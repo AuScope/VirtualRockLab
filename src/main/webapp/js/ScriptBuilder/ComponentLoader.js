@@ -15,33 +15,31 @@ Ext.namespace('Ext.ux');
  * to manipulate the components as they are added.
  * @singleton
  */
-Ext.ux.ComponentLoader = function() {
-	var cm = Ext.ComponentMgr;			
-	return {
-		/*
-		 *  
-		 */
-		/*
-		 * Load components from a server resource, config options include
+Ext.ux.ComponentLoader = {
+        /*
+         *  
+         */
+        /*
+         * Load components from a server resource, config options include
          * anything available in @link Ext.data.Connect#request
-		 * Note: Always uses the connection of Ext.Ajax 
-		 */
-		load : function(config) {
-			Ext.apply(config, {
-				callback: this.onLoad.createDelegate(this, [config], true),
-				scope: this
-			});	
-			if (config) {
-				Ext.apply(config.params, {
-					container: config
-				});
-			}
-			Ext.Ajax.request(config);
-		},
-		// private
-		onLoad : function(opts, success, response, ct) {			
-			var config = Ext.decode(response.responseText);
-            cm.create(config);
-		},
-	};
-}();
+         * Note: Always uses the connection of Ext.Ajax 
+         */
+        load : function(config) {
+            Ext.apply(config, {
+                callback: this.onLoad.createDelegate(this, [config], true),
+                scope: this
+            }); 
+            if (config) {
+                Ext.apply(config.params, {
+                    container: config
+                });
+            }
+            Ext.Ajax.request(config);
+        },
+        // private
+        onLoad : function(opts, success, response, ct) {            
+            var config = Ext.decode(response.responseText);
+            Ext.ComponentMgr.create(config);
+        }
+};
+

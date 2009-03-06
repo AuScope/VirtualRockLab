@@ -94,8 +94,8 @@ ScriptBuilder.showDialog = function(compId, compTitle, existingNode) {
             handler: function() { dlg.close(); }
         }]
     });
-    // Prevent destruction of dlgContents
-    dlg.on('beforedestroy', function() { dlg.remove(dlgContents, false); return true; });
+    // Prevent destruction of dlgContents (IE needs this)
+    dlg.on('beforedestroy', function() { return false; });
     dlg.show();
 }
 
