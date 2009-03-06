@@ -1,0 +1,34 @@
+{
+  xtype: "form",
+  id: "FrictionForm",
+  nclass: FrictionNode,
+  bodyStyle: "padding:5px;",
+  labelWidth: 120,
+  defaults: { anchor: "100%" },
+  items: [{
+    xtype: "textfield",
+    name: "uniqueName",
+    value: "interaction",
+    fieldLabel: "Unique Name",
+    allowBlank: false
+  }, {
+    xtype: "numberfield",
+    name: "normalK",
+    value: "1.0",
+    fieldLabel: "Normal Stiffness",
+    allowBlank: false
+  }, {
+    xtype: "numberfield",
+    name: "shearK",
+    value: "0.1",
+    fieldLabel: "Shear Stiffness",
+    allowBlank: false
+  }, {
+    xtype: "numberfield",
+    name: "dynamicMu",
+    value: "0.4",
+    fieldLabel: "Friction Coefficient",
+    allowBlank: false
+  }]
+}
+

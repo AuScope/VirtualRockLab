@@ -1,0 +1,832 @@
+package org.auscope.gridtools;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.StringReader;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Date;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.axis.message.addressing.EndpointReferenceType;
+import org.globus.axis.util.Util;
+import org.globus.exec.client.GramJob;
+import org.globus.exec.client.GramJobListener;
+import org.globus.exec.generated.FaultType;
+import org.globus.exec.generated.JobDescriptionType;
+import org.globus.exec.generated.MultiJobDescriptionType;
+import org.globus.exec.generated.StateEnumeration;
+import org.globus.exec.utils.ManagedJobFactoryConstants;
+import org.globus.exec.utils.client.ManagedJobFactoryClientHelper;
+import org.globus.exec.utils.rsl.RSLHelper;
+import org.gridforum.jgss.ExtendedGSSManager;
+import org.globus.wsrf.impl.security.authorization.HostAuthorization;
+import org.globus.wsrf.utils.FaultHelper;
+import org.ietf.jgss.GSSCredential;
+import org.oasis.wsrf.faults.BaseFaultTypeDescription;
+
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
+
+import org.xml.sax.InputSource;
+import org.w3c.dom.*;
+
+
+/**
+ * Following MVC pattern, this is one of the Models. In particular, this model
+ * knows how to manage jobs using WS-GRAM. It implements the
+ * <code>JobControlInterface</code>, and thus is able to submit, kill and get
+ * the status and results of a job. Additionally, this Model creates the final
+ * job script that will be submitted.
+ * <p>
+ * It also listens for changes to the state of a <code>GramJob</code>.
+ * 
+ * @author Ryan Fraser
+ * @author Terry Rankine
+ * @author Darren Kidd
+ */
+public class GramJobControl implements JobControlInterface {
+    /** Reference to the Controller's Log4J logger. */
+    private static Log logger = LogFactory.getLog(GramJobControl.class.getName());
+
+    private GramJobListener listener = null;
+    private Date resourceDate = null;
+
+    /**
+     * Default constructor. Does nothing. (There's nothing to do!)
+     * /* (non-Javadoc)
+     * 
+     * @see org.globus.exec.client.GramJobListener#stateChanged(org.globus.exec.client.GramJob)
+     */
+    public GramJobControl() {
+    }
+
+    public void setListener(GramJobListener newlistener) {
+        listener = newlistener;
+    }
+    
+    public void setResourceDate(int walltime) {
+        Date date1 = new Date();
+        // set the resource lifetime to the amount of milliseconds from
+        // 1/1/1970 + walltime x 60 x 1000 x 7
+        resourceDate = new Date(date1.getTime() + (walltime * 60 * 1000 * 7));
+    }
+
+    /**
+     * Construct an XML Job Script for a particular job.
+     * Given a <code>GridJob</code> object (which holds all the necessary
+     * properties of a particular job), this method will construct the actual
+     * XML job string which will be submitted.
+     * 
+     * @param job The <code>GridJob</code> object
+     * 
+     * @return A string representing the XML job script
+     */
+    public String constructJobScript(GridJob job) {
+        final String DATE_FORMAT = "_yyyy-MM-dd'_'HH-mm-ss";
+        // Create object of SimpleDateFormat and parse the desired date format
+        SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
+        // Write out the Job ID which includes the current (formatted) date
+        final String JOB_ID = job.getName() + sdf.format(new Date());
+        final String SITE_GRID_FTP_SERVER = job.getSiteGridFTPServer();
+
+        String localInputDir, localOutputDir;
+        localInputDir = localOutputDir = "${GLOBUS_SCRATCH_DIR}/" + JOB_ID + '/';
+
+        // Header
+        String finalJobString = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+            "<job> <executable>" + job.getExeName() + "</executable>" +
+            " <directory>" + localOutputDir + "</directory>";
+
+        // Arguments
+        for (String arg : job.getArguments()) {
+            finalJobString += " <argument>" + arg + "</argument>";
+        }
+
+        // Environment
+        finalJobString += " <environment>  <name>USERJOB</name>  <value>" +
+            job.getName() + "</value> </environment> <environment>" +
+            "  <name>INPUTDIR</name>  <value>" + localInputDir + "</value>" +
+            " </environment> <environment>  <name>OUTPUTDIR</name>" +
+            "  <value>" + localOutputDir + "</value> </environment>";
+
+
+        if (job.getJobType().equalsIgnoreCase("single") &&
+                Integer.valueOf(job.getCpuCount()) > 1)
+            finalJobString += " <environment>  <name>OMP_NUM_THREADS</name>" +
+                "  <value>" + job.getCpuCount()+ "</value> </environment>";
+
+        // IO redirection.
+
+        // Input redirection
+        if (job.getStdInput().length() > 0) {
+            finalJobString += " <stdin>" + localInputDir + job.getStdInput() + "</stdin>";
+        }
+        // Output redirection        
+        if (job.getStdOutput().length() > 0) {
+            finalJobString += " <stdout>" + localOutputDir + job.getStdOutput() + "</stdout>";
+        } else {
+            finalJobString += " <stdout>" + localOutputDir + "stdOut</stdout>";
+        }
+        // Error redirection        
+        if (job.getStdError().length() > 0) {
+            finalJobString += " <stderr>" + localOutputDir + job.getStdError() + "</stderr>";
+        } else {
+            finalJobString += " <stderr>" + localOutputDir + "stdError</stderr>";
+        }
+
+        // Job Properties...
+        finalJobString += " <count>" + job.getCpuCount() + "</count>" +
+            " <queue>" + job.getQueue() + "</queue> <maxWallTime>" +
+            job.getMaxWallTime() + "</maxWallTime> <maxMemory>" +
+            job.getMaxMemory() + "</maxMemory> <jobType>" + job.getJobType() +
+            "</jobType>";
+
+        // File Stage In
+        if (job.getInTransfers()[0].compareToIgnoreCase("NULL") != 0)
+        {
+            finalJobString += " <fileStageIn>";
+
+            for (String xfer : job.getInTransfers()) {
+                finalJobString += "  <transfer>   <sourceUrl>" + xfer +
+                    "</sourceUrl>   <destinationUrl>" +
+                    SITE_GRID_FTP_SERVER + localInputDir +
+                    "</destinationUrl>  </transfer>";
+            }
+            finalJobString += " </fileStageIn>";
+        }
+
+        // File Stage Out
+        if (job.getOutTransfers()[0].compareToIgnoreCase("NULL") !=0 )
+        {
+            finalJobString += " <fileStageOut>";
+            for (String xfer : job.getOutTransfers()) {
+                finalJobString += "  <transfer>   <sourceUrl>" +
+                    SITE_GRID_FTP_SERVER + localOutputDir + "</sourceUrl>" +
+                    "   <destinationUrl>" + xfer + JOB_ID +
+                    "/</destinationUrl>  </transfer>";
+            }
+            finalJobString += " </fileStageOut>";
+        }
+
+        // Delete the directory created on remote resource and all associated
+        // files
+        finalJobString += " <fileCleanUp>  <deletion>   <file>" +
+            SITE_GRID_FTP_SERVER + localOutputDir +
+            "</file>  </deletion> </fileCleanUp>";
+
+        // Start Extensions
+        finalJobString += " <extensions>  <globusrunAnnotation>" +
+            "   <automaticJobDelegation>true</automaticJobDelegation>" +
+            "   <automaticStagingDelegation>true</automaticStagingDelegation>" +
+            "   <automaticStageInDelegation>true</automaticStageInDelegation>" +
+            "   <automaticStageOutDelegation>true</automaticStageOutDelegation>" +
+            "   <automaticCleanUpDelegation>true</automaticCleanUpDelegation>" +
+            "  </globusrunAnnotation>";
+
+        // Modules
+        if (job.getModules() != null) {
+            for (String mod : job.getModules()) {
+                finalJobString += "  <module>" + mod + "</module>";
+            }
+        }
+
+        // Code and version - just for debugging
+        finalJobString += "  <code>" + job.getCode() + "</code>  <version>" +
+            job.getVersion() + "</version>";
+
+        // Finish Extensions
+        finalJobString += " </extensions>";
+
+        // Close Job Tag
+        finalJobString += "</job>";
+
+        /*
+        try {
+            logger.info("Writing RSL to " + JOBFILE + "...");
+            FileWriter fw = new FileWriter(JOBFILE);
+
+            // Make pretty (readable!) job description. Put newlines at the
+            // end of each tag.
+            String newString;
+            newString = finalJobString.replaceAll("><", ">\n<");
+            newString = newString.replaceAll("> <", ">\n <");
+            newString = newString.replaceAll(">  <", ">\n  <");
+            newString = newString.replaceAll(">   <", ">\n   <");
+
+            fw.write(newString);
+            fw.close();
+        } catch (Throwable e) {
+            logger.error("Could not write Job string to file.");
+            logger.error(e.getMessage());
+        }
+        */
+
+        // set the resource Date object
+        setResourceDate(Integer.valueOf(job.getMaxWallTime()));
+
+        return finalJobString;
+    }
+
+
+    public JobDescriptionType[] constructMultiJobScript(GridJob job) {
+        final String DATE_FORMAT = "_yyyy-MM-dd'_'HH-mm-ss";
+        // Create object of SimpleDateFormat and parse the desired date format
+        SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
+        // Write out the Job ID which includes the current (formatted) date
+        final String JOB_ID = job.getName() + sdf.format(new Date());
+
+        final String SITE_GRID_FTP_SERVER = job.getSiteGridFTPServer();
+
+        String localInputDir, localOutputDir;
+        localInputDir = localOutputDir = "${GLOBUS_SCRATCH_DIR}/" + JOB_ID + '/';
+        String writeJobStr="";
+
+        //multi with optional mpi support
+        //we are in multi so set the multi/mpi jobtype to simply mpi now
+
+        if(job.getJobType().equalsIgnoreCase("multi/mpi"))
+            job.setJobType("mpi");
+        else
+            job.setJobType("single");
+            
+        JobDescriptionType[] jobs = new JobDescriptionType[job.getArguments().length];
+
+        for(int i=0; i<job.getArguments().length;i++) {
+            localInputDir = localOutputDir = "${GLOBUS_SCRATCH_DIR}/" +
+                JOB_ID + "_subJob_" + Integer.toString(i)+ '/';
+            
+            String finalJobString = "<job> <executable>" + job.getExeName() +
+                "</executable> <directory>" + localOutputDir + "</directory>";
+
+            // Arguments
+            finalJobString += " <argument>" + job.getArguments()[i] + "</argument>";
+
+            // Environment
+            finalJobString += " <environment>  <name>USERJOB</name>" +
+                "  <value>" + job.getName() + "</value> </environment>" +
+                " <environment>  <name>INPUTDIR</name>  <value>" +
+                localInputDir + "</value> </environment> <environment>" +
+                "  <name>OUTPUTDIR</name>  <value>" + localOutputDir +
+                "</value> </environment>";
+
+            if (job.getJobType().equalsIgnoreCase("single") &&
+                    Integer.valueOf(job.getCpuCount()) > 1)
+                finalJobString += " <environment>  <name>OMP_NUM_THREADS</name>" +
+                    "  <value>" + job.getCpuCount()+ "</value> </environment>";
+        
+            // IO redirection.
+
+            // Input redirection
+            if (job.getStdInput().length() > 0) {
+                finalJobString += " <stdin>" + localInputDir + job.getStdInput() + "</stdin>";
+            }
+            //Output redirection        
+            if (job.getStdOutput().length() > 0) {
+                finalJobString += " <stdout>" + localOutputDir + job.getStdOutput() + "</stdout>";
+            } else {
+                finalJobString += " <stdout>" + localOutputDir + "stdOut</stdout>";
+            }
+        
+            finalJobString += " <stderr>" + localOutputDir + "stdError</stderr>";
+        
+            // Job Properties...
+            finalJobString += " <count>" + job.getCpuCount() + "</count>" +
+                " <queue>" + job.getQueue() + "</queue>" + " <maxWallTime>" +
+                job.getMaxWallTime() + "</maxWallTime> <maxMemory>" +
+                job.getMaxMemory() + "</maxMemory> <jobType>" +
+                job.getJobType() + "</jobType>";
+        
+            // File Stage In
+            //something was specified in the stageIn directives thus do the following:
+            if (job.getInTransfers()[0].compareToIgnoreCase("NULL") != 0) {
+                finalJobString += " <fileStageIn>";
+                    
+                for (String xfer : job.getInTransfers()) {
+                    finalJobString += "  <transfer>   <sourceUrl>" + xfer +
+                        "</sourceUrl>   <destinationUrl>" +
+                        SITE_GRID_FTP_SERVER + localInputDir +
+                        "</destinationUrl>  </transfer>";
+                }
+                finalJobString += " </fileStageIn>";
+            }
+                
+            // File Stage Out
+            if (job.getOutTransfers()[0].compareToIgnoreCase("NULL") != 0) {
+                finalJobString += " <fileStageOut>";
+                for (String xfer : job.getOutTransfers()) {
+                    finalJobString += "  <transfer>   <sourceUrl>" +
+                        SITE_GRID_FTP_SERVER + localOutputDir +
+                        "</sourceUrl>   <destinationUrl>" + xfer + JOB_ID +
+                        "_subJob_" + Integer.toString(i) +
+                        "/</destinationUrl>  </transfer>";
+                }
+                finalJobString += " </fileStageOut>";
+            }
+                
+            // Delete the directory created on remote resource and all
+            // associated files
+            finalJobString += " <fileCleanUp>" +
+                "  <deletion>   <file>" + SITE_GRID_FTP_SERVER +
+                localOutputDir + "</file>  </deletion> </fileCleanUp>";
+        
+            // Start Extensions
+            finalJobString += " <extensions>  <globusrunAnnotation>" +
+                "   <automaticJobDelegation>true</automaticJobDelegation>" +
+                "   <automaticStagingDelegation>true</automaticStagingDelegation>" +
+                "   <automaticStageInDelegation>true</automaticStageInDelegation>" +
+                "   <automaticStageOutDelegation>true</automaticStageOutDelegation>" +
+                "   <automaticCleanUpDelegation>true</automaticCleanUpDelegation>" +
+                "  </globusrunAnnotation>";
+
+            // Modules
+            if (job.getModules() != null) {
+                for (String mod : job.getModules()) {
+                    finalJobString += "  <module>" + mod + "</module>";
+                }
+            }
+        
+            // Code and version - just for debugging
+            finalJobString += "  <code>" + job.getCode() + "</code>  <version>" +
+                job.getVersion() + "</version>";
+        
+            // Finish Extensions
+            finalJobString += " </extensions>";
+
+            // Close Job Tag
+            finalJobString += "</job>";
+            try {
+                jobs[i]= RSLHelper.readRSL(finalJobString);
+            } catch (Throwable e) {
+                logger.error("Could not translate job string into JobDescriptionType");
+                e.printStackTrace();
+                logger.error(e.getMessage());
+            }
+            logger.info("finished creating jobs");
+
+            writeJobStr += finalJobString;
+        }
+            
+        /*
+        try {
+            final String JOBFILE = "GridJob.xml";
+
+            logger.info("Writing " + JOBFILE + " file...");
+            FileWriter fw = new FileWriter(JOBFILE);
+
+            // Make pretty (readable!) job description. Put newlines at the
+            // end of each tag.
+            String newString;
+            newString = writeJobStr.replaceAll("><", ">\n<");
+            newString = newString.replaceAll("> <", ">\n <");
+            newString = newString.replaceAll(">  <", ">\n  <");
+            newString = newString.replaceAll(">   <", ">\n   <");
+
+            fw.write(newString);
+            fw.close();
+        } catch (Throwable e) {
+            logger.error("Could not write Job string to file.");
+            logger.error(e.getMessage());
+        }
+        */
+        
+        // set the resource Date object
+        setResourceDate(Integer.valueOf(job.getMaxWallTime()));
+
+        return jobs;
+    }
+ 
+    /**
+     * Submit the job using WS-GRAM. Sends the job string to the specified host.
+     * Returns the EPR of the job, unless an error occurred, in which case it
+     * will happily return <code>null</code>.
+     * 
+     * @param host      The host site this job is being sent to
+     * @param jobString The jobString to be submitted
+     * 
+     * @return The EPR to the job, or <code>null</code> if something went wrong
+     */
+    public String submitJob(String jobString, String host) {
+
+        String gramJobHandle = null;
+        // Set a system property - for Apache Axis (Java Web Services platform).
+        System.setProperty("axis.configFile", "client-config.wsdd");
+        Util.registerTransport();
+
+        try {
+            JobDescriptionType jobDescription = RSLHelper.readRSL(jobString);
+            // For 'credential import extension'.
+            ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
+            logger.info("Creating Credential");
+            GSSCredential cred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
+
+            // Create new GRAM job. Get GRAM end point reference.
+            GramJob job = new GramJob(jobDescription);
+            URL factoryUrl = ManagedJobFactoryClientHelper.getServiceURL(host).getURL();
+            logger.info("Got factoryUrl");
+            EndpointReferenceType gramEndpoint = ManagedJobFactoryClientHelper.getFactoryEndpoint(factoryUrl, "PBS");
+            logger.info("Got endpoint");
+
+            // Auth stuff, and setting the credentials.
+            job.setDelegationEnabled(true);
+            job.setCredentials(cred);
+            job.setTerminationTime(resourceDate);
+            HostAuthorization iA = new HostAuthorization();
+        
+            job.setAuthorization(iA);
+            job.setDuration(null);
+            // Listen for Job state changes if requested.
+            if (listener != null)
+                job.addListener(listener);
+            job.submit(gramEndpoint, false); // SUBMIT THE JOB! YAY!
+
+            job.refreshStatus();
+            gramJobHandle = job.getHandle(); // Get the handle to the job.
+        } catch (Exception e) {
+            logger.error(getGlobusErrorDescription(e));
+        }
+        return gramJobHandle; // Return the handle...
+    }
+
+    
+    /**
+     * Submit the job using WS-GRAM. Sends the job string to the specified host.
+     * Returns the EPR of the job, unless an error occurred, in which case it
+     * will happily return <code>null</code>.
+     * 
+     * @param host      The host site this job is being sent to
+     * @param jobString The jobString to be submitted
+     * 
+     * @return The EPR to the job, or <code>null</code> if something went wrong
+     */
+    public String submitMultiJob(JobDescriptionType[] jobs, String host) {
+        // For 'credential import extension'.
+        ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
+
+        String gramJobHandle = null;
+        // Set a system property - for Apache Axis (Java Web Services platform).
+        System.setProperty("axis.configFile", "client-config.wsdd");
+        Util.registerTransport();
+
+        try {
+            for(int i=0;i<jobs.length;i++) {
+                String factoryTypeSubs = ManagedJobFactoryConstants.FACTORY_TYPE.PBS;
+                URL factoryUrl = ManagedJobFactoryClientHelper.getServiceURL(host).getURL();
+                EndpointReferenceType factoryEndpointSubJobs = ManagedJobFactoryClientHelper.getFactoryEndpoint(factoryUrl, factoryTypeSubs);
+                jobs[i].setFactoryEndpoint(factoryEndpointSubJobs);
+            }
+        
+            GSSCredential cred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
+            
+            String factoryType =  ManagedJobFactoryConstants.FACTORY_TYPE.MULTI;            
+            URL factoryUrl = ManagedJobFactoryClientHelper.getServiceURL(host).getURL();
+            EndpointReferenceType gramEndpoint = ManagedJobFactoryClientHelper.getFactoryEndpoint(factoryUrl, factoryType);
+
+            logger.info("creating MultiJobDescType");
+            MultiJobDescriptionType multiJobDescription =  new MultiJobDescriptionType();
+            multiJobDescription.setJob(jobs);
+            logger.info("creating GramJob");
+            // Create new GRAM job. Get GRAM end point reference.
+            GramJob job = new GramJob(multiJobDescription);
+
+            // Auth stuff, and setting the credentials.
+            job.setDelegationEnabled(true);
+            job.setCredentials(cred);
+            job.setTerminationTime(resourceDate);
+            HostAuthorization iA = new HostAuthorization();
+
+            job.setAuthorization(iA);
+            job.setDuration(null);
+            // Listen for Job state changes if requested.
+            if (listener != null)
+                job.addListener(listener);
+            job.submit(gramEndpoint, false); // SUBMIT THE JOB! YAY!
+
+            job.getState();
+            gramJobHandle = job.getHandle(); // Get the handle to the job.
+        } catch (Exception e) {
+            logger.error(getGlobusErrorDescription(e));
+        }
+        return gramJobHandle; // Return the handle...
+    }
+ 
+    /**
+     * Kills the job given its EPR. Returns a String indicating the status of
+     * the job after being killed.
+     * 
+     * @param reference The EPR to the job to kill
+     * 
+     * @return A String indicating the state of the killed job
+     */
+    public String killJob(String reference) {
+
+        String condition = null;
+
+        ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
+
+        try {
+            GSSCredential userCred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
+
+            // Find the job, and make sure are authorized to kill it.
+            GramJob job = new GramJob();
+            job.setHandle(reference);
+            job.setCredentials(userCred);
+
+            // Kill it.
+            job.destroy();
+
+            try {
+                // Figure out the status...
+                StateEnumeration jobState = job.getState();
+                condition = jobState.getValue();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            logger.error(getGlobusErrorDescription(e));
+        }
+
+        return condition;
+    }
+
+    public GridJob getJobByReference(String reference) {
+        GridJob gridJob = new GridJob();
+        ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
+
+        try {
+            GSSCredential userCred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
+
+            // Find the job
+            GramJob job = new GramJob();
+            job.setHandle(reference);
+            job.setCredentials(userCred);
+
+            JobDescriptionType jobDesc = job.getDescription();
+            gridJob.setExeName(jobDesc.getExecutable());
+            gridJob.setJobType(jobDesc.getJobType().toString());
+            gridJob.setQueue(jobDesc.getQueue());
+            gridJob.setMaxWallTime(jobDesc.getMaxWallTime().toString());
+            gridJob.setMaxMemory(jobDesc.getMaxMemory().toString());
+            gridJob.setCpuCount(jobDesc.getCount().toString());
+            gridJob.setStdInput(jobDesc.getStdin());
+            gridJob.setStdOutput(jobDesc.getStdout());
+            gridJob.setStdError(jobDesc.getStderr());
+            //gridJob.setCode(jobDesc.getXXX());
+            List<String> transfers = new ArrayList<String>();
+            for (int i=0; i<jobDesc.getFileStageIn().getTransfer().length; i++) {
+                transfers.add(jobDesc.getFileStageIn().getTransfer(i).getSourceUrl());
+            }
+            gridJob.setInTransfers(transfers.toArray(new String[transfers.size()]));
+
+            transfers.clear();
+            for (int i=0; i<jobDesc.getFileStageOut().getTransfer().length; i++) {
+                transfers.add(jobDesc.getFileStageOut().getTransfer(i).getDestinationUrl());
+            }
+            gridJob.setOutTransfers(transfers.toArray(new String[transfers.size()]));
+
+            //logger.info(jobDesc.getFileStageIn().getTransfer(0).getSourceUrl());
+
+        } catch (Exception e) {
+            logger.error(getGlobusErrorDescription(e));
+        }
+
+        return gridJob;
+    }
+
+    /**
+     * Get the status of a job, as well as any faults that may have occurred.
+     * Returns a String containing the status and any faults.
+     * 
+     * @param reference The EPR of the job
+     * 
+     * @return String indicating the status of this job
+     */
+    public String getJobStatus(String reference) {
+ 
+        String condition = null;
+        ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
+
+        try {
+            GSSCredential userCred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
+
+            // Find our job, and refresh its status.
+            GramJob job = new GramJob();
+            job.setHandle(reference);
+            job.setCredentials(userCred);
+            job.refreshStatus();
+
+            try {
+                // Get the state of our job.
+                StateEnumeration jobState = job.getState();
+                condition = jobState.getValue();
+
+                // Checking for faults...
+                FaultType myFaultType = job.getFault();
+                if (myFaultType != null) {
+                    BaseFaultTypeDescription[] myFaultArray = job.getFault().getDescription();
+                    for (BaseFaultTypeDescription currFault : myFaultArray) {
+                        logger.error(currFault.get_value());
+                        //condition += "\nReason: " + currFault.get_value();
+                    }
+                }
+            } catch (Exception e) {
+                logger.error(e.getMessage());
+            }
+        } catch (Exception e) {
+            logger.error(getGlobusErrorDescription(e));
+        }
+        return condition;
+    }
+
+    /**
+     * Returns a descriptive error message for given exception.
+     * 
+     * @param e the exception
+     * 
+     * @return a string describing the error
+     */
+    private String getGlobusErrorDescription(Exception e) {
+        if (e.getMessage() == null) {
+            return FaultHelper.getMessage(e);
+        } else if (e.getMessage().indexOf("Expired credentials detected") != -1) {
+            StringBuffer myBuffer = new StringBuffer();
+            myBuffer.append("Error: Expired Credentials detected.\n");
+            myBuffer.append("Please ensure you have a current proxy!");
+            return myBuffer.toString();
+
+        } else if (e.getCause() != null &&
+                   e.getCause().getMessage() != null) {
+            if (e.getCause().getMessage().indexOf("Unknown CA") != -1) {
+                // Unknown CA error
+                StringBuffer myBuffer = new StringBuffer();
+                myBuffer.append("Error: You don't trust the CA certificate for this server.\n");
+                myBuffer.append("To trust it, you must add its CA cert into either:\n");
+                myBuffer.append(" A) your personal trust dir: $HOME/.globus/certificates\n");
+                myBuffer.append("   or\n");
+                myBuffer.append(" B) the systemwide trust dir: /etc/grid-security/certificates");
+                return myBuffer.toString();
+
+            } else if (e.getCause().getMessage().indexOf("Connection timed out: connect") != -1) {
+                // connection exception -- either firewall or connect time out
+                StringBuffer myBuffer = new StringBuffer();
+                myBuffer.append("Timeout while connecting to the host.\n");
+                myBuffer.append("Please contact the site or try again.");
+                return myBuffer.toString();
+            }
+        }
+        return e.getMessage();
+    }
+
+    /**
+     * Gets the results of a job. The implementation has not been completed yet,
+     * so unsure of exactly <i>what</i> information it will return.
+     * 
+     * <b>TODO: Needs to be implemented!</b>
+     * 
+     * @param tagName the tag name
+     * @param ele the ele
+     * 
+     * @return "Not implemented yet!"
+     */
+    private String getTextValue(Element ele, String tagName) {
+        String textVal = "";
+        NodeList nl = ele.getElementsByTagName(tagName);
+
+        if (nl != null && nl.getLength() > 0) {
+            Element el = (Element) nl.item(0);
+            try {
+                textVal = el.getFirstChild().getNodeValue();
+            } catch (Exception e) {
+                textVal = "";
+            }
+        }
+
+        return textVal;
+    }
+
+    /**
+     * Turbo MDS query.
+     * 
+     * @param query the query
+     * @param eprFile the epr file
+     * 
+     * @return the node list
+     */
+    private NodeList turboMDSquery(String query, String eprFile) {
+        NodeList myNodeList = null;
+        XPathFactory xPath = XPathFactory.newInstance();
+        try {
+            InputSource inpXml = new InputSource(new StringReader(eprFile));
+            myNodeList = (NodeList) xPath.newXPath().evaluate(query, inpXml, XPathConstants.NODESET);
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+        return myNodeList;
+    }
+
+    /**
+     * Gets the intermittent results of a job given its EPR.
+     * Returns a String of the location the results where transported to.
+     * 
+     * @param reference The EPR to the job
+     * 
+     * @return A String indicating the location of where result files were
+     * copied to
+     */
+    public String getJobResults(String reference) {
+        String jobStr = ""; //FIXME
+        String submissionHost /*get from epr*/, workingDirectory, outputDirectory;
+
+        ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
+        System.setProperty("axis.configFile", "client-config.wsdd");
+        Util.registerTransport();
+
+        submissionHost = workingDirectory = outputDirectory = null;
+
+        String[] temp = null;
+        // strip the service and port off the host (EPR contains
+        // ManagedJobExecutableService, need ManagedJobFactoryService to
+        // submit to!
+        temp = reference.split("\\:8443");
+        logger.info("host = " +temp[0]);
+        
+        submissionHost = temp[0];
+        workingDirectory = "job/fileStageOut/transfer";
+
+        NodeList hostLists = turboMDSquery(workingDirectory, jobStr);
+
+        Element siteEl = null;
+        logger.info("Number of staging out directives = "+Integer.toString(hostLists.getLength()));
+        for (int i = 0; i < hostLists.getLength(); i++) {
+            siteEl = (Element) hostLists.item(i);
+            workingDirectory = getTextValue(siteEl, "sourceUrl");
+        }
+
+        outputDirectory = "job/fileStageOut/transfer";
+
+        hostLists = turboMDSquery(outputDirectory, jobStr);
+
+        for (int i = 0; i < hostLists.getLength(); i++) {
+            siteEl = (Element) hostLists.item(i);
+            outputDirectory = getTextValue(siteEl, "destinationUrl");
+        }
+
+        //create results job
+
+        String jobDescriptionString = "<job>" + 
+            " <executable>/bin/hostname</executable>" +
+            " <directory>/tmp/</directory> <stdout>/dev/null</stdout> " +
+            " <stderr>/dev/null</stderr>  <fileStageOut> <transfer>" +
+            " <sourceUrl>" + workingDirectory + "</sourceUrl>" +
+            " <destinationUrl>" + outputDirectory + "</destinationUrl>" +
+            " </transfer> </fileStageOut> </job>";
+
+        try {
+            logger.info("Writing results file...");
+            FileWriter fw = new FileWriter("results.xml");
+            fw.write(jobDescriptionString);
+            fw.close();
+        } catch (Throwable e) {
+            logger.error("Could not write Job string to file.");
+            logger.error(e.getMessage());
+        }
+
+        try {
+            JobDescriptionType jobDescription = RSLHelper.readRSL(jobDescriptionString);
+            GSSCredential cred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
+
+            // Create new GRAM job. Get GRAM end point reference.
+            GramJob job = new GramJob(jobDescription);
+
+            URL factoryUrl = ManagedJobFactoryClientHelper.getServiceURL(submissionHost + ":8443/wsrf/services/ManagedJobFactoryService").getURL();
+
+            EndpointReferenceType gramEndpoint = ManagedJobFactoryClientHelper.getFactoryEndpoint(factoryUrl, ManagedJobFactoryConstants.FACTORY_TYPE.FORK);
+
+            // Auth stuff, and setting the credentials.
+            job.setDelegationEnabled(true);
+            job.setCredentials(cred);
+
+            // Listen for Job state changes if requested.
+            if (listener != null)
+                job.addListener(listener);
+            job.submit(gramEndpoint, false); // SUBMIT THE JOB!
+
+            job.getState();
+            //gramJobHandle = job.getHandle(); // Get the handle to the job.
+        } catch (Exception e) {
+            logger.error(getGlobusErrorDescription(e));
+        }
+
+        return outputDirectory;
+    }
+}
+

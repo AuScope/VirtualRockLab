@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+
+    <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+        <property name="basename" value="messages"/>
+    </bean>
+
+    <bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+        <property name="prefix" value="/WEB-INF/jsp/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+
+    <bean name="/index.html" class="org.auscope.vrl.web.JobMonitorController">
+        <property name="gridAccess" ref="gridAccess"/>
+        <property name="userJobManager" ref="userJobManager"/>
+    </bean>
+
+    <bean name="/scriptbuilder.html" class="org.auscope.vrl.web.ScriptBuilderController">
+    </bean>
+
+    <bean name="/gridsubmit.html" class="org.auscope.vrl.web.GridSubmitFormController">
+        <property name="sessionForm" value="false"/>
+        <property name="commandName" value="gridSubmit"/>
+        <property name="commandClass" value="org.auscope.gridtools.GridJob"/>
+        <property name="validator">
+            <bean class="org.auscope.vrl.GridJobValidator"/>
+        </property>
+        <property name="formView" value="gridsubmit"/>
+        <property name="successView" value="index"/>
+        <property name="gridAccess" ref="gridAccess"/>
+        <property name="userJobManager" ref="userJobManager"/>
+    </bean>
+
+</beans>
+

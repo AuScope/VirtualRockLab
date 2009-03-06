@@ -1,0 +1,22 @@
+{
+  xtype: "form",
+  id: "ExclusionForm",
+  nclass: ExclusionNode,
+  bodyStyle: "padding:5px;",
+  labelWidth: 200,
+  defaults: { anchor: "100%" },
+  items: [{
+    xtype: "textfield",
+    name: "intName1",
+    value: "",
+    fieldLabel: "Name of First Interaction Group",
+    allowBlank: false
+  }, {
+    xtype: "textfield",
+    name: "intName2",
+    value: "",
+    fieldLabel: "Name of Second Interaction Group",
+    allowBlank: false
+  }]
+}
+

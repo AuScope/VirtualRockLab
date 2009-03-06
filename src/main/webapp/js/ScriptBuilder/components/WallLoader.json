@@ -1,0 +1,59 @@
+{
+  xtype: "form",
+  id: "WallLoaderForm",
+  nclass: WallLoaderNode,
+  bodyStyle: "padding:5px;",
+  defaults: { anchor: "100%" },
+  labelWidth: 130,
+  items: [{
+    xtype: "textfield",
+    name: "uniqueName",
+    value: "runnable",
+    fieldLabel: "Unique Name",
+    allowBlank: false
+  }, {
+    xtype: "textfield",
+    name: "wallName",
+    value: "",
+    fieldLabel: "Name of Wall to load",
+    allowBlank: false
+  }, {
+    xtype: "radiogroup",
+    fieldLabel: "Wall Loader Timing",
+    items: [
+      { boxLabel: 'Before Timestep', name: 'snapTiming', inputValue: 0 },
+      { boxLabel: 'After Timestep', name: 'snapTiming', inputValue: 1, checked: true }
+    ]
+  }, {
+    xtype: "fieldset",
+    collapsible: false,
+    title: "Plate Speed",
+    anchor: "100%",
+    autoHeight: true,
+    labelWidth: 20,
+    defaults: { anchor: "100%" },
+    items: [{
+      xtype: "numberfield",
+      name: "plateX",
+      value: "0.0",
+      decimalPrecision: 4,
+      fieldLabel: "X",
+      allowBlank: false
+    }, {
+      xtype: "numberfield",
+      name: "plateY",
+      value: "-0.001",
+      decimalPrecision: 4,
+      fieldLabel: "Y",
+      allowBlank: false
+    }, {
+      xtype: "numberfield",
+      name: "plateZ",
+      value: "0.0",
+      decimalPrecision: 4,
+      fieldLabel: "Z",
+      allowBlank: false
+    }]
+  }]
+}
+
