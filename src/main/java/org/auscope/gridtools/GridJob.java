@@ -61,7 +61,7 @@ public class GridJob implements Serializable
      */
     public GridJob()
     {
-        site = siteGridFTPServer = name = email = code = exeName = ""; 
+        site = siteGridFTPServer = name = email = code = exeName = "";
         version = queue = maxWallTime = maxMemory = jobType = ""; 
         cpuCount = stdInput = stdOutput = stdError = "";
         arguments = inTransfers = outTransfers = modules = new String[0];

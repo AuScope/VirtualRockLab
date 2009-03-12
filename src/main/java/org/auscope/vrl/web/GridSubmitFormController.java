@@ -70,20 +70,37 @@ public class GridSubmitFormController extends SimpleFormController {
         String[] inTransfers = transfersString.split(",");
 
         // see formBackingObject() - first element is local stageIn dir
-        String jobTempDir = inTransfers[0];
+        String jobInputDir = inTransfers[0];
 
+        // Get all uploaded files through parameters file$i and save in
+        // temporary job directory
         for (int i=0;; i++) {
             MultipartFile f = mfReq.getFile("file"+i);
             if (f == null) {
                 break;
             }
             logger.info("Saving uploaded file "+f.getOriginalFilename());
-            f.transferTo(new File(jobTempDir+f.getOriginalFilename()));
+            f.transferTo(new File(jobInputDir+f.getOriginalFilename()));
         }
 
-        // add server part to local stageIn
-        inTransfers[0] = gridAccess.getLocalGridFtpServer() + jobTempDir;
+        // Add server part to local stageIn
+        inTransfers[0] = gridAccess.getLocalGridFtpServer() + jobInputDir;
         job.setInTransfers(inTransfers);
+
+        // Create a new directory for the output files of this job
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
+        String dateFmt = sdf.format(new Date());
+        String jobID = "testUser" + "-" + job.getName() + "-" + dateFmt +
+            File.separator;
+        String jobOutputDir = gridAccess.getLocalGridFtpStageOutDir() + jobID;
+        boolean success = (new File(jobOutputDir)).mkdir();
+
+        if (!success) {
+            logger.error("Could not create directory "+jobOutputDir);
+            jobOutputDir = gridAccess.getLocalGridFtpStageOutDir();
+        }
+        job.setOutTransfers(new String[] { gridAccess.getLocalGridFtpServer() +
+            jobOutputDir });
 
         logger.info("Submitting job with name " + job.getName() + " to " +
                 job.getSite());
@@ -98,15 +115,14 @@ public class GridSubmitFormController extends SimpleFormController {
         } else {
             logger.info("Resulting EPR: "+submitEPR);
 
-            String[] eprs = new String[] { submitEPR };
-            String[] status = gridAccess.retrieveJobStatus(eprs);
+            String status = gridAccess.retrieveJobStatus(submitEPR);
             UserJob userJob = new UserJob("testUser", job.getName(),
-                    submitEPR, new Date().toString(), status[0]);
+                    jobOutputDir, submitEPR, status, new Date().toString());
             userJobManager.saveUserJob(userJob);
             logger.info("Returning to " + getSuccessView());
         }
 
-        return super.onSubmit(request, response, command, errors);
+        return new ModelAndView(new RedirectView(getSuccessView(), true, false, false));
     }
 
     protected Object formBackingObject(HttpServletRequest request)
@@ -116,7 +132,7 @@ public class GridSubmitFormController extends SimpleFormController {
         final String email = "";
         final String code = CODE_NAME;
         final String jobType = "mpi";
-        final String maxWallTime = "5";
+        final String maxWallTime = "2";
         final String maxMemory = "1024";
         final String cpuCount = "2";
         final String stdInput = "";
@@ -124,9 +140,7 @@ public class GridSubmitFormController extends SimpleFormController {
         final String stdError = "stdError.txt";
         String[] arguments = { "script.py" };
         String[] inTransfers;
-        final String[] outTransfers = { gridAccess.getLocalGridFtpServer() +
-            gridAccess.getLocalGridFtpStageOutDir()
-        };
+        final String[] outTransfers = new String[0];
         final String version =
             gridAccess.retrieveCodeVersionsAtSite(site, code)[0];
         final String queue = gridAccess.retrieveQueueNamesAtSite(site)[0];
@@ -135,18 +149,20 @@ public class GridSubmitFormController extends SimpleFormController {
         // This directory will always be the first stageIn directive.
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
         String dateFmt = sdf.format(new Date());
-        String jobTempDir = gridAccess.getLocalGridFtpStageInDir() +
-            "testUser" + "-" + dateFmt + "/";
-        boolean success = (new File(jobTempDir)).mkdir();
+        String jobID = "testUser" + "-" + dateFmt + File.separator;
+        String jobInputDir = gridAccess.getLocalGridFtpStageInDir() + jobID;
+
+        boolean success = (new File(jobInputDir)).mkdir();
 
         if (!success) {
-            logger.error("Could not create directory "+jobTempDir);
-            jobTempDir = gridAccess.getLocalGridFtpStageInDir();
+            logger.error("Could not create directory "+jobInputDir);
+            jobInputDir = gridAccess.getLocalGridFtpStageInDir();
         }
 
-        inTransfers = new String[] { jobTempDir };
+        // The server part will be added before submission
+        inTransfers = new String[] { jobInputDir };
 
-        // Check if ScriptBuilder was used. If so, there is a file in the
+        // Check if the ScriptBuilder was used. If so, there is a file in the
         // system temp directory which needs to be staged in.
         String newScript = request.getParameter("newscript");
         if (newScript != null) {
@@ -155,7 +171,7 @@ public class GridSubmitFormController extends SimpleFormController {
             File scriptFile = new File(System.getProperty("java.io.tmpdir") +
                     File.separator+newScript+".py");
             success = scriptFile.renameTo(
-                    new File(jobTempDir, scriptFile.getName()));
+                    new File(jobInputDir, scriptFile.getName()));
 
             if (success) {
                 logger.info("Moved "+newScript+" to stageIn directory");

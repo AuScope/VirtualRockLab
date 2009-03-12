@@ -13,6 +13,7 @@ import org.globus.wsrf.utils.FaultHelper;
 import org.gridforum.jgss.ExtendedGSSManager;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
+import org.ietf.jgss.GSSManager;
 
 import org.auscope.gridtools.GramJobControl;
 import org.auscope.gridtools.GridJob;
@@ -139,63 +140,45 @@ public class GridAccessController {
         return jobSubmitEPR;
     }
  
-    public GridJob getJobByReference(String jobStr) {
+    public GridJob getJobByReference(String reference) {
         GramJobControl ggj = new GramJobControl();
-        return ggj.getJobByReference(jobStr);
+        return ggj.getJobByReference(reference);
     }
 
     /**
-     * Kill one or more jobs.
+     * Kill a grid job.
      * 
-     * @param jobStr The array of jobs to kill
+     * @param reference The reference of the job to kill
      * 
-     * @return The condition of each of the jobs (a
-     * <code>StateEnumeration</code> String)
+     * @return The status of the job (a <code>StateEnumeration</code> String)
      */
-    public String[] killJob(String[] jobStr) {
-        String condition[] = new String[jobStr.length];
+    public String killJob(String reference) {
         GramJobControl ggj = new GramJobControl();
-
-        for (int i = 0; i < jobStr.length; i++) {
-            condition[i] = ggj.killJob(jobStr[i]);
-        }
-        return condition;
+        return ggj.killJob(reference);
     }
  
     /**
-     * Check the status of one or more jobs.
+     * Check the status of a job.
      * 
-     * @param jobStrings The array of jobs to check the status of
+     * @param reference The reference of the job to check the status of
      * 
-     * @return The status of each of the jobs (a <code>StateEnumeration</code>
-     * String)
+     * @return The status of the job (a <code>StateEnumeration</code> String)
      */
-    public String[] retrieveJobStatus(String[] jobStrings) {
-        String status[] = new String[jobStrings.length];
+    public String retrieveJobStatus(String reference) {
         GramJobControl ggj = new GramJobControl();
-
-        for (int i = 0; i < jobStrings.length; i++) {
-            status[i] = ggj.getJobStatus(jobStrings[i]);
-        }
-        return status;
+        return ggj.getJobStatus(reference);
     }
 
     /**
-     * Get the results from one or more jobs.
+     * Get the results from a job.
      * 
-     * @param jobStr The array of jobs to get results from
+     * @param reference The reference of the job to get results from
      * 
-     * @return An array containing the results of each job
+     * @return The results of the job
      */
-    public String[] retrieveJobResults(String[] jobStr) {
-
-        String results[] = new String[jobStr.length];
+    public String retrieveJobResults(String reference) {
         GramJobControl ggj = new GramJobControl();
-
-        for (int i = 0; i < jobStr.length; i++) {
-            results[i] = ggj.getJobResults(jobStr[i]);
-        }
-        return results;
+        return ggj.getJobResults(reference);
     }
 
     /**
@@ -377,24 +360,23 @@ public class GridAccessController {
     public static boolean validProxy()
     {
         boolean retval = false;
-        try
-        {
-            ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
-            GSSCredential cred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
+        try {
+            GSSManager manager = ExtendedGSSManager.getInstance();
+            GSSCredential cred = manager.createCredential(
+                    GSSCredential.INITIATE_AND_ACCEPT);
+
             // Lifetime check - in seconds - 5 mins.
-            if (cred.getRemainingLifetime() > (5*60))
-            {
+            if (cred.getRemainingLifetime() > (5*60)) {
                 logger.info("Valid proxy found: " +
                         cred.getRemainingLifetime()/60 + "min, " +
                         cred.getRemainingLifetime()%60 + "sec");
                 retval = true;
             } else {
-                logger.info("Proxy lifetime too short: should have at least 5 mins, time left in mins");
-                logger.info(cred.getRemainingLifetime()/60 + "min, "
-                        + cred.getRemainingLifetime()%60 + "sec");
+                logger.info("Proxy lifetime too short: " +
+                    cred.getRemainingLifetime()/60 + "min, " +
+                    cred.getRemainingLifetime()%60 + "sec");
             }
-        } catch (GSSException e)
-        {
+        } catch (GSSException e) {
             logger.error(FaultHelper.getMessage(e)); 
         }
         

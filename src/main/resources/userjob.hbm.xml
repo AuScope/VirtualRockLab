@@ -7,8 +7,9 @@
     </id>
     <property name="userId"/>
     <property name="name"/>
-    <property name="timeStamp"/>
+    <property name="outputDir"/>
     <property name="status"/>
+    <property name="timeStamp"/>
 
 </class>
 </hibernate-mapping>

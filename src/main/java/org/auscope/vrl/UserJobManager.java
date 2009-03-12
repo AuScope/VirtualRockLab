@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+
 public class UserJobManager {
     protected final Log logger = LogFactory.getLog(getClass());
 
@@ -12,6 +13,10 @@ public class UserJobManager {
 
     public List<UserJob> getUserJobs(String userId) {
         return userJobDao.getUserJobList(userId);
+    }
+
+    public UserJob getUserJobByRef(String userId, String reference) {
+        return userJobDao.getUserJobByRef(userId, reference);
     }
 
     public void saveUserJob(UserJob userJob) {

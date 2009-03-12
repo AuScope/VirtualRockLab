@@ -9,16 +9,18 @@ import java.io.Serializable;
  */
 public class UserJob implements Serializable
 {
-    /** The user ID */
-    private String   userId;
     /** The job name */
     private String   name;
+    /** Directory containing output files */
+    private String   outputDir;
     /** A unique job reference (e.g. EPR). */
     private String   reference;
-    /** The submission timestamp */
-    private String   timeStamp;
     /** The job status */
     private String   status;
+    /** The submission timestamp */
+    private String   timeStamp;
+    /** The user ID */
+    private String   userId;
     
 
     /**
@@ -26,9 +28,8 @@ public class UserJob implements Serializable
      * to prevent errors. The strings are initialized to the empty String, and 
      * the arrays are initialized to a length of zero. 
      */
-    public UserJob()
-    {
-        userId = name = reference = timeStamp = status = ""; 
+    public UserJob() {
+        name = outputDir = reference = status = timeStamp = userId = "";
     }
 
     /**
@@ -38,18 +39,20 @@ public class UserJob implements Serializable
      *
      * @param userId            The ID of the user who owns this job
      * @param name              The name of this job
+     * @param outputDir         The output directory for this job
      * @param reference         The reference for this job
-     * @param timeStamp         The submission timestamp of this job
      * @param status            The status of this job
+     * @param timeStamp         The submission timestamp of this job
      */
-    public UserJob(String userId, String name, String reference,
-            String timeStamp, String status)
+    public UserJob(String userId, String name, String outputDir,
+            String reference, String status, String timeStamp)
     {
         this.userId = userId;
         this.name = name;
+        this.outputDir = outputDir;
         this.reference = reference;
-        this.timeStamp = timeStamp;
         this.status = status;
+        this.timeStamp = timeStamp;
     }
 
     /**
@@ -92,6 +95,27 @@ public class UserJob implements Serializable
     {
         assert (name != null);
         this.name = name;
+    }
+
+    /**
+     * Returns the output directory of this job.
+     * 
+     * @return The output directory of this job.
+     */
+    public String getOutputDir()
+    {
+        return outputDir;
+    }
+
+    /**
+     * Sets the output directory of this job.
+     * 
+     * @param name The output directory of this job.
+     */
+    public void setOutputDir(String outputDir)
+    {
+        assert (outputDir != null);
+        this.outputDir = outputDir;
     }
 
     /**

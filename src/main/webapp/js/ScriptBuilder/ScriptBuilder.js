@@ -9,6 +9,11 @@ Ext.BLANK_IMAGE_URL = 'js/ext/resources/images/default/s.gif';
 
 Ext.namespace('ScriptBuilder');
 
+// default content of the component description panel
+ScriptBuilder.compDescText = '<p class="desc-info">Select a component to see its description, double-click to add it to the script.<br/><br/>Double-click the Simulation Container to change simulation settings.</p>';
+// content of the component description panel in text editor mode
+ScriptBuilder.compDescTextEditor = '<p class="desc-info">Select a component to see its description.<br/></p>';
+
 //
 // Extend the XmlTreeLoader to set some custom TreeNode attributes specific to
 // our application:
@@ -16,19 +21,14 @@ Ext.namespace('ScriptBuilder');
 ESySComponentLoader = Ext.extend(Ext.ux.XmlTreeLoader, {
     processAttributes : function(attr) {
         if (attr.name) { // category node
-            
             // Set the node text that will show in the tree
             attr.text = attr.name;
-            
-            // Choose icon using the type flag
-            //attr.iconCls = 'icon-' + attr.type;
-            
+
             // Override these values for our folder nodes because we are
             // loading all data at once. If we were loading each node
             // asynchronously (the default) we would not want to do this:
             attr.loaded = true;
         } else if (attr.title) { // component node
-            
             attr.text = attr.title;
             //attr.iconCls = 'book';
             attr.leaf = true;
@@ -66,7 +66,8 @@ ScriptBuilder.showDialog = function(compId, compTitle, existingNode) {
             text: 'OK',
             handler: function() {
                 if (!dlgContents.getForm().isValid()) {
-                    Ext.Msg.alert('Invalid Field(s)', 'Please provide values for all fields!');
+                    Ext.Msg.alert('Invalid Field(s)',
+                        'Please provide values for all fields!');
                     return;
                 }
                 if (!existingNode) {
@@ -87,6 +88,10 @@ ScriptBuilder.showDialog = function(compId, compTitle, existingNode) {
                     }
                 }
                 ScriptBuilder.updateSource();
+                if (compId == "SimContainer") {
+                    Ext.getCmp('scriptname').setRawValue(
+                            rootNode.getScriptName());
+                }
                 dlg.close();
             }
         }, {
@@ -105,6 +110,18 @@ ScriptBuilder.updateSource = function() {
     Ext.getCmp('sourcetext').setValue(s);
 }
 
+// changes the interface so script can be edited and component adding is
+// no longer possible
+ScriptBuilder.switchToTextEditor = function() {
+    Ext.getCmp('content-panel').remove('usedcomps-panel');
+    Ext.getCmp('content-panel').doLayout();
+    var descEl = Ext.getCmp('description-panel').body;
+    descEl.update(ScriptBuilder.compDescTextEditor).setStyle('background','#eee');
+    Ext.getCmp('edit-script-btn').disable();
+    Ext.getCmp('sourcetext').enable();
+    ScriptBuilder.textEditMode = true;
+}
+
 //
 // This is the main layout definition.
 //
@@ -113,12 +130,11 @@ ScriptBuilder.initialize = function() {
     Ext.QuickTips.init();
     
     // a template for the component description html area
-    var descTpl = new Ext.Template(
+    var compDescTpl = new Ext.Template(
         '<h2 class="title">{title}</h2>',
         '<p>{innerText}</p>'
     );
-    descTpl.compile();
-    var descText = '<p class="desc-info">Select a component to see its description, double-click to add it to the script.<br/><br/>Double-click the Simulation Container to change simulation settings.</p>';
+    compDescTpl.compile();
 
     // the tree that holds added components
     var usedCompsTree = new Ext.tree.TreePanel({
@@ -196,36 +212,66 @@ ScriptBuilder.initialize = function() {
         id: 'source-panel',
         layout: 'fit',
         title: 'Script Source',
-        url: 'scriptdownload.jsp',
+        url: 'scriptbuilder.html',
         standardSubmit: true,
         region:'center',
         buttonAlign: 'right',
         margins: '5 0 0 0',
         buttons: [{
+            text: 'Cancel',
+            handler: function() {
+                // confirm and go back to main page
+                Ext.Msg.confirm('Quit ScriptBuilder', 'Are you sure you want to quit?',
+                    function(btn) {
+                        if (btn=='yes') {
+                            window.location = "monitor.html";
+                        }
+                    }
+                );
+            }
+        }, {
+            id: 'edit-script-btn',
+            text: 'Edit Script',
+            handler: function() {
+                // confirm and go back to main page
+                Ext.Msg.confirm('Switch to Texteditor', 'After switching to text edit mode you can no longer use the GUI editor. Are you sure you want to switch?',
+                    function(btn) {
+                        if (btn=='yes') {
+                            ScriptBuilder.switchToTextEditor();
+                        }
+                    }
+                );
+            }
+        }, {
             text: 'Download Script',
             handler: function() {
                 // submit script source for download
                 Ext.getCmp('scriptaction').setRawValue('download');
-                var name = Ext.getCmp('usedcomps-panel').getRootNode().getScriptName();
-                Ext.getCmp('scriptname').setRawValue(name);
+                if (ScriptBuilder.textEditMode == false) {
+                    Ext.getCmp('sourcetext').enable();
+                }
                 Ext.getCmp('source-panel').getForm().submit();
+                if (ScriptBuilder.textEditMode == false) {
+                    Ext.getCmp('sourcetext').disable();
+                }
             }
         }, {
             text: 'Use Script',
             handler: function() {
                 // submit script source for use in grid submit
                 Ext.getCmp('scriptaction').setRawValue('use');
-                var name = Ext.getCmp('usedcomps-panel').getRootNode().getScriptName();
-                Ext.getCmp('scriptname').setRawValue(name);
-                Ext.getCmp('source-panel').getForm().submit({ url: 'scriptbuilder.html' });
+                if (ScriptBuilder.textEditMode == false) {
+                    Ext.getCmp('sourcetext').enable();
+                }
+                Ext.getCmp('source-panel').getForm().submit();
             }
         }],
         items: [{
             id: 'sourcetext',
             xtype: 'textarea',
+            disabled: true,
             width: '100%',
-            height: '100%',
-            readOnly: true
+            height: '100%'
         }, {
             id: 'scriptaction',
             xtype: 'hidden',
@@ -260,14 +306,18 @@ ScriptBuilder.initialize = function() {
             if (node.leaf) { // click on a component
                 var descEl = Ext.getCmp('description-panel').body;
                 descEl.update('').setStyle('background','#fff');
-                descTpl.overwrite(descEl, node.attributes);
+                compDescTpl.overwrite(descEl, node.attributes);
             } else { // click on a category
                 var descEl = Ext.getCmp('description-panel').body;
-                descEl.update(descText).setStyle('background','#eee');
+                if (ScriptBuilder.textEditMode == true) {
+                    descEl.update(ScriptBuilder.compDescTextEditor).setStyle('background','#eee');
+                } else {
+                    descEl.update(ScriptBuilder.compDescText).setStyle('background','#eee');
+                }
             }
         },
         'dblclick': function(node) {
-            if (node.leaf &&
+            if (ScriptBuilder.textEditMode == false && node.leaf &&
                 Ext.getCmp('usedcomps-panel').getRootNode().canAppend(node.attributes)) {
                 ScriptBuilder.showDialog(node.attributes.id, node.attributes.title);
             }
@@ -284,7 +334,7 @@ ScriptBuilder.initialize = function() {
         bodyStyle: 'padding-bottom:15px;background:#eee;',
         autoScroll: true,
         collapsible: true,
-        html: descText
+        html: ScriptBuilder.compDescText
     };
     
     // Finally, build the main layout once all the pieces are ready.
@@ -320,6 +370,8 @@ ScriptBuilder.initialize = function() {
     });
 
     ScriptBuilder.updateSource();
+
+    ScriptBuilder.textEditMode = false;
 
     // Show settings dialog for the new script
     ScriptBuilder.showDialog('SimContainer', 'New Script',

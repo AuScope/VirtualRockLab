@@ -1,13 +1,6 @@
 package org.auscope.gridtools;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.StringReader;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -15,9 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Date;
 
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
+
+import org.apache.axis.message.addressing.EndpointReferenceType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.axis.message.addressing.EndpointReferenceType;
 import org.globus.axis.util.Util;
 import org.globus.exec.client.GramJob;
 import org.globus.exec.client.GramJobListener;
@@ -28,31 +24,26 @@ import org.globus.exec.generated.StateEnumeration;
 import org.globus.exec.utils.ManagedJobFactoryConstants;
 import org.globus.exec.utils.client.ManagedJobFactoryClientHelper;
 import org.globus.exec.utils.rsl.RSLHelper;
-import org.gridforum.jgss.ExtendedGSSManager;
 import org.globus.wsrf.impl.security.authorization.HostAuthorization;
 import org.globus.wsrf.utils.FaultHelper;
+import org.gridforum.jgss.ExtendedGSSManager;
 import org.ietf.jgss.GSSCredential;
 import org.oasis.wsrf.faults.BaseFaultTypeDescription;
-
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathFactory;
-
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-import org.w3c.dom.*;
 
 
 /**
- * Following MVC pattern, this is one of the Models. In particular, this model
- * knows how to manage jobs using WS-GRAM. It implements the
+ * This class manages jobs using WS-GRAM. It implements the
  * <code>JobControlInterface</code>, and thus is able to submit, kill and get
- * the status and results of a job. Additionally, this Model creates the final
- * job script that will be submitted.
- * <p>
- * It also listens for changes to the state of a <code>GramJob</code>.
+ * the status and results of a job. Additionally, this class creates the final
+ * job script that can be submitted.
  * 
  * @author Ryan Fraser
  * @author Terry Rankine
  * @author Darren Kidd
+ * @author Cihan Altinay
  */
 public class GramJobControl implements JobControlInterface {
     /** Reference to the Controller's Log4J logger. */
@@ -92,7 +83,7 @@ public class GramJobControl implements JobControlInterface {
      * @return A string representing the XML job script
      */
     public String constructJobScript(GridJob job) {
-        final String DATE_FORMAT = "_yyyy-MM-dd'_'HH-mm-ss";
+        final String DATE_FORMAT = "-yyyyMMdd_HHmmss";
         // Create object of SimpleDateFormat and parse the desired date format
         SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
         // Write out the Job ID which includes the current (formatted) date
@@ -172,8 +163,8 @@ public class GramJobControl implements JobControlInterface {
             for (String xfer : job.getOutTransfers()) {
                 finalJobString += "  <transfer>   <sourceUrl>" +
                     SITE_GRID_FTP_SERVER + localOutputDir + "</sourceUrl>" +
-                    "   <destinationUrl>" + xfer + JOB_ID +
-                    "/</destinationUrl>  </transfer>";
+                    "   <destinationUrl>" + xfer + "/</destinationUrl>" +
+                    "  </transfer>";
             }
             finalJobString += " </fileStageOut>";
         }
@@ -410,8 +401,8 @@ public class GramJobControl implements JobControlInterface {
      * Returns the EPR of the job, unless an error occurred, in which case it
      * will happily return <code>null</code>.
      * 
+     * @param jobString The RSL of the job to be submitted
      * @param host      The host site this job is being sent to
-     * @param jobString The jobString to be submitted
      * 
      * @return The EPR to the job, or <code>null</code> if something went wrong
      */
@@ -536,13 +527,13 @@ public class GramJobControl implements JobControlInterface {
         try {
             GSSCredential userCred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
 
-            // Find the job, and make sure are authorized to kill it.
+            // Find the job, and make sure we are authorized to kill it.
             GramJob job = new GramJob();
             job.setHandle(reference);
             job.setCredentials(userCred);
 
             // Kill it.
-            job.destroy();
+            job.cancel();
 
             try {
                 // Figure out the status...
@@ -656,6 +647,7 @@ public class GramJobControl implements JobControlInterface {
      */
     private String getGlobusErrorDescription(Exception e) {
         if (e.getMessage() == null) {
+            e.printStackTrace();
             return FaultHelper.getMessage(e);
         } else if (e.getMessage().indexOf("Expired credentials detected") != -1) {
             StringBuffer myBuffer = new StringBuffer();
@@ -683,6 +675,7 @@ public class GramJobControl implements JobControlInterface {
                 return myBuffer.toString();
             }
         }
+        e.printStackTrace();
         return e.getMessage();
     }
 

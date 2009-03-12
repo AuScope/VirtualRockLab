@@ -127,9 +127,15 @@
 </head>
 
 <body onload="init()">
+    <h1>Submit a simulation job</h1>
+    <p><a href="<c:url value="monitor.html"/>"><fmt:message key="home"/></a></p>
+    <p><a href="<c:url value="scriptbuilder.html"/>"><fmt:message key="createscript"/></a></p>
+    <p><a href="<c:url value="gridsubmit.html"/>"><fmt:message key="submitjob"/></a></p>
+    <p><a href="<c:url value="query.html"/>"><fmt:message key="queryjobs"/></a></p>
+    <br>
+
     <form:form method="post" commandName="gridSubmit" name="jobForm" enctype="multipart/form-data">
         <form:hidden id="inTransfers" path="inTransfers"/>
-        <h1>Submit a simulation job</h1>
         <table width="100%" bgcolor="f8f8ff" border="0" cellspacing="0" cellpadding="5">
         <tr>
             <td align="right" width="25%">Job Name:</td>
@@ -182,7 +188,6 @@
         <input type="button" align="center" value="Submit" onClick="beforeSubmit()">
         <h3><form:errors cssClass="error"/></h3>
     </form:form>
-    <a href="<c:url value="index.html"/>">Home</a>
 </body>
 
 </html>

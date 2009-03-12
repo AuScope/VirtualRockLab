@@ -1,12 +1,12 @@
 package org.auscope.vrl;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.validation.Validator;
 import org.springframework.validation.Errors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.auscope.gridtools.GridJob;
+
 
 public class GridJobValidator implements Validator {
 

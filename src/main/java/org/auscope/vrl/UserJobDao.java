@@ -23,18 +23,29 @@ public class UserJobDao {
     public List<UserJob> getUserJobList(final String userId) {
         HibernateCallback callback = new HibernateCallback() {
             public Object doInHibernate(Session session) 
-                throws HibernateException,SQLException {
-                return session.createQuery("from UserJob").list();
+                throws HibernateException, SQLException {
+                return session.createQuery("FROM UserJob").list();
             }
         };
         return (List<UserJob>)hibernateTemplate.execute(callback);
     }
 
+    public UserJob getUserJobByRef(final String userId, final String reference) {
+        HibernateCallback callback = new HibernateCallback() {
+            public Object doInHibernate(Session session) 
+                throws HibernateException, SQLException {
+                return session.createQuery(
+                        "FROM UserJob WHERE reference='"+reference+"'") .
+                    uniqueResult();
+            }
+        };
+        return (UserJob)hibernateTemplate.execute(callback);
+    }
 
     public void saveUserJob(final UserJob userJob) {
         HibernateCallback callback = new HibernateCallback() {
             public Object doInHibernate(Session session)
-                throws HibernateException,SQLException {
+                throws HibernateException, SQLException {
                 session.saveOrUpdate(userJob);
                 return null;
             }
