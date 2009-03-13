@@ -15,6 +15,8 @@ public class UserJob implements Serializable
     private String   outputDir;
     /** A unique job reference (e.g. EPR). */
     private String   reference;
+    /** The script filename */
+    private String   scriptFile;
     /** The job status */
     private String   status;
     /** The submission timestamp */
@@ -29,7 +31,8 @@ public class UserJob implements Serializable
      * the arrays are initialized to a length of zero. 
      */
     public UserJob() {
-        name = outputDir = reference = status = timeStamp = userId = "";
+        name = outputDir = reference = scriptFile = status = timeStamp =
+            userId = "";
     }
 
     /**
@@ -41,16 +44,19 @@ public class UserJob implements Serializable
      * @param name              The name of this job
      * @param outputDir         The output directory for this job
      * @param reference         The reference for this job
+     * @param scriptFile        The input script filename
      * @param status            The status of this job
      * @param timeStamp         The submission timestamp of this job
      */
     public UserJob(String userId, String name, String outputDir,
-            String reference, String status, String timeStamp)
+            String reference, String scriptFile, String status,
+            String timeStamp)
     {
         this.userId = userId;
         this.name = name;
         this.outputDir = outputDir;
         this.reference = reference;
+        this.scriptFile = scriptFile;
         this.status = status;
         this.timeStamp = timeStamp;
     }
@@ -140,6 +146,27 @@ public class UserJob implements Serializable
     }
 
     /**
+     * Returns the script filename of this job.
+     * 
+     * @return The script filename of this job.
+     */
+    public String getScriptFile()
+    {
+        return scriptFile;
+    }
+
+    /**
+     * Sets the script filename of this job.
+     * 
+     * @param scriptFile The script filename.
+     */
+    public void setScriptFile(String scriptFile)
+    {
+        assert (scriptFile != null);
+        this.scriptFile = scriptFile;
+    }
+
+    /**
      * Returns the timestamp of this job.
      * 
      * @return The timestamp of this job.
@@ -191,8 +218,10 @@ public class UserJob implements Serializable
     public String toString()
     {
         return "userId=\"" + userId +
-               ",name=\"" + name +
-               ",reference=\"" + reference +
+               "\",name=\"" + name +
+               "\",outputDir=\"" + outputDir +
+               "\",reference=\"" + reference +
+               "\",scriptFile=\"" + scriptFile +
                "\",timeStamp=\"" + timeStamp +
                "\",status=\"" + status + "\"";
     }

@@ -1,14 +1,20 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <%@ include file="/WEB-INF/jsp/include.jsp" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 
 <html>
-<head>
-  <title><fmt:message key="title"/></title>
-  <style>
-    .error { color: red; }
-  </style>
 
-  <script language="javascript">
+<head>
+    <title><fmt:message key="title"/></title>
+    <link rel="stylesheet" type="text/css" href="css/virtualrocklab.css">
+    <style type="text/css">
+      #sitenav-03 a {
+        background: url( "/img/navigation.gif" ) -200px -38px no-repeat;
+      }
+      .error { color: red; }
+    </style>
+
+    <script language="javascript">
       var allVersions;
       var inTransfers;
       var numUploads=0;
@@ -88,6 +94,11 @@
       }
 
       updateTransfers = function() {
+          // skip first element (keep local stageIn)
+          for (var i=1; i<inTransfers.length; i++) {
+              if (document.getElementById("xfer"+i))
+                  inTransfers[i] = document.getElementById("xfer"+i).value;
+          }
           xferDiv = document.getElementById("transfersDiv");
           subDiv = document.createElement("div");
           xferDiv.replaceChild(subDiv, xferDiv.childNodes[0]);
@@ -123,15 +134,14 @@
           formXfers.value = inTransfers;
           document.jobForm.submit();
       }
-  </script>
+    </script>
 </head>
 
 <body onload="init()">
+    <%@ include file="page_header.jsp" %>
+    <div id="body"></div>
+
     <h1>Submit a simulation job</h1>
-    <p><a href="<c:url value="monitor.html"/>"><fmt:message key="home"/></a></p>
-    <p><a href="<c:url value="scriptbuilder.html"/>"><fmt:message key="createscript"/></a></p>
-    <p><a href="<c:url value="gridsubmit.html"/>"><fmt:message key="submitjob"/></a></p>
-    <p><a href="<c:url value="query.html"/>"><fmt:message key="queryjobs"/></a></p>
     <br>
 
     <form:form method="post" commandName="gridSubmit" name="jobForm" enctype="multipart/form-data">
@@ -160,6 +170,11 @@
                 </form:select>
             </td>
             <td width="50%"><form:errors path="version" cssClass="error"/></td>
+        </tr>
+        <tr>
+            <td align="right" width="25%">Number of MPI processes:</td>
+            <td width="25%"><form:input path="cpuCount"/></td>
+            <td width="50%"><form:errors path="cpuCount" cssClass="error"/></td>
         </tr>
         <tr>
             <td align="right">Files to Stage In:</td>

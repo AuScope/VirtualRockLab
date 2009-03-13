@@ -344,14 +344,14 @@ ScriptBuilder.initialize = function() {
         items: [{
             xtype: 'box',
             region: 'north',
-            applyTo: 'header',
-            height: 30
+            applyTo: 'body',
+            height: 100
         },{
             id: 'component-browser',
             region:'west',
             border: false,
             split:true,
-            margins: '2 0 5 5',
+            margins: '2 0 2 2',
             width: 250,
             minSize: 150,
             maxSize: 500,
@@ -360,7 +360,7 @@ ScriptBuilder.initialize = function() {
             id: 'content-panel',
             title: 'Current Script',
             region: 'center',
-            margins: '2 5 5 0',
+            margins: '2 2 2 0',
             defaults: {
                 collapsible: false,
                 split: true

@@ -7,7 +7,12 @@ import org.springframework.web.servlet.mvc.SimpleFormController;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.Exception;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -117,12 +122,35 @@ public class GridSubmitFormController extends SimpleFormController {
 
             String status = gridAccess.retrieveJobStatus(submitEPR);
             UserJob userJob = new UserJob("testUser", job.getName(),
-                    jobOutputDir, submitEPR, status, new Date().toString());
+                    jobOutputDir, submitEPR, job.getArguments()[0], status, new Date().toString());
             userJobManager.saveUserJob(userJob);
             logger.info("Returning to " + getSuccessView());
         }
 
         return new ModelAndView(new RedirectView(getSuccessView(), true, false, false));
+    }
+
+    private boolean moveFile(File source, File destination) {
+        boolean success = false;
+        logger.info(source.getPath()+" -> "+destination.getPath());
+        try {
+            BufferedReader input = new BufferedReader(
+                    new FileReader(source));
+            BufferedWriter output = new BufferedWriter(
+                    new FileWriter(destination));
+            String line = null;
+            while ((line = input.readLine()) != null) {
+                output.write(line);
+                output.newLine();
+            }
+            input.close();
+            output.close();
+            source.delete();
+            success = true;
+        } catch (IOException e) {
+            logger.warn("Could not move file: "+e.getMessage());
+        }
+        return success;
     }
 
     protected Object formBackingObject(HttpServletRequest request)
@@ -134,10 +162,10 @@ public class GridSubmitFormController extends SimpleFormController {
         final String jobType = "mpi";
         final String maxWallTime = "2";
         final String maxMemory = "1024";
-        final String cpuCount = "2";
         final String stdInput = "";
         final String stdOutput = "stdOutput.txt";
         final String stdError = "stdError.txt";
+        String cpuCount = "2";
         String[] arguments = { "script.py" };
         String[] inTransfers;
         final String[] outTransfers = new String[0];
@@ -167,17 +195,52 @@ public class GridSubmitFormController extends SimpleFormController {
         String newScript = request.getParameter("newscript");
         if (newScript != null) {
             logger.info("Adding "+newScript+" to stageIn directory");
-
-            File scriptFile = new File(System.getProperty("java.io.tmpdir") +
+            File tmpScriptFile = new File(System.getProperty("java.io.tmpdir") +
                     File.separator+newScript+".py");
-            success = scriptFile.renameTo(
-                    new File(jobInputDir, scriptFile.getName()));
-
+            File newScriptFile = new File(jobInputDir, tmpScriptFile.getName());
+            success = moveFile(tmpScriptFile, newScriptFile);
             if (success) {
                 logger.info("Moved "+newScript+" to stageIn directory");
                 arguments[0] = newScript+".py";
+
+                // Now look for a string like
+                // sim = LsmMpi( numWorkerProcesses = 2, ...)
+                // to extract the number of CPUs
+                try {
+                    BufferedReader input = new BufferedReader(
+                            new FileReader(newScriptFile));
+                    String line = null;
+                    while ((line = input.readLine()) != null) {
+                        int sidx;
+                        if ((sidx = line.indexOf("numWorkerProcesses")) != -1) {
+                            sidx = line.indexOf('=', sidx);
+                            if (sidx == -1) {
+                                break;
+                            }
+                            sidx++;
+                            int eidx = line.indexOf(',', sidx);
+                            if (eidx == -1) {
+                                break;
+                            }
+                            try {
+                                int iCount = Integer.parseInt(line.substring(
+                                            sidx, eidx).trim());
+                                cpuCount = String.valueOf(iCount+1);
+                                logger.info("Number of CPUs from script: "+cpuCount);
+                            } catch (NumberFormatException e) {
+                                logger.warn("Error parsing number of CPUs.");
+                            }
+
+                            break;
+                        }
+                    }
+                    input.close();
+                } catch (IOException e) {
+                    logger.warn("Could not open script file to extract number of CPUs: "+e.getMessage());
+                }
+
             } else {
-                logger.error("Could not move "+newScript+" to stageIn!");
+                logger.warn("Could not move "+newScript+" to stageIn!");
             }
         }
 
