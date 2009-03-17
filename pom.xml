@@ -104,13 +104,16 @@
          <artifactId>hibernate</artifactId>
          <version>3.2.6.ga</version>
       </dependency>
-      <!--
       <dependency>
-         <groupId>org.apache.axis.message</groupId>
-         <artifactId>addressing</artifactId>
-         <version>1.0</version>
+         <groupId>commons-collections</groupId>
+         <artifactId>commons-collections</artifactId>
+         <version>3.2.1</version>
       </dependency>
-     -->
+      <dependency>
+         <groupId>net.sf.json-lib</groupId>
+         <artifactId>json-lib-ext-spring</artifactId>
+         <version>1.0.2</version>
+      </dependency>
       <dependency>
          <groupId>org.globus</groupId>
          <artifactId>wsgram-api</artifactId>

@@ -51,8 +51,9 @@ public class JobMonitorController extends MultiActionController {
             HttpServletRequest request,
             HttpServletResponse response) throws Exception {
 
+        logger.info("No/invalid action parameter; returning default view");
         // Return default view
-        return invokeNamedMethod("showJobs", request, response);
+        return new ModelAndView("monitor");
     }
 
     public ModelAndView killJob(HttpServletRequest request,
@@ -60,56 +61,60 @@ public class JobMonitorController extends MultiActionController {
 
         String jobRef = request.getParameter("ref");
         logger.info("Cancelling job "+jobRef);
-
         UserJob job = userJobManager.getUserJobByRef("testUser", jobRef);
+        Map<String, Object> myModel = new HashMap<String, Object>();
+
         if (job == null) {
-            logger.error("Requested job not in job manager! Not cancelling.");
+            String errorString = new String("Requested job not in job manager! Not cancelling.");
+            logger.error(errorString);
+            myModel.put("error", errorString);
 
         } else {
             String newState = gridAccess.killJob(jobRef);
             if (newState == null)
-                newState = "Failed";
+                newState = "Unknown";
             logger.info("New job state: "+newState);
 
             job.setStatus(newState);
             userJobManager.saveUserJob(job);
+            myModel.put("success", true);
         }
 
-        return showJobs(request, response);
+        return new ModelAndView("jsonView", "model", myModel);
     }
 
-    public ModelAndView jobDetails(HttpServletRequest request,
-                                   HttpServletResponse response) {
+    public ModelAndView jobFiles(HttpServletRequest request,
+                                 HttpServletResponse response) {
 
         String jobRef = request.getParameter("ref");
-        logger.info("Getting details of job "+jobRef);
-
+        logger.info("Getting file list for job "+jobRef);
         UserJob job = userJobManager.getUserJobByRef("testUser", jobRef);
+        Map<String, Object> myModel = new HashMap<String, Object>();
+
         if (job == null) {
-            logger.error("Requested job not in job manager!");
+            String errorString = new String("Requested job not in job manager!");
+            logger.error(errorString);
+            myModel.put("error", errorString);
 
         } else {
-            Map<String, Object> myModel = new HashMap<String, Object>();
-            myModel.put("ref", jobRef);
+            FileInfo[] fileDetails = null;
 
             File dir = new File(job.getOutputDir());
             File[] files = dir.listFiles();
             if (files != null) {
                 Arrays.sort(files);
 
-                FileInfo[] fileDetails = new FileInfo[files.length];
+                fileDetails = new FileInfo[files.length];
                 for (int i=0; i<files.length; i++) {
                     fileDetails[i] = new FileInfo(files[i].getName(), files[i].length());
                 }
-
-                myModel.put("files", fileDetails);
             }
 
-            logger.info("Returning user job details view");
-            return new ModelAndView("jobdetails", "model", myModel);
+            myModel.put("ref", jobRef);
+            myModel.put("files", fileDetails);
         }
 
-        return showJobs(request, response);
+        return new ModelAndView("jsonView", "model", myModel);
     }
 
     public ModelAndView downloadFile(HttpServletRequest request,
@@ -130,7 +135,6 @@ public class JobMonitorController extends MultiActionController {
                 logger.error("File "+f.getPath()+" not readable!");
             } else {
                 response.setContentType("application/octet-stream");
-                //response.setContentLength((int)f.length());
                 response.setHeader("Content-Disposition",
                         "attachment; filename=\""+fileName+"\"");
 
@@ -146,15 +150,13 @@ public class JobMonitorController extends MultiActionController {
                 } catch (IOException e) {
                     logger.error("Could not send file: "+e.getMessage());
                 }
-
-                return null;
             }
         }
 
-        return showJobs(request, response);
+        return null;
     }
 
-    public ModelAndView showJobs(HttpServletRequest request,
+    public ModelAndView listJobs(HttpServletRequest request,
                                  HttpServletResponse response) {
 
         //TODO: Check credentials before doing anything -> redirect to login
@@ -162,8 +164,9 @@ public class JobMonitorController extends MultiActionController {
         //if (!gridAccess.validProxy()) {}
 
         logger.info("Updating status of user jobs");
-
         List<UserJob> userJobs = userJobManager.getUserJobs("testUser");
+        Map<String, Object> myModel = new HashMap<String, Object>();
+
         for (UserJob j : userJobs) {
             String state = j.getStatus();
             if (!state.equals("Done") && !state.equals("Failed")) {
@@ -176,14 +179,10 @@ public class JobMonitorController extends MultiActionController {
             //gridAccess.getJobByReference(j.getReference());
         }
 
-        Map<String, Object> myModel = new HashMap<String, Object>();
+        myModel.put("jobs", userJobs);
 
-        if (!userJobs.isEmpty()) {
-            myModel.put("jobs", userJobs);
-        }
-
-        logger.info("Returning user job view");
-        return new ModelAndView("monitor", "model", myModel);
+        logger.info("Returning user jobs");
+        return new ModelAndView("jsonView", "model", myModel);
     }
 
     public void setGridAccess(GridAccessController gridAccess) {
