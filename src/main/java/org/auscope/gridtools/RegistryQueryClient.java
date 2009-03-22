@@ -65,8 +65,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
     private static Log logger = 
         LogFactory.getLog(RegistryQueryClient.class.getName());
 
-    static 
-    {
+    static {
         Util.registerTransport(); // For secure transport
     }
 
@@ -76,8 +75,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * 
      * <b>TODO: Make sure MDS server is alive or fail!</b>
      */
-    public RegistryQueryClient()
-    {
+    public RegistryQueryClient() {
         //TODO: Test that the MDS server is alive.
     }
 
@@ -88,8 +86,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * Checks to see if the MDS cache file exists, and then checks its age.
      * If it is too old, or doesn't exist, it is recreated.
      */
-    private void checkCache()
-    {
+    private void checkCache() {
         Date currentTime = new Date(); // Get the current date and time.
 
         File mdsCache = new File(MDS_CACHE_FILE);
@@ -201,10 +198,9 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * 
      * @param query The XPath query to run
      * @return A <code>NodeList</code> containing the nodes/elements selected
-     *         by the query
+     *         by the query or null on error.
      */
-    private NodeList turboMDSquery(String query)
-    {
+    private NodeList turboMDSquery(String query) {
         checkCache();
 
         NodeList myNodeList = null;
@@ -231,8 +227,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param xPathqueryString The XPath query to run
      * @return A String containing the result of the query
      */
-    private String masterQueryMDS(String url, String xPathQuery)
-    {
+    private String masterQueryMDS(String url, String xPathQuery) {
         String returnStr = "";
  
         try {
@@ -282,29 +277,26 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * 
      * @return Array of site names
      */
-    public String[] getAllSitesOnGrid()
-    {
-    
-        String[] hosts;
+    public String[] getAllSitesOnGrid() {
+        String[] hosts = new String[0];
         String xpathQuery = "//*[local-name()='Site']";
         // OldQuery: "/child::node()[local-name()='Name']"
     
         // Query MDS file.
         NodeList hostLists = turboMDSquery(xpathQuery);
     
-        Element siteEl;
+        if (hostLists != null) {
+            // Keep sites Unique using TreeSet
+            TreeSet<String> myTreeSet = new TreeSet<String>();
         
-        // Keep sites Unique using TreeSet.
-        TreeSet<String> myTreeSet = new TreeSet<String>();
-    
-        for (int i = 0; i < hostLists.getLength(); i++)
-        {
-            siteEl = (Element) hostLists.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+            for (int i = 0; i < hostLists.getLength(); i++) {
+                Element siteEl = (Element) hostLists.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
+        
+            // Shove it into a String[] array
+            hosts = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-    
-        // Shove it into a String[] array.
-        hosts = myTreeSet.toArray(new String[myTreeSet.size()]);
     
         return hosts;
     }
@@ -314,28 +306,25 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * 
      * @return String[] Names of all the codes available
      */
-    public String[] getAllCodesOnGrid()
-    {
-
+    public String[] getAllCodesOnGrid() {
+        String names[] = new String[0];
         String xpathQuery = "//*[local-name()='SoftwarePackage']";
 
         // Query MDS file.
         NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
 
-        Element siteEl;
-        String names[];
+        if (codeAvailNodeList != null) {
+            // Keep codes unique using TreeSet
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        // Keep codes unique using TreeSet.
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
+                Element siteEl = (Element) codeAvailNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
 
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++)
-        {
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+            // Shove in array
+            names = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-
-        // Shove in array.
-        names = myTreeSet.toArray(new String[myTreeSet.size()]);
 
         return names;
     }
@@ -346,30 +335,28 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param site Name of the site 
      * @return An array of available queues
      */
-    public String[] getQueueNamesAtSite(String site) 
-    {
-        String[] queueNames = null;
-
+    public String[] getQueueNamesAtSite(String site) {
+        String[] queueNames = new String[0];
         String xpathQuery = "//*[local-name()='Site']" +
                 "/child::node()[local-name()='Name'][text()='" + site + "']" +
                 "/ancestor::node()[local-name()='Site']" +
                 "/descendant::node()[local-name()='ComputingElement']";
 
         // Query MDS file.
-        Element siteEl;
         NodeList queuesNodeList = turboMDSquery(xpathQuery);
 
-        // Keep unique using TreeSet.
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+        if (queuesNodeList != null) {
+            // Keep unique using TreeSet
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        for (int i = 0; i < queuesNodeList.getLength(); i++)
-        {
-            siteEl = (Element) queuesNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+            for (int i = 0; i < queuesNodeList.getLength(); i++) {
+                Element siteEl = (Element) queuesNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
+
+            // Shove in array
+            queueNames = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-
-        // Shove in array.
-        queueNames = myTreeSet.toArray(new String[myTreeSet.size()]);
 
         return queueNames;
     }
@@ -379,9 +366,8 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * 
      * @return Array of hostnames of the GridFTP servers.
      */
-    public String[] getAllGridFTPServersOnGrid()
-    {
-        String[] serverNames;
+    public String[] getAllGridFTPServersOnGrid() {
+        String[] serverNames = new String[0];
 
         String xpathQuery = 
             "//*[local-name()='Site']" +
@@ -391,20 +377,20 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
             "[text()='gsiftp']/parent::node()";
 
         // Query MDS file.
-        Element siteEl;
         NodeList ftpServersList = turboMDSquery(xpathQuery);
 
-        // Keep unique using TreeSet.
-        TreeSet<String> myTreeSet = new TreeSet<String>();
-        
-        for (int i = 0; i < ftpServersList.getLength(); i++)
-        {
-            siteEl = (Element) ftpServersList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Endpoint"));
-        }
+        if (ftpServersList != null) {
+            // Keep unique using TreeSet
+            TreeSet<String> myTreeSet = new TreeSet<String>();
+            
+            for (int i = 0; i < ftpServersList.getLength(); i++) {
+                Element siteEl = (Element) ftpServersList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Endpoint"));
+            }
 
-        // Shove in array.
-        serverNames = myTreeSet.toArray(new String[myTreeSet.size()]);
+            // Shove in array
+            serverNames = myTreeSet.toArray(new String[myTreeSet.size()]);
+        }
         
         return serverNames;
     }
@@ -415,8 +401,8 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param site The name of the site
      * @return An array of the available clusters.
      */
-    public String[] getClusterNamesAtSite(String site)
-    {
+    public String[] getClusterNamesAtSite(String site) {
+        String clusters[] = new String[0];
         String xpathQuery = 
             "//*[local-name()='Site']/child::node()[local-name()='Name']"
                 + "[translate(text(),'abcdefghijklmnopqrstuvwxyz',"
@@ -427,20 +413,18 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + "/parent::node()/descendant::node()[local-name()='Cluster']";
 
         // Query MDS file.
-        Element siteEl;
         NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
 
-        String clusters[];
+        if (codeAvailNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
+                Element siteEl = (Element) codeAvailNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
 
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++)
-        {
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+            clusters = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-
-        clusters = myTreeSet.toArray(new String[myTreeSet.size()]);
 
         return clusters;
     }
@@ -452,30 +436,28 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * 
      * @return An array of all the versions available
      */
-    public String[] getAllVersionsOfCodeOnGrid(String code)
-    {
+    public String[] getAllVersionsOfCodeOnGrid(String code) {
+        String versions[] = new String[0];
         String xpathQuery = "//*[local-name()='SoftwarePackage']"
                 + "/ancestor::node()[local-name()='Site']"
                 + "/descendant::node()[local-name()='SoftwarePackage']"
                 + "/child::node()[contains(name(),Name)][text()='"
                 + code + "']" + "/parent::node()";
 
-        // Query MDS file.
-        Element siteEl;
+        // Query MDS file
         NodeList verAvailableList = turboMDSquery(xpathQuery);
 
-        String versions[];
+        if (verAvailableList != null) {
+            // Keep unique using TreeSet
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        // Keep unique using TreeSet
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < verAvailableList.getLength(); i++) {
+                Element siteEl = (Element) verAvailableList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Version"));
+            }
 
-        for (int i = 0; i < verAvailableList.getLength(); i++)
-        {
-            siteEl = (Element) verAvailableList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Version"));
+            versions = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-
-        versions = myTreeSet.toArray(new String[myTreeSet.size()]);
 
         return versions;
     }
@@ -486,14 +468,13 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param site The site to get the host address of
      * @return Address of the job manager
      */
-    public String getJobManagerAtSite(String site)
-    {
+    public String getJobManagerAtSite(String site) {
+        String hostAddress = "";
         String xpathQuery = "//*[local-name()='Site']" +
                 "/child::node()[local-name()='Name'][text()='"+site+"']" +
                 "/ancestor::node()[local-name()='Site']" +
                 "/descendant::node()[local-name()='ContactString']/text()";
         
-        String hostAddress = null;
 /*
         if (site.equalsIgnoreCase("ivec"))
             site = "https://ng2.ivec.org:8443";
@@ -516,18 +497,14 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
         
          
         NodeList contactStrNodeList = turboMDSquery(xpathQuery);
-        // create a String array to house the list of codes available
-        // module = new String[codeVersionNodeList.getLength()];
-        logger.info(contactStrNodeList.getLength());
 
-        // iterate through the document to get Code's Version
-        for (int i = 0; i < contactStrNodeList.getLength(); i++)
-        {
-            // get code's versions
-            hostAddress = contactStrNodeList.item(i).getNodeValue();
+        if (contactStrNodeList != null) {
+            logger.info(contactStrNodeList.getLength());
+
+            for (int i = 0; i < contactStrNodeList.getLength(); i++) {
+                hostAddress = contactStrNodeList.item(i).getNodeValue();
+            }
         }
-
-        logger.info(hostAddress);
         return hostAddress;
     }
     
@@ -537,28 +514,22 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param site The site to get the server of
      * @return The address of the gateway server
      */
-    public String getGatewayGridFTPServerAtSite(String site)
-    {
+    public String getGatewayGridFTPServerAtSite(String site) {
         String localGridFTPServer = "";
-    
         String xpathQuery = "//*[local-name()='Site']"
                 + "/child::node()[local-name()='Name'][text()='" + site
                 + "']" + "/ancestor::node()[local-name()='Site']";
-    
+
         // Parse the document
-        Element siteEl;
-        NodeList codeVersionNodeList = turboMDSquery(xpathQuery);
+        NodeList serverNodeList = turboMDSquery(xpathQuery);
     
         // iterate through the document to get Code's Version
-        for (int i = 0; i < codeVersionNodeList.getLength(); i++)
-        {
-            // get code's versions
-            siteEl = (Element) codeVersionNodeList.item(i);
+        for (int i = 0; i < serverNodeList.getLength(); i++) {
+            Element siteEl = (Element) serverNodeList.item(i);
             localGridFTPServer = getTextValue(siteEl, "Endpoint");
         }
-    
+
         return localGridFTPServer;
-    
     }
 
     /**
@@ -567,9 +538,8 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param site The name of the site
      * @return An array of codes available at the site
      */
-    public String[] getAllCodesAtSite(String site)
-    {
-
+    public String[] getAllCodesAtSite(String site) {
+        String[] siteCodesAvail = new String[0];
         // XPath query to get codes (SoftwarePackages) available at a given site
         String xpathQuery = "//*[local-name()='Site']/child::node()" +
                 "[contains(name(),Name)][text()='" + site + "']" +
@@ -577,25 +547,21 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 "/descendant::node()[local-name()='SoftwarePackage']"; 
         
         // Parse the document
-        Element siteEl;
         NodeList siteSWPackageNodeList = turboMDSquery(xpathQuery);
 
-        // Create a String array to house the list of codes available.
-        String[] siteCodesAvail;
+        if (siteSWPackageNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+            // Iterate through the document to get SoftwarePackage's Name.
+            for (int i = 0; i < siteSWPackageNodeList.getLength(); i++) {
+                // Get SoftwarePackage name.
+                Element siteEl = (Element) siteSWPackageNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
 
-        // Iterate through the document to get SoftwarePackage's Name.
-        for (int i = 0; i < siteSWPackageNodeList.getLength(); i++)
-        {
-            // Get SoftwarePackage name.
-            siteEl = (Element) siteSWPackageNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+            siteCodesAvail = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
 
-        siteCodesAvail = myTreeSet.toArray(new String[myTreeSet.size()]);
-
-        // Return list of all the unique codes at a site.
         return siteCodesAvail;
     }
     
@@ -606,8 +572,8 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param cluster The cluster at the site to query
      * @return An array of the available compute elements
      */
-    public String[] getComputeElementsOfClusterAtSite(String site, String cluster)
-    {
+    public String[] getComputeElementsOfClusterAtSite(String site, String cluster) {
+        String names[] = new String[0];
         String xpathQuery = "//*[local-name()='Site']/child::node()[local-name()='Name']"
                 + "[translate(text(),'abcdefghijklmnopqrstuvwxyz',"
                 + "'ABCDEFGHIJKLMNOPQRSTUVWXYZ')=translate('"
@@ -624,21 +590,19 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + "/descendant::node()[local-name()='ComputingElement']";
     
         // Parse the document
-        Element siteEl;
-        NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
+        NodeList computeElsNodeList = turboMDSquery(xpathQuery);
     
-        String names[];
-    
-        TreeSet<String> myTreeSet = new TreeSet<String>();
-    
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
-            // get code's versions
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+        if (computeElsNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
+
+            for (int i = 0; i < computeElsNodeList.getLength(); i++) {
+                Element siteEl = (Element) computeElsNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
+        
+            names = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-    
-        names = myTreeSet.toArray(new String[myTreeSet.size()]);
-    
+
         return names;
     }
 
@@ -662,10 +626,8 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param version The version of the code
      * @return The name of the required module
      */
-    public String getModuleNameOfCodeAtSite(String site, String code, String version)
-    {
-        String module = null;
-    
+    public String getModuleNameOfCodeAtSite(String site, String code, String version) {
+        String module = "";
         String xpathQuery = "//*[local-name()='Site']"
                 + "/child::node()[local-name()='Name']" + "[text()='" + site
                 + "']" + "/ancestor::node()[local-name()='Site']"
@@ -676,14 +638,13 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + version + "']" + "/parent::node()";
     
         // Parse the document
-        Element siteEl;
-        NodeList softwarePackageNodeList = turboMDSquery(xpathQuery);
+        NodeList swPackageNodeList = turboMDSquery(xpathQuery);
     
-        // iterate through the document to get Code's Version
-        for (int i = 0; i < softwarePackageNodeList.getLength(); i++) {
-            // get code's versions
-            siteEl = (Element) softwarePackageNodeList.item(i);
-            module = getTextValue(siteEl, "Module");
+        if (swPackageNodeList != null) {
+            for (int i = 0; i < swPackageNodeList.getLength(); i++) {
+                Element siteEl = (Element) swPackageNodeList.item(i);
+                module = getTextValue(siteEl, "Module");
+            }
         }
         return module;
     }
@@ -697,8 +658,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param version The version of the code
      * @return The type of job this code supports
      */
-    public String getJobTypeOfCodeAtSite(String site, String code, String version)
-    {
+    public String getJobTypeOfCodeAtSite(String site, String code, String version) {
         String jobType = "single"; // mpi, etc
         // TODO: Need to define a query here for parallel, single and mpi usage
         return jobType;
@@ -712,10 +672,8 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param version The version of the code
      * @return The executable name of the code
      */
-    public String getExeNameOfCodeAtSite(String site, String code, String version)
-    {
+    public String getExeNameOfCodeAtSite(String site, String code, String version) {
         String exeName = "";
-    
         String xpathQuery = "//*[local-name()='Site']/child::node()"
                 + "[local-name()='Name'][text()='"
                 + site
@@ -732,22 +690,17 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + "/parent::node()/child::node()[local-name()='SoftwareExecutable']";
     
         // Parse the document
-        Element siteEl;
-        NodeList codeVersionNodeList = turboMDSquery(xpathQuery);
-    
-        // create a String array to house the list of codes available
-        // module = new String[codeVersionNodeList.getLength()];
-        // logger.info(codeVersionNodeList.getLength());
-    
-        // iterate through the document to get Code's Version
-        for (int i = 0; i < codeVersionNodeList.getLength(); i++) {
-            // get code's versions
-            siteEl = (Element) codeVersionNodeList.item(i);
-            // temp change for JCU
-             exeName = getTextValue(siteEl, "Name");
-            //exeName = getTextValue(siteEl, "Path");
+        NodeList namesNodeList = turboMDSquery(xpathQuery);
+
+        if (namesNodeList != null) {
+            for (int i = 0; i < namesNodeList.getLength(); i++) {
+                Element siteEl = (Element) namesNodeList.item(i);
+                // temp change for JCU
+                 exeName = getTextValue(siteEl, "Name");
+                //exeName = getTextValue(siteEl, "Path");
+            }
         }
-    
+ 
         return exeName;
     }
 
@@ -758,8 +711,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param site The site to check
      * @return The <code>file:///</code> String
      */
-    public String getClusterGridFTPServerAtSite(String site)
-    {
+    public String getClusterGridFTPServerAtSite(String site) {
         return "file:///";
     }
 
@@ -771,8 +723,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @return An array of versions of this code
      */
     public String[] getVersionsOfCodeAtSite(String site, String code) {
-        String[] version;
-
+        String[] version = new String[0];
         String xpathQuery = "//*[local-name()='Site']"
                 + "/child::node()[local-name()='Name'][text()='" + site + "']"
                 + "/ancestor::node()[local-name()='Site']"
@@ -781,17 +732,17 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + "']/parent::node()";
 
         // Parse the document
-        Element siteEl;
         NodeList codeVersionNodeList = turboMDSquery(xpathQuery);
 
-        TreeSet<String> myTreeSet = new TreeSet<String>();
-        for (int i = 0; i < codeVersionNodeList.getLength(); i++) {
-            siteEl = (Element) codeVersionNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Version"));
-            // debug
-        }
+        if (codeVersionNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < codeVersionNodeList.getLength(); i++) {
+                Element siteEl = (Element) codeVersionNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Version"));
+            }
 
-        version = myTreeSet.toArray(new String[myTreeSet.size()]);
+            version = myTreeSet.toArray(new String[myTreeSet.size()]);
+        }
         return version;
     }
 
@@ -802,8 +753,8 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param version The particular version required
      * @return An array of sites with this exact code
      */
-    public String[] getAllSitesWithAVersionOfACode(String code, String version)
-    {
+    public String[] getAllSitesWithAVersionOfACode(String code, String version) {
+        String names[] = new String[0];
         String versionString = "";
         if (version.length() > 0) {
             versionString = "/child::node()[contains(name(),Version)][text()='"
@@ -817,20 +768,18 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + versionString + "/ancestor::node()[local-name()='Site']";
     
         // Parse the document
-        Element siteEl;
         NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
-    
-        String names[];
-    
-        TreeSet<String> myTreeSet = new TreeSet<String>();
-    
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
-            // get code's versions
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+
+        if (codeAvailNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
+
+            for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
+                Element siteEl = (Element) codeAvailNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
+
+            names = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-    
-        names = myTreeSet.toArray(new String[myTreeSet.size()]);
     
         return names;
     }
@@ -838,24 +787,14 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
     /* NOT PART OF GRID INFO INTERFACE */
     
     /**
-     * Get the free job slots of a queue (a.k.a. Compute Element) in a
-     * particular cluster at a certain site.
-     * 
-     * @param site
-     * @param cluster
-     * @param computeEl
-     * @return 
-     */
-
-
-    /**
-     * Gets the all sites code versions.
+     * Gets all sites code versions.
      * 
      * @param requestedCode the requested code
      * 
-     * @return the all sites code versions
+     * @return all sites code versions
      */
     public String[] getAllSitesCodeVersions(String requestedCode) {
+        String versions[] = new String[0];
         String xpathQuery = "//*[local-name()='SoftwarePackage']"
                 + "/ancestor::node()[local-name()='Site']"
                 + "/descendant::node()[local-name()='SoftwarePackage']"
@@ -866,21 +805,20 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
         // "/child::node()[local-name()='Version']";
 
         // Parse the document
-        Element siteEl;
         NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
 
-        String names[];
+        if (codeAvailNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
+                Element siteEl = (Element) codeAvailNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Version"));
+            }
 
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Version"));
+            versions = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
 
-        names = myTreeSet.toArray(new String[myTreeSet.size()]);
-
-        return names;
+        return versions;
     }
 
     /**
@@ -892,8 +830,9 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @return The free job slots of compute elements of cluster at site
      */
     public String[] getFreeJobSlotsOfComputeElementsOfClusterAtSite(
-            String site, String cluster, String computeEl)
-    {
+            String site, String cluster, String computeEl) {
+
+        String names[] = new String[0];
         String xpathQuery = "//*[local-name()='Site']"
                 + "/child::node()[local-name()='Name']"
                 + "[translate(text(),'abcdefghijklmnopqrstuvwxyz',"
@@ -909,20 +848,18 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + "/descendant::node()[local-name()='ComputingElement']";
 
         // Parse the document
-        Element siteEl;
-        NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
+        NodeList slotsAvailNodeList = turboMDSquery(xpathQuery);
 
-        String names[];
+        if (slotsAvailNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < slotsAvailNodeList.getLength(); i++) {
+                Element siteEl = (Element) slotsAvailNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
 
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
-            // get code's versions
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+            names = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-
-        names = myTreeSet.toArray(new String[myTreeSet.size()]);
 
         return names;
     }
@@ -934,6 +871,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @return An array of subcluster names
      */
     public String[] getSubClusterNamesAtSite(String site) {
+        String names[] = new String[0];
         String xpathQuery = "//*[local-name()='Site']/child::node()[local-name()='Name']"
                 + "[translate(text(),'abcdefghijklmnopqrstuvwxyz',"
                 + "'ABCDEFGHIJKLMNOPQRSTUVWXYZ')=translate('"
@@ -943,19 +881,18 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + "/parent::node()/descendant::node()[local-name()='Cluster']";
 
         // Parse the document
-        Element siteEl;
-        NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
+        NodeList clusterNodeList = turboMDSquery(xpathQuery);
 
-        String names[];
+        if (clusterNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < clusterNodeList.getLength(); i++) {
+                Element siteEl = (Element) clusterNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
 
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+            names = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-
-        names = myTreeSet.toArray(new String[myTreeSet.size()]);
 
         return names;
     }
@@ -989,21 +926,21 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
         // Old Version
         // xpathQuery += "/child::node()[local-name()='Name']";
 
+        String names[] = new String[0];
+
         // Parse the document
-        Element siteEl;
-        NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
+        NodeList clusterNodeList = turboMDSquery(xpathQuery);
 
-        String names[];
+        if (clusterNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < clusterNodeList.getLength(); i++) {
+                Element siteEl = (Element) clusterNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
 
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
-            // get code's versions
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+            names = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-
-        names = myTreeSet.toArray(new String[myTreeSet.size()]);
 
         return names;
     }
@@ -1055,23 +992,21 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
 
         xpathQuery += "/ancestor::node()[local-name()='SubCluster']";
 
-        // MDS server to query
+        String names[] = new String[0];
 
         // Parse the document
-        Element siteEl;
-        NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
+        NodeList clusterNodeList = turboMDSquery(xpathQuery);
 
-        String names[];
+        if (clusterNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < clusterNodeList.getLength(); i++) {
+                Element siteEl = (Element) clusterNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
 
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
-            // get code's versions
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+            names = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-
-        names = myTreeSet.toArray(new String[myTreeSet.size()]);
 
         return names;
     }
@@ -1104,20 +1039,21 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                     + "[number(text())>'" + wallTime + "']/parent::node()";
         }
 
+        String names[] = new String[0];
+
         // Parse the document
-        Element siteEl;
-        NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
+        NodeList elementNodeList = turboMDSquery(xpathQuery);
 
-        String names[];
+        if (elementNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < elementNodeList.getLength(); i++) {
+                Element siteEl = (Element) elementNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Name"));
+            }
 
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Name"));
+            names = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-
-        names = myTreeSet.toArray(new String[myTreeSet.size()]);
 
         return names;
     }
@@ -1144,19 +1080,21 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + "/child::node()[local-name()='Name'][text()='queueName']"
                 + "/parent::node()";
 
+        String names[] = new String[0];
+
         // Parse the document
-        Element siteEl;
-        NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
+        NodeList elementNodeList = turboMDSquery(xpathQuery);
 
-        String names[];
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+        if (elementNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "DefaultSE"));
+            for (int i = 0; i < elementNodeList.getLength(); i++) {
+                Element siteEl = (Element) elementNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "DefaultSE"));
+            }
+
+            names = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
-
-        names = myTreeSet.toArray(new String[myTreeSet.size()]);
 
         if (names.length == 0)
             return "";
@@ -1192,18 +1130,19 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + "/parent::node()";
 
         // Parse the document
-        Element siteEl;
-        NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
+        NodeList pathNodeList = turboMDSquery(xpathQuery);
 
-        TreeSet<String> myTreeSet = new TreeSet<String>();
+        if (pathNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
 
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "DefaultSE"));
+            for (int i = 0; i < pathNodeList.getLength(); i++) {
+                Element siteEl = (Element) pathNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "DefaultSE"));
+            }
+            // TODO: THIS IS WRONG.
+            storagePath = myTreeSet.toArray(new String[myTreeSet.size()])[0];
         }
-        // TODO: THIS IS WRONG.
-        storagePath = myTreeSet.toArray(new String[myTreeSet.size()])[0];
-        // TODO: make get storage path work
+
         return storagePath;
     }
 
@@ -1220,7 +1159,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
          * /child::node()[local-name()='Endpoint']
          */
 
-        String[] serverNames;
+        String[] serverNames = new String[0];
 
         String xpathQuery = "//*[local-name()='Site']"
                 + "/child::node()[local-name()='StorageElement']"
@@ -1229,16 +1168,18 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + "[text()='gsiftp']/parent::node()";
 
         // Parse the document
-        Element siteEl;
-        NodeList codeAvailNodeList = turboMDSquery(xpathQuery);
+        NodeList serverNodeList = turboMDSquery(xpathQuery);
 
-        TreeSet<String> myTreeSet = new TreeSet<String>();
-        for (int i = 0; i < codeAvailNodeList.getLength(); i++) {
-            siteEl = (Element) codeAvailNodeList.item(i);
-            myTreeSet.add(getTextValue(siteEl, "Endpoint"));
+        if (serverNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < serverNodeList.getLength(); i++) {
+                Element siteEl = (Element) serverNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "Endpoint"));
+            }
+
+            serverNames = myTreeSet.toArray(new String[myTreeSet.size()]);
         }
 
-        serverNames = myTreeSet.toArray(new String[myTreeSet.size()]);
         return serverNames;
     }
 
@@ -1260,20 +1201,23 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 + "'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ')]"
                 + "/parent::node()";
 
-        // Parse the document
-        Element siteEl;
-        NodeList emailAddress = turboMDSquery(xpathQuery);
+        String email = "";
 
-        String names;
-        TreeSet<String> myTreeSet = new TreeSet<String>();
-        for (int i = 0; i < emailAddress.getLength(); i++) {
-            siteEl = (Element) emailAddress.item(i);
-            myTreeSet.add(getTextValue(siteEl, "UserSupportContact"));
+        // Parse the document
+        NodeList emailNodeList = turboMDSquery(xpathQuery);
+
+        if (emailNodeList != null) {
+            TreeSet<String> myTreeSet = new TreeSet<String>();
+            for (int i = 0; i < emailNodeList.getLength(); i++) {
+                Element siteEl = (Element) emailNodeList.item(i);
+                myTreeSet.add(getTextValue(siteEl, "UserSupportContact"));
+            }
+
+            // Take the first element.... pretty poor way to do it...
+            email = myTreeSet.toArray(new String[myTreeSet.size()])[0];
         }
 
-        // Take the first element.... pretty poor way to do it...
-        names = myTreeSet.toArray(new String[myTreeSet.size()])[0];
-        return names;
+        return email;
     }
 }
 
