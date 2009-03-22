@@ -56,6 +56,5 @@
         <property name="localGridFtpStageInDir" value="${gridftp.stageInDir}"/>
         <property name="localGridFtpStageOutDir" value="${gridftp.stageOutDir}"/>
     </bean>
-
 </beans>
 
