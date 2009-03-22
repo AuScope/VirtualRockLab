@@ -9,7 +9,7 @@
     <link rel="stylesheet" type="text/css" href="css/virtualrocklab.css">
     <style type="text/css">
       #sitenav-03 a {
-        background: url( "/img/navigation.gif" ) -200px -38px no-repeat;
+        background: url( "img/navigation.gif" ) -200px -38px no-repeat;
       }
       .error { color: red; }
     </style>

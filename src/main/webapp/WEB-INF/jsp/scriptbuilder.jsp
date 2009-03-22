@@ -9,7 +9,7 @@
     <link rel="stylesheet" type="text/css" href="css/virtualrocklab.css">
     <style type="text/css">
       #sitenav-02 a {
-        background: url( "/img/navigation.gif" ) -100px -38px no-repeat;
+        background: url( "img/navigation.gif" ) -100px -38px no-repeat;
       }
     </style>
     <link rel="stylesheet" type="text/css" href="js/ext/resources/css/ext-all.css">

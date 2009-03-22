@@ -24,7 +24,7 @@ a:hover {
 }
 
 #header {
-    background-image: url("/img/img-auscope-banner.gif");
+    background-image: url("../img/img-auscope-banner.gif");
     background-repeat: no-repeat;
     width: 100%;
     height: 100px;
@@ -37,7 +37,7 @@ a:hover {
 }
 
 #sitenav {
-    background: url("/img/navigation.gif") no-repeat;
+    background: url("../img/navigation.gif") no-repeat;
     width: 300px;
     height: 38px;
     margin: 0;
@@ -74,15 +74,15 @@ a:hover {
 }
 
 #sitenav-01 a:hover {
-    background: url("/img/navigation.gif") 0px -38px no-repeat;
+    background: url("../img/navigation.gif") 0px -38px no-repeat;
 }
 
 #sitenav-02 a:hover {
-    background: url("/img/navigation.gif") -100px -38px no-repeat;
+    background: url("../img/navigation.gif") -100px -38px no-repeat;
 }
 
 #sitenav-03 a:hover {
-    background: url("/img/navigation.gif") -200px -38px no-repeat;
+    background: url("../img/navigation.gif") -200px -38px no-repeat;
 }
 
 #start-div h2 {
