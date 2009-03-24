@@ -224,7 +224,7 @@ ScriptBuilder.initialize = function() {
                 Ext.Msg.confirm('Quit ScriptBuilder', 'Are you sure you want to quit?',
                     function(btn) {
                         if (btn=='yes') {
-                            window.location = "monitor.html";
+                            window.location = "joblist.html";
                         }
                     }
                 );

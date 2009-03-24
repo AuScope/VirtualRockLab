@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="js/ext/resources/css/ext-all.css">
     <script type="text/javascript" src="js/ext/adapter/ext/ext-base.js"></script>
     <script type="text/javascript" src="js/ext/ext-all.js"></script>
-    <script type="text/javascript" src="js/JobMonitor.js"></script>
+    <script type="text/javascript" src="js/JobList.js"></script>
 </head>
 
 <body>

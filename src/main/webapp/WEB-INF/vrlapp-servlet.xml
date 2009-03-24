@@ -32,12 +32,12 @@
             <bean class="org.auscope.vrl.GridJobValidator"/>
         </property>
         <property name="formView" value="gridsubmit"/>
-        <property name="successView" value="monitor.html"/>
+        <property name="successView" value="joblist.html"/>
         <property name="gridAccess" ref="gridAccess"/>
         <property name="userJobManager" ref="userJobManager"/>
     </bean>
 
-    <bean name="/monitor.html" class="org.auscope.vrl.web.JobMonitorController">
+    <bean name="/joblist.html" class="org.auscope.vrl.web.JobListController">
         <property name="methodNameResolver" ref="methodNameResolver"/>
         <property name="gridAccess" ref="gridAccess"/>
         <property name="userJobManager" ref="userJobManager"/>

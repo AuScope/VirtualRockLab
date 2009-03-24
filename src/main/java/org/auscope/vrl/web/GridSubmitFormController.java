@@ -169,9 +169,16 @@ public class GridSubmitFormController extends SimpleFormController {
         String[] arguments = { "script.py" };
         String[] inTransfers;
         final String[] outTransfers = new String[0];
-        final String version =
-            gridAccess.retrieveCodeVersionsAtSite(site, code)[0];
-        final String queue = gridAccess.retrieveQueueNamesAtSite(site)[0];
+        String version = "";
+        String queue = "";
+
+        String[] allVersions = gridAccess.retrieveCodeVersionsAtSite(site, code);
+        if (allVersions.length > 0)
+            version = allVersions[0];
+        
+        String[] allQueues = gridAccess.retrieveQueueNamesAtSite(site);
+        if (allQueues.length > 0)
+            queue = allQueues[0];
 
         // Create a new directory to put all files for this job into.
         // This directory will always be the first stageIn directive.
