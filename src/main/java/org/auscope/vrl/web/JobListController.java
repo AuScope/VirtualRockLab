@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.auscope.vrl.GridAccessController;
 import org.auscope.vrl.UserJob;
 import org.auscope.vrl.UserJobManager;
+import org.auscope.vrl.Util;
 
 public class JobListController extends MultiActionController {
 
@@ -205,6 +206,7 @@ public class JobListController extends MultiActionController {
                 logger.error(errorString);
             }
         }
+        myModel.put("error", errorString);
         return new ModelAndView("joblist", "model", myModel);
     }
 
@@ -289,6 +291,7 @@ public class JobListController extends MultiActionController {
                 logger.error(errorString);
             }
         }
+        myModel.put("error", errorString);
         return new ModelAndView("joblist", "model", myModel);
     }
 
@@ -358,7 +361,65 @@ public class JobListController extends MultiActionController {
 
         ModelAndView mav =  new ModelAndView(
                 new RedirectView("gridsubmit.html"));
-        mav.addObject("resubmitRef", jobRef);
+        mav.addObject("resubmitJob", jobRef);
+        return mav;
+    }
+
+    /**
+     * Re-use existing script
+     * 
+     * @param request The servlet request including a ref parameter and a
+     *                filename parameter
+     * @param response The servlet response
+     *
+     * @return The scriptbuilder model and view for editing the script or
+     *         the joblist model and view with an error parameter if the job
+     *         or file was not found.
+     */
+    public ModelAndView useScript(HttpServletRequest request,
+                                  HttpServletResponse response) {
+
+        String jobRef = request.getParameter("ref");
+        String fileName = request.getParameter("filename");
+        logger.info("Re-using script file from "+jobRef);
+        UserJob job = userJobManager.getUserJobByRef("testUser", jobRef);
+        String errorString = null;
+
+        if (job == null) {
+            errorString = new String("Requested job not in job manager!");
+            logger.error(errorString);
+        } else if (fileName == null) {
+            errorString = new String("No filename provided!");
+            logger.error(errorString);
+        }
+
+        File sourceFile = new File(job.getOutputDir()+File.separator+fileName);
+        if (!sourceFile.canRead()) {
+            errorString = new String("Script file could not be read.");
+            logger.error("File "+sourceFile.getPath()+" not readable!");
+        }
+
+        if (errorString == null) {
+            String tempDir = System.getProperty("java.io.tmpdir");
+            File tempScript = new File(tempDir+File.separator+fileName);
+            boolean success = Util.copyFile(sourceFile, tempScript);
+            if (success) {
+                tempScript.deleteOnExit();
+            } else {
+                errorString = new String("Script file could not be read.");
+                logger.error(errorString);
+            }
+        }
+
+        if (errorString != null) {
+            Map<String, Object> myModel = new HashMap<String, Object>();
+            myModel.put("error", errorString);
+            return new ModelAndView("joblist", "model", myModel);
+        }
+
+        ModelAndView mav =  new ModelAndView(
+                new RedirectView("scriptbuilder.html"));
+        mav.addObject("usescript", fileName);
         return mav;
     }
 

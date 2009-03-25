@@ -84,7 +84,8 @@ JobList.resubmitJob = function(ref) {
 }
 
 JobList.useScript = function(ref, file) {
-    alert("To be implemented");
+    window.location = JobList.ControllerURL +
+        "?action=useScript&ref="+ref+"&filename="+file;
 }
 
 //
@@ -138,6 +139,7 @@ JobList.initialize = function() {
         id: 'job-grid',
         store: JobList.jobStore,
         columns: [
+            { header: 'User', width: 60, sortable: true, dataIndex: 'userId'},
             { header: 'Job Name', sortable: true, dataIndex: 'name'},
             { header: 'Submit Date', width: 160, sortable: true, dataIndex: 'timeStamp'},
             { header: 'Status', sortable: true, dataIndex: 'status', renderer: jobStatusRenderer}
@@ -318,6 +320,11 @@ JobList.initialize = function() {
             items: [ jobDetails ]
         }]
     });
+
+    if (JobList.error != null) {
+        Ext.Msg.alert('Error', JobList.error);
+        JobList.error = null;
+    }
 }
 
 

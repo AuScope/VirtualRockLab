@@ -9,6 +9,8 @@ Ext.BLANK_IMAGE_URL = 'js/ext/resources/images/default/s.gif';
 
 Ext.namespace('ScriptBuilder');
 
+ScriptBuilder.ControllerURL = "scriptbuilder.html";
+
 // default content of the component description panel
 ScriptBuilder.compDescText = '<p class="desc-info">Select a component to see its description, double-click to add it to the script.<br/><br/>Double-click the Simulation Container to change simulation settings.</p>';
 // content of the component description panel in text editor mode
@@ -122,6 +124,29 @@ ScriptBuilder.switchToTextEditor = function() {
     ScriptBuilder.textEditMode = true;
 }
 
+ScriptBuilder.onGetScriptTextFailure = function(response, request) {
+    ScriptBuilder.textEditMode = false;
+    ScriptBuilder.updateSource();
+
+    // Show settings dialog for new script
+    ScriptBuilder.showDialog('SimContainer', 'New Script',
+            Ext.getCmp('usedcomps-panel').getRootNode());
+}
+
+ScriptBuilder.onGetScriptTextResponse = function(response, request) {
+    var resp = Ext.decode(response.responseText);
+    if (resp.model != null && resp.model.scriptText != null) {
+        Ext.getCmp('scriptname').setRawValue(resp.model.scriptName);
+        Ext.getCmp('sourcetext').setValue(resp.model.scriptText);
+        ScriptBuilder.switchToTextEditor();
+
+    } else {
+        // Reuse code from failure path
+        ScriptBuilder.onGetScriptTextFailure(response, request);
+    }
+}
+
+
 //
 // This is the main layout definition.
 //
@@ -212,7 +237,7 @@ ScriptBuilder.initialize = function() {
         id: 'source-panel',
         layout: 'fit',
         title: 'Script Source',
-        url: 'scriptbuilder.html',
+        url: ScriptBuilder.ControllerURL,
         standardSubmit: true,
         region:'center',
         buttonAlign: 'right',
@@ -246,7 +271,7 @@ ScriptBuilder.initialize = function() {
             text: 'Download Script',
             handler: function() {
                 // submit script source for download
-                Ext.getCmp('scriptaction').setRawValue('download');
+                Ext.getCmp('action').setRawValue('downloadScript');
                 if (ScriptBuilder.textEditMode == false) {
                     Ext.getCmp('sourcetext').enable();
                 }
@@ -259,7 +284,7 @@ ScriptBuilder.initialize = function() {
             text: 'Use Script',
             handler: function() {
                 // submit script source for use in grid submit
-                Ext.getCmp('scriptaction').setRawValue('use');
+                Ext.getCmp('action').setRawValue('useScript');
                 if (ScriptBuilder.textEditMode == false) {
                     Ext.getCmp('sourcetext').enable();
                 }
@@ -273,9 +298,9 @@ ScriptBuilder.initialize = function() {
             width: '100%',
             height: '100%'
         }, {
-            id: 'scriptaction',
+            id: 'action',
             xtype: 'hidden',
-            value: 'download'
+            value: ''
         }, {
             id: 'scriptname',
             xtype: 'hidden',
@@ -369,13 +394,14 @@ ScriptBuilder.initialize = function() {
         }]
     });
 
-    ScriptBuilder.updateSource();
+    // Check for existing script text to edit
+    Ext.Ajax.request({
+        url: ScriptBuilder.ControllerURL,
+        success: ScriptBuilder.onGetScriptTextResponse,
+        failure: ScriptBuilder.onGetScriptTextFailure, 
+        params: { 'action': 'getScriptText' }
+    });
 
-    ScriptBuilder.textEditMode = false;
-
-    // Show settings dialog for the new script
-    ScriptBuilder.showDialog('SimContainer', 'New Script',
-            Ext.getCmp('usedcomps-panel').getRootNode());
 }
 
 

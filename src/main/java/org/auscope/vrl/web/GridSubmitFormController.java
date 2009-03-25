@@ -8,16 +8,17 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.Exception;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -30,6 +31,7 @@ import org.auscope.gridtools.GridJob;
 import org.auscope.vrl.GridAccessController;
 import org.auscope.vrl.UserJob;
 import org.auscope.vrl.UserJobManager;
+import org.auscope.vrl.Util;
 
 public class GridSubmitFormController extends SimpleFormController {
 
@@ -40,14 +42,11 @@ public class GridSubmitFormController extends SimpleFormController {
     private GridAccessController gridAccess;
     private UserJobManager userJobManager;
 
-    public ModelAndView handleRequestInternal(HttpServletRequest request,
-                                              HttpServletResponse response)
-            throws ServletException, Exception {
+    protected Map referenceData(HttpServletRequest request) throws Exception {
 
-        ModelAndView mav = super.handleRequestInternal(request, response);
+        logger.info("Retrieving sites with ESyS-Particle installations");
 
         List<String[]> versionsAtSite = new ArrayList<String[]>();
-
         String[] particleSites = gridAccess.
                 retrieveSitesWithSoftwareAndVersion(CODE_NAME, "");
         for (String s : particleSites) {
@@ -55,10 +54,11 @@ public class GridSubmitFormController extends SimpleFormController {
                     retrieveCodeVersionsAtSite(s, CODE_NAME);
             versionsAtSite.add(siteVersions);
         }
-        mav.addObject("sites", particleSites);
-        mav.addObject("versions", versionsAtSite);
+        Map<String, Object> refData = new HashMap<String, Object>();
+        refData.put("sites", particleSites);
+        refData.put("versions", versionsAtSite);
 
-        return mav;
+        return refData;
     }
 
     protected ModelAndView onSubmit(HttpServletRequest request,
@@ -130,31 +130,9 @@ public class GridSubmitFormController extends SimpleFormController {
         return new ModelAndView(new RedirectView(getSuccessView(), true, false, false));
     }
 
-    private boolean moveFile(File source, File destination) {
-        boolean success = false;
-        logger.info(source.getPath()+" -> "+destination.getPath());
-        try {
-            BufferedReader input = new BufferedReader(
-                    new FileReader(source));
-            BufferedWriter output = new BufferedWriter(
-                    new FileWriter(destination));
-            String line = null;
-            while ((line = input.readLine()) != null) {
-                output.write(line);
-                output.newLine();
-            }
-            input.close();
-            output.close();
-            source.delete();
-            success = true;
-        } catch (IOException e) {
-            logger.warn("Could not move file: "+e.getMessage());
-        }
-        return success;
-    }
-
     protected Object formBackingObject(HttpServletRequest request)
             throws ServletException {
+
         final String site = "ESSCC";
         final String name = "gridjob";
         final String email = "";
@@ -197,6 +175,11 @@ public class GridSubmitFormController extends SimpleFormController {
         // The server part will be added before submission
         inTransfers = new String[] { jobInputDir };
 
+        logger.info("Creating new GridJob instance");
+        GridJob guiJob = new GridJob(site, name, email, code, version,
+            arguments, queue, jobType, maxWallTime, maxMemory, cpuCount,
+            inTransfers, outTransfers, stdInput, stdOutput, stdError);
+
         // Check if the ScriptBuilder was used. If so, there is a file in the
         // system temp directory which needs to be staged in.
         String newScript = request.getParameter("newscript");
@@ -205,10 +188,11 @@ public class GridSubmitFormController extends SimpleFormController {
             File tmpScriptFile = new File(System.getProperty("java.io.tmpdir") +
                     File.separator+newScript+".py");
             File newScriptFile = new File(jobInputDir, tmpScriptFile.getName());
-            success = moveFile(tmpScriptFile, newScriptFile);
+            success = Util.moveFile(tmpScriptFile, newScriptFile);
             if (success) {
                 logger.info("Moved "+newScript+" to stageIn directory");
                 arguments[0] = newScript+".py";
+                guiJob.setArguments(arguments);
 
                 // Now look for a string like
                 // sim = LsmMpi( numWorkerProcesses = 2, ...)
@@ -222,17 +206,18 @@ public class GridSubmitFormController extends SimpleFormController {
                         if ((sidx = line.indexOf("numWorkerProcesses")) != -1) {
                             sidx = line.indexOf('=', sidx);
                             if (sidx == -1) {
-                                break;
+                                continue;
                             }
                             sidx++;
                             int eidx = line.indexOf(',', sidx);
                             if (eidx == -1) {
-                                break;
+                                continue;
                             }
                             try {
                                 int iCount = Integer.parseInt(line.substring(
                                             sidx, eidx).trim());
                                 cpuCount = String.valueOf(iCount+1);
+                                guiJob.setCpuCount(cpuCount);
                                 logger.info("Number of CPUs from script: "+cpuCount);
                             } catch (NumberFormatException e) {
                                 logger.warn("Error parsing number of CPUs.");
@@ -251,11 +236,16 @@ public class GridSubmitFormController extends SimpleFormController {
             }
         }
 
-        logger.info("Creating new GridJob instance");
-
-        GridJob guiJob = new GridJob(site, name, email, code, version,
-            arguments, queue, jobType, maxWallTime, maxMemory, cpuCount,
-            inTransfers, outTransfers, stdInput, stdOutput, stdError);
+        // Check if the user requested to re-submit a previous job.
+        String jobRef = request.getParameter("resubmitJob");
+        if (jobRef != null) {
+            logger.info("Request to re-submit a job.");
+            UserJob existingJob = userJobManager.getUserJobByRef("testUser", jobRef);
+            if (existingJob != null) {
+                logger.info("Using files and values of "+existingJob.getName());
+                //TODO
+            }
+        }
 
         return guiJob;
     }

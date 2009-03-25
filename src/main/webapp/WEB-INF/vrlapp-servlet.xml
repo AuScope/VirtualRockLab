@@ -44,6 +44,7 @@
     </bean>
 
     <bean name="/scriptbuilder.html" class="org.auscope.vrl.web.ScriptBuilderController">
+        <property name="methodNameResolver" ref="methodNameResolver"/>
     </bean>
 
 </beans>

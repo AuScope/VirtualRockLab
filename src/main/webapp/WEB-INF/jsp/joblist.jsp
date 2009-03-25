@@ -15,6 +15,11 @@
     <script type="text/javascript" src="js/ext/adapter/ext/ext-base.js"></script>
     <script type="text/javascript" src="js/ext/ext-all.js"></script>
     <script type="text/javascript" src="js/JobList.js"></script>
+    <c:if test='${model.error != null}'>
+    <script type="text/javascript">
+        JobList.error = "${model.error}";
+    </script>
+    </c:if>
 </head>
 
 <body>
