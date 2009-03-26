@@ -67,6 +67,7 @@ public class GridSubmitFormController extends SimpleFormController {
                                     BindException errors)
             throws Exception {
 
+        String user = request.getRemoteUser();
         MultipartHttpServletRequest mfReq = (MultipartHttpServletRequest)request;
         GridJob job = (GridJob) command;
 
@@ -95,7 +96,7 @@ public class GridSubmitFormController extends SimpleFormController {
         // Create a new directory for the output files of this job
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
         String dateFmt = sdf.format(new Date());
-        String jobID = "testUser" + "-" + job.getName() + "-" + dateFmt +
+        String jobID = user + "-" + job.getName() + "-" + dateFmt +
             File.separator;
         String jobOutputDir = gridAccess.getLocalGridFtpStageOutDir() + jobID;
         boolean success = (new File(jobOutputDir)).mkdir();
@@ -121,7 +122,7 @@ public class GridSubmitFormController extends SimpleFormController {
             logger.info("Resulting EPR: "+submitEPR);
 
             String status = gridAccess.retrieveJobStatus(submitEPR);
-            UserJob userJob = new UserJob("testUser", job.getName(),
+            UserJob userJob = new UserJob(user, job.getName(),
                     jobOutputDir, submitEPR, job.getArguments()[0], status, new Date().toString());
             userJobManager.saveUserJob(userJob);
             logger.info("Returning to " + getSuccessView());
@@ -133,6 +134,7 @@ public class GridSubmitFormController extends SimpleFormController {
     protected Object formBackingObject(HttpServletRequest request)
             throws ServletException {
 
+        String user = request.getRemoteUser();
         final String site = "ESSCC";
         final String name = "gridjob";
         final String email = "";
@@ -162,7 +164,7 @@ public class GridSubmitFormController extends SimpleFormController {
         // This directory will always be the first stageIn directive.
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
         String dateFmt = sdf.format(new Date());
-        String jobID = "testUser" + "-" + dateFmt + File.separator;
+        String jobID = user + "-" + dateFmt + File.separator;
         String jobInputDir = gridAccess.getLocalGridFtpStageInDir() + jobID;
 
         boolean success = (new File(jobInputDir)).mkdir();
@@ -240,7 +242,7 @@ public class GridSubmitFormController extends SimpleFormController {
         String jobRef = request.getParameter("resubmitJob");
         if (jobRef != null) {
             logger.info("Request to re-submit a job.");
-            UserJob existingJob = userJobManager.getUserJobByRef("testUser", jobRef);
+            UserJob existingJob = userJobManager.getUserJobByRef(user, jobRef);
             if (existingJob != null) {
                 logger.info("Using files and values of "+existingJob.getName());
                 //TODO

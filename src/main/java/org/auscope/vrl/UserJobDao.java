@@ -24,7 +24,8 @@ public class UserJobDao {
         HibernateCallback callback = new HibernateCallback() {
             public Object doInHibernate(Session session) 
                 throws HibernateException, SQLException {
-                return session.createQuery("FROM UserJob").list();
+                return session.createQuery(
+                        "FROM UserJob WHERE userId='"+userId+"'").list();
             }
         };
         return (List<UserJob>)hibernateTemplate.execute(callback);

@@ -28,6 +28,7 @@ import org.globus.wsrf.impl.security.authorization.HostAuthorization;
 import org.globus.wsrf.utils.FaultHelper;
 import org.gridforum.jgss.ExtendedGSSManager;
 import org.ietf.jgss.GSSCredential;
+import org.ietf.jgss.GSSException;
 import org.oasis.wsrf.faults.BaseFaultTypeDescription;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -47,24 +48,46 @@ import org.xml.sax.InputSource;
  */
 public class GramJobControl implements JobControlInterface {
     /** Reference to the Controller's Log4J logger. */
-    private static Log logger = LogFactory.getLog(GramJobControl.class.getName());
+    private static Log logger = LogFactory.getLog(
+            GramJobControl.class.getName());
 
     private GramJobListener listener = null;
     private Date resourceDate = null;
+    private GSSCredential credential = null;
 
     /**
      * Default constructor. Does nothing. (There's nothing to do!)
-     * /* (non-Javadoc)
-     * 
-     * @see org.globus.exec.client.GramJobListener#stateChanged(org.globus.exec.client.GramJob)
      */
     public GramJobControl() {
+    }
+
+    /**
+     * Constructor initializing credential.
+     */
+    public GramJobControl(GSSCredential credential) {
+        this.credential = credential;
     }
 
     public void setListener(GramJobListener newlistener) {
         listener = newlistener;
     }
     
+    public void setCredential(GSSCredential credential) {
+        this.credential = credential;
+    }
+
+    public GSSCredential getCredential() throws GSSException {
+        GSSCredential cred = this.credential;
+        if (cred == null) {
+            // if credential was not set try importing default
+            ExtendedGSSManager manager =
+                (ExtendedGSSManager)ExtendedGSSManager.getInstance();
+            logger.info("Credential was not set. Creating new one.");
+            cred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
+        }
+        return cred;
+    }
+
     public void setResourceDate(int walltime) {
         Date date1 = new Date();
         // set the resource lifetime to the amount of milliseconds from
@@ -415,21 +438,17 @@ public class GramJobControl implements JobControlInterface {
 
         try {
             JobDescriptionType jobDescription = RSLHelper.readRSL(jobString);
-            // For 'credential import extension'.
-            ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
-            logger.info("Creating Credential");
-            GSSCredential cred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
 
             // Create new GRAM job. Get GRAM end point reference.
             GramJob job = new GramJob(jobDescription);
-            URL factoryUrl = ManagedJobFactoryClientHelper.getServiceURL(host).getURL();
-            logger.info("Got factoryUrl");
-            EndpointReferenceType gramEndpoint = ManagedJobFactoryClientHelper.getFactoryEndpoint(factoryUrl, "PBS");
-            logger.info("Got endpoint");
+            URL factoryUrl = ManagedJobFactoryClientHelper.
+                    getServiceURL(host).getURL();
+            EndpointReferenceType gramEndpoint = ManagedJobFactoryClientHelper.
+                    getFactoryEndpoint(factoryUrl, "PBS");
 
             // Auth stuff, and setting the credentials.
             job.setDelegationEnabled(true);
-            job.setCredentials(cred);
+            job.setCredentials(getCredential());
             job.setTerminationTime(resourceDate);
             HostAuthorization iA = new HostAuthorization();
         
@@ -460,9 +479,6 @@ public class GramJobControl implements JobControlInterface {
      * @return The EPR to the job, or <code>null</code> if something went wrong
      */
     public String submitMultiJob(JobDescriptionType[] jobs, String host) {
-        // For 'credential import extension'.
-        ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
-
         String gramJobHandle = null;
         // Set a system property - for Apache Axis (Java Web Services platform).
         System.setProperty("axis.configFile", "client-config.wsdd");
@@ -475,14 +491,12 @@ public class GramJobControl implements JobControlInterface {
                 EndpointReferenceType factoryEndpointSubJobs = ManagedJobFactoryClientHelper.getFactoryEndpoint(factoryUrl, factoryTypeSubs);
                 jobs[i].setFactoryEndpoint(factoryEndpointSubJobs);
             }
-        
-            GSSCredential cred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
-            
-            String factoryType =  ManagedJobFactoryConstants.FACTORY_TYPE.MULTI;            
+
+            String factoryType = ManagedJobFactoryConstants.FACTORY_TYPE.MULTI;
             URL factoryUrl = ManagedJobFactoryClientHelper.getServiceURL(host).getURL();
             EndpointReferenceType gramEndpoint = ManagedJobFactoryClientHelper.getFactoryEndpoint(factoryUrl, factoryType);
 
-            logger.info("creating MultiJobDescType");
+            logger.info("creating MultiJobDescriptionType");
             MultiJobDescriptionType multiJobDescription =  new MultiJobDescriptionType();
             multiJobDescription.setJob(jobs);
             logger.info("creating GramJob");
@@ -491,7 +505,7 @@ public class GramJobControl implements JobControlInterface {
 
             // Auth stuff, and setting the credentials.
             job.setDelegationEnabled(true);
-            job.setCredentials(cred);
+            job.setCredentials(getCredential());
             job.setTerminationTime(resourceDate);
             HostAuthorization iA = new HostAuthorization();
 
@@ -522,15 +536,11 @@ public class GramJobControl implements JobControlInterface {
 
         String condition = null;
 
-        ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
-
         try {
-            GSSCredential userCred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
-
             // Find the job, and make sure we are authorized to kill it.
             GramJob job = new GramJob();
             job.setHandle(reference);
-            job.setCredentials(userCred);
+            job.setCredentials(getCredential());
 
             // Kill it.
             job.cancel();
@@ -551,15 +561,12 @@ public class GramJobControl implements JobControlInterface {
 
     public GridJob getJobByReference(String reference) {
         GridJob gridJob = new GridJob();
-        ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
 
         try {
-            GSSCredential userCred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
-
             // Find the job
             GramJob job = new GramJob();
             job.setHandle(reference);
-            job.setCredentials(userCred);
+            job.setCredentials(getCredential());
 
             JobDescriptionType jobDesc = job.getDescription();
             gridJob.setExeName(jobDesc.getExecutable());
@@ -604,15 +611,12 @@ public class GramJobControl implements JobControlInterface {
     public String getJobStatus(String reference) {
  
         String condition = null;
-        ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
 
         try {
-            GSSCredential userCred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
-
             // Find our job, and refresh its status.
             GramJob job = new GramJob();
             job.setHandle(reference);
-            job.setCredentials(userCred);
+            job.setCredentials(getCredential());
             job.refreshStatus();
 
             try {
@@ -739,7 +743,6 @@ public class GramJobControl implements JobControlInterface {
         String jobStr = ""; //FIXME
         String submissionHost /*get from epr*/, workingDirectory, outputDirectory;
 
-        ExtendedGSSManager manager = (ExtendedGSSManager) ExtendedGSSManager.getInstance();
         System.setProperty("axis.configFile", "client-config.wsdd");
         Util.registerTransport();
 
@@ -795,7 +798,6 @@ public class GramJobControl implements JobControlInterface {
 
         try {
             JobDescriptionType jobDescription = RSLHelper.readRSL(jobDescriptionString);
-            GSSCredential cred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
 
             // Create new GRAM job. Get GRAM end point reference.
             GramJob job = new GramJob(jobDescription);
@@ -806,7 +808,7 @@ public class GramJobControl implements JobControlInterface {
 
             // Auth stuff, and setting the credentials.
             job.setDelegationEnabled(true);
-            job.setCredentials(cred);
+            job.setCredentials(getCredential());
 
             // Listen for Job state changes if requested.
             if (listener != null)

@@ -74,7 +74,8 @@ public class JobListController extends MultiActionController {
 
         String jobRef = request.getParameter("ref");
         logger.info("Cancelling job "+jobRef);
-        UserJob job = userJobManager.getUserJobByRef("testUser", jobRef);
+        UserJob job = userJobManager.getUserJobByRef(
+                request.getRemoteUser(), jobRef);
         Map<String, Object> myModel = new HashMap<String, Object>();
 
         if (job == null) {
@@ -112,9 +113,13 @@ public class JobListController extends MultiActionController {
     public ModelAndView jobFiles(HttpServletRequest request,
                                  HttpServletResponse response) {
 
+        String user = request.getParameter("user");
+        if (user == null) {
+            user = request.getRemoteUser();
+        }
         String jobRef = request.getParameter("ref");
-        logger.info("Getting file list for job "+jobRef);
-        UserJob job = userJobManager.getUserJobByRef("testUser", jobRef);
+        logger.info("Getting file list for job "+jobRef+" of user "+user);
+        UserJob job = userJobManager.getUserJobByRef(user, jobRef);
         Map<String, Object> myModel = new HashMap<String, Object>();
 
         if (job == null) {
@@ -156,13 +161,17 @@ public class JobListController extends MultiActionController {
     public ModelAndView downloadFile(HttpServletRequest request,
                                      HttpServletResponse response) {
 
+        String user = request.getParameter("user");
+        if (user == null) {
+            user = request.getRemoteUser();
+        }
         String jobRef = request.getParameter("ref");
         String fileName = request.getParameter("filename");
-        UserJob job = userJobManager.getUserJobByRef("testUser", jobRef);
+        UserJob job = userJobManager.getUserJobByRef(user, jobRef);
         Map<String, Object> myModel = new HashMap<String, Object>();
         String errorString = null;
 
-        logger.info("Download "+fileName+" of job "+jobRef);
+        logger.info("Download "+fileName+" of job "+jobRef+" by user "+user);
 
         if (job != null && fileName != null) {
             File f = new File(job.getOutputDir()+File.separator+fileName);
@@ -223,15 +232,20 @@ public class JobListController extends MultiActionController {
     public ModelAndView downloadMulti(HttpServletRequest request,
                                       HttpServletResponse response) {
 
+        String user = request.getParameter("user");
+        if (user == null) {
+            user = request.getRemoteUser();
+        }
         String jobRef = request.getParameter("ref");
         String filesParam = request.getParameter("files");
-        UserJob job = userJobManager.getUserJobByRef("testUser", jobRef);
+        UserJob job = userJobManager.getUserJobByRef(user, jobRef);
         Map<String, Object> myModel = new HashMap<String, Object>();
         String errorString = null;
 
         if (job != null && filesParam != null) {
             String[] fileNames = filesParam.split(",");
-            logger.info("Archiving "+fileNames.length+" files of job "+jobRef);
+            logger.info("Archiving "+fileNames.length+" files of job "+jobRef+
+                    " by user "+user);
 
             response.setContentType("application/zip");
             response.setHeader("Content-Disposition",
@@ -307,13 +321,12 @@ public class JobListController extends MultiActionController {
     public ModelAndView listJobs(HttpServletRequest request,
                                  HttpServletResponse response) {
 
-        //TODO: Check credentials before doing anything -> redirect to login
-        // page if no valid proxy found
-        //if (!gridAccess.validProxy()) {}
-        logger.info("EPPN = " + request.getHeader("eppn"));
-
-        logger.info("Updating status of user jobs");
-        List<UserJob> userJobs = userJobManager.getUserJobs("testUser");
+        String user = request.getParameter("user");
+        if (user == null) {
+            user = request.getRemoteUser();
+        }
+        logger.info("Updating status of jobs by "+user);
+        List<UserJob> userJobs = userJobManager.getUserJobs(user);
         Map<String, Object> myModel = new HashMap<String, Object>();
 
         for (UserJob j : userJobs) {
@@ -347,9 +360,13 @@ public class JobListController extends MultiActionController {
     public ModelAndView resubmitJob(HttpServletRequest request,
                                     HttpServletResponse response) {
 
+        String user = request.getParameter("user");
+        if (user == null) {
+            user = request.getRemoteUser();
+        }
         String jobRef = request.getParameter("ref");
-        logger.info("Re-submitting job "+jobRef);
-        UserJob job = userJobManager.getUserJobByRef("testUser", jobRef);
+        logger.info("Re-submitting job "+jobRef+" of user "+user);
+        UserJob job = userJobManager.getUserJobByRef(user, jobRef);
 
         if (job == null) {
             Map<String, Object> myModel = new HashMap<String, Object>();
@@ -379,10 +396,14 @@ public class JobListController extends MultiActionController {
     public ModelAndView useScript(HttpServletRequest request,
                                   HttpServletResponse response) {
 
+        String user = request.getParameter("user");
+        if (user == null) {
+            user = request.getRemoteUser();
+        }
         String jobRef = request.getParameter("ref");
         String fileName = request.getParameter("filename");
-        logger.info("Re-using script file from "+jobRef);
-        UserJob job = userJobManager.getUserJobByRef("testUser", jobRef);
+        logger.info("Re-using script file of job "+jobRef+" by user "+user);
+        UserJob job = userJobManager.getUserJobByRef(user, jobRef);
         String errorString = null;
 
         if (job == null) {

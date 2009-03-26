@@ -24,6 +24,10 @@
         <property name="paramName" value="action"/>
     </bean>
 
+    <bean name="/login.html" class="org.auscope.vrl.web.LoginController">
+        <property name="gridAccess" ref="gridAccess"/>
+    </bean>
+
     <bean name="/gridsubmit.html" class="org.auscope.vrl.web.GridSubmitFormController">
         <property name="sessionForm" value="false"/>
         <property name="commandName" value="gridSubmit"/>

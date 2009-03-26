@@ -9,6 +9,7 @@ import org.apache.commons.logging.LogFactory;
 import org.globus.exec.generated.JobDescriptionType;
 
 // The following are for proxy checking
+import org.globus.myproxy.MyProxyException;
 import org.globus.wsrf.utils.FaultHelper;
 import org.gridforum.jgss.ExtendedGSSManager;
 import org.ietf.jgss.GSSCredential;
@@ -17,6 +18,7 @@ import org.ietf.jgss.GSSManager;
 
 import org.auscope.gridtools.GramJobControl;
 import org.auscope.gridtools.GridJob;
+import org.auscope.gridtools.MyProxyManager;
 import org.auscope.gridtools.RegistryQueryClient;
 import org.auscope.gridtools.SiteInfo;
 
@@ -37,9 +39,15 @@ public class GridAccessController {
     private static Log logger = LogFactory.getLog(
             GridAccessController.class.getName());
 
-    private String gridFtpServer = "gsiftp://ng2.esscc.uq.edu.au:2811";
-    private String gridFtpStageInDir = "/tmp/";
-    private String gridFtpStageOutDir = "/tmp/";
+    private String gridFtpServer = "";
+    private String gridFtpStageInDir = "";
+    private String gridFtpStageOutDir = "";
+
+    // MyProxy settings
+    private String myProxyServer = "myproxy.arcs.org.au";
+    private int myProxyPort = 7512;
+    private int myProxyLifetime = 12*60*60;
+    private GSSCredential credential;
 
     public void setLocalGridFtpServer(String gridFtpServer) {
         this.gridFtpServer = gridFtpServer;
@@ -103,7 +111,7 @@ public class GridAccessController {
             job.setExeName(exeName);
             job.setSiteGridFTPServer(RQC.getClusterGridFTPServerAtSite(job.getSite()));
             String jobStr = null;
-            GramJobControl gjc = new GramJobControl();
+            GramJobControl gjc = new GramJobControl(credential);
 
             // Construct the XML Job Script.
             if (job.getJobType().equalsIgnoreCase("single") ||
@@ -141,7 +149,7 @@ public class GridAccessController {
     }
  
     public GridJob getJobByReference(String reference) {
-        GramJobControl ggj = new GramJobControl();
+        GramJobControl ggj = new GramJobControl(credential);
         return ggj.getJobByReference(reference);
     }
 
@@ -153,7 +161,7 @@ public class GridAccessController {
      * @return The status of the job (a <code>StateEnumeration</code> String)
      */
     public String killJob(String reference) {
-        GramJobControl ggj = new GramJobControl();
+        GramJobControl ggj = new GramJobControl(credential);
         return ggj.killJob(reference);
     }
  
@@ -165,7 +173,7 @@ public class GridAccessController {
      * @return The status of the job (a <code>StateEnumeration</code> String)
      */
     public String retrieveJobStatus(String reference) {
-        GramJobControl ggj = new GramJobControl();
+        GramJobControl ggj = new GramJobControl(credential);
         return ggj.getJobStatus(reference);
     }
 
@@ -177,7 +185,7 @@ public class GridAccessController {
      * @return The results of the job
      */
     public String retrieveJobResults(String reference) {
-        GramJobControl ggj = new GramJobControl();
+        GramJobControl ggj = new GramJobControl(credential);
         return ggj.getJobResults(reference);
     }
 
@@ -186,8 +194,7 @@ public class GridAccessController {
      * 
      * @return The list of available sites
      */
-    public String[] retrieveAllSitesOnGrid()
-    {
+    public String[] retrieveAllSitesOnGrid() {
         String sites[] = RQC.getAllSitesOnGrid();
 
         // Order the sites alphabetically.
@@ -203,8 +210,7 @@ public class GridAccessController {
      * 
      * @return The list of codes available
      */
-    public String[] retrieveAllCodesAtSite(String site)
-    {
+    public String[] retrieveAllCodesAtSite(String site) {
         return RQC.getAllCodesAtSite(site);
     }
 
@@ -215,8 +221,7 @@ public class GridAccessController {
      * @param site The site that code is being selected from
      * @return The module name
      */
-    public String retrieveModuleNameForCode(String code, String site, String version)
-    {
+    public String retrieveModuleNameForCode(String code, String site, String version) {
         return RQC.getModuleNameOfCodeAtSite(site, code, version);
     }
 
@@ -227,8 +232,8 @@ public class GridAccessController {
      * @param version The particular version
      * @return A list of sites that have the version of the code
      */
-    public String[] retrieveSitesWithSoftwareAndVersion(String code, String version)
-    {
+    public String[] retrieveSitesWithSoftwareAndVersion(String code,
+            String version) {
         return RQC.getAllSitesWithAVersionOfACode(code, version);
     }
     
@@ -244,8 +249,7 @@ public class GridAccessController {
      * @return The subcluster that satisfies the requirements
      */
     public String[] retrieveSubClusterWithSoftwareAndVersionWithMemAndCPUs(
-            String code, String version, String cpus, String mem)
-    {
+            String code, String version, String cpus, String mem) {
         return RQC.getSubClusterWithSoftwareAndVersionWithMemAndCPUs(code, version, cpus, mem);
     }
     
@@ -257,13 +261,13 @@ public class GridAccessController {
      * @param wallTime
      * @return A list of queues
      */
-    public String[] retrieveComputingElementForWalltimeAndSubcluster(String currSubCluster, String wallTime)
-    {
+    public String[] retrieveComputingElementForWalltimeAndSubcluster(
+            String currSubCluster, String wallTime) {
         return RQC.getComputingElementForWalltimeAndSubcluster(currSubCluster, wallTime);
     }
     
-    public String retrieveStorageElementFromComputingElementWithDiskAvailable(String queue, String diskSpace)
-    {
+    public String retrieveStorageElementFromComputingElementWithDiskAvailable(
+            String queue, String diskSpace) {
         String defaultSE = "";
         String storagePath = "";
 
@@ -274,8 +278,8 @@ public class GridAccessController {
     }
         
 
-    public String[] retrieveSubClusterWithMemAndCPUsAtSite(String site, String cluster, String cpus, String mem)
-    {
+    public String[] retrieveSubClusterWithMemAndCPUsAtSite(String site,
+            String cluster, String cpus, String mem) {
         return RQC.getSubClusterWithMemAndCPUsFromClusterFromSite(site, cluster, cpus, mem);
     }
     
@@ -286,8 +290,7 @@ public class GridAccessController {
      * @param code The code that will be used
      * @return An array of the different versions of 'code' available at 'site'
      */
-    public String[] retrieveCodeVersionsAtSite(String site, String code)
-    {
+    public String[] retrieveCodeVersionsAtSite(String site, String code) {
         return RQC.getVersionsOfCodeAtSite(site, code);
     }
 
@@ -297,8 +300,7 @@ public class GridAccessController {
      * @param site The site that is being checked for queues
      * @return A list of the different queues available
      */
-    public String[] retrieveQueueNamesAtSite(String site)
-    {
+    public String[] retrieveQueueNamesAtSite(String site) {
         return RQC.getQueueNamesAtSite(site);
     }
 
@@ -307,8 +309,7 @@ public class GridAccessController {
      * 
      * @return A list of all the codes available
      */
-    public String[] retrieveAllSiteCodes()
-    {
+    public String[] retrieveAllSiteCodes() {
         return RQC.getAllCodesOnGrid();
     }
     
@@ -319,13 +320,11 @@ public class GridAccessController {
      * @param code The code to check for versions of
      * @return A list of all the version avalailable
      */
-    public String[] retrieveAllVersionsOfCodeOnGrid(String code)
-    {
+    public String[] retrieveAllVersionsOfCodeOnGrid(String code) {
         return RQC.getAllVersionsOfCodeOnGrid(code);
     }
     
-    public SiteInfo[] retrieveSiteStatus()
-    {
+    public SiteInfo[] retrieveSiteStatus() {
         return RQC.getAllSitesStatus();
     }
     
@@ -335,8 +334,7 @@ public class GridAccessController {
      * 
      * @return A list of GridFTP servers
      */
-    public String[] retrieveAllGridFtpServersOnGrid()
-    {
+    public String[] retrieveAllGridFtpServersOnGrid() {
         return RQC.getAllGridFTPServersOnGrid();
     }
 
@@ -347,37 +345,60 @@ public class GridAccessController {
      * @return the email address 
      */
     
-    public String getSiteContactEmailAtSite(String site)
-    {
+    public String getSiteContactEmailAtSite(String site) {
         return RQC.getSiteContactEmailAtSite(site);
     }   
 
     /**
-     * Check if the user has a valid proxy
+     * Initializes proxy which will be used to authenticate the user for the
+     * grid.
      * 
-     * @return true/false
+     * @return true if credentials were successfully created, false otherwise
      */
-    public static boolean validProxy()
-    {
+    public boolean initProxy(String proxyUser, String proxyPass) {
         boolean retval = false;
         try {
-            GSSManager manager = ExtendedGSSManager.getInstance();
-            GSSCredential cred = manager.createCredential(
-                    GSSCredential.INITIATE_AND_ACCEPT);
+            GSSCredential cred = MyProxyManager.getDelegation(
+                    myProxyServer, myProxyPort,
+                    proxyUser, proxyPass.toCharArray(),
+                    myProxyLifetime);
 
-            // Lifetime check - in seconds - 5 mins.
-            if (cred.getRemainingLifetime() > (5*60)) {
-                logger.info("Valid proxy found: " +
+            logger.info("Got Credential from "+myProxyServer);
+            logger.info("Name: " + cred.getName().toString());
+            logger.info("Remaining lifetime: " + cred.getRemainingLifetime());
+            credential = cred;
+            RQC.setCredential(cred);
+            retval = true;
+
+        } catch (MyProxyException e) {
+            logger.error("Could not get delegated proxy from server.");
+        } catch (GSSException e) {
+            logger.error("GSS Exception: get remaining lifetime error.");
+        } catch (Exception e) {
+            logger.error("Could not get delegated proxy from server.");
+        }
+        
+        // try to create new credential if the above failed.
+        if (credential == null) {
+            try {
+                GSSManager manager = ExtendedGSSManager.getInstance();
+                GSSCredential cred = manager.createCredential(
+                        GSSCredential.INITIATE_AND_ACCEPT);
+
+                // Lifetime check - in seconds - 5 mins.
+                if (cred.getRemainingLifetime() > (5*60)) {
+                    logger.info("Valid proxy found: " +
+                            cred.getRemainingLifetime()/60 + "min, " +
+                            cred.getRemainingLifetime()%60 + "sec");
+                    retval = true;
+                } else {
+                    logger.info("Proxy lifetime too short: " +
                         cred.getRemainingLifetime()/60 + "min, " +
                         cred.getRemainingLifetime()%60 + "sec");
-                retval = true;
-            } else {
-                logger.info("Proxy lifetime too short: " +
-                    cred.getRemainingLifetime()/60 + "min, " +
-                    cred.getRemainingLifetime()%60 + "sec");
+                }
+            } catch (GSSException e) {
+                logger.error(FaultHelper.getMessage(e)); 
             }
-        } catch (GSSException e) {
-            logger.error(FaultHelper.getMessage(e)); 
         }
         
         return retval;

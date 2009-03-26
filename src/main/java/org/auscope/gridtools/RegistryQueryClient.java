@@ -7,6 +7,7 @@ import java.io.FileWriter;
 import java.util.Date;
 import java.util.TreeSet;
 
+import javax.xml.rpc.Stub;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
@@ -19,7 +20,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.globus.axis.util.Util;
 import org.globus.wsrf.WSRFConstants;
+import org.globus.wsrf.impl.security.authentication.Constants;
+import org.globus.wsrf.impl.security.descriptor.ClientSecurityDescriptor;
 import org.globus.wsrf.utils.FaultHelper;
+import org.ietf.jgss.GSSCredential;
 import org.oasis.wsrf.properties.QueryExpressionType;
 import org.oasis.wsrf.properties.QueryResourcePropertiesResponse;
 import org.oasis.wsrf.properties.QueryResourceProperties_Element;
@@ -65,6 +69,8 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
     private static Log logger = 
         LogFactory.getLog(RegistryQueryClient.class.getName());
 
+    private GSSCredential credential = null;
+
     static {
         Util.registerTransport(); // For secure transport
     }
@@ -79,6 +85,16 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
         //TODO: Test that the MDS server is alive.
     }
 
+    /**
+     * Initialize the Registry Query Client with existing credentials.
+     */
+    public RegistryQueryClient(GSSCredential credential) {
+        this.credential = credential;
+    }
+
+    public void setCredential(GSSCredential credential) {
+        this.credential = credential;
+    }
 
     /* LOCAL HELPER METHODS */
 
@@ -238,10 +254,17 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
     
             QueryResourceProperties_PortType queryPort = locator
                     .getQueryResourcePropertiesPort(serviceEPR);
+
+            if (credential != null) {
+                ClientSecurityDescriptor secDesc =
+                    new ClientSecurityDescriptor();
+                secDesc.setGSSCredential(credential);
+                ((Stub) queryPort)._setProperty(Constants.CLIENT_DESCRIPTOR, secDesc);
+            }
+
             // This is the XPath query that we will use.
             // It requests all entries that contain the string
-            // specified in 'xPathqueryString'
-    
+            // specified in xPathQuery
             QueryExpressionType query = new QueryExpressionType();
             query.setDialect(new URI(WSRFConstants.XPATH_1_DIALECT));
             query.setValue(xPathQuery);
