@@ -24,8 +24,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.auscope.vrl.GridAccessController;
-import org.auscope.vrl.UserJob;
-import org.auscope.vrl.UserJobManager;
+import org.auscope.vrl.VRLJob;
+import org.auscope.vrl.VRLJobManager;
 import org.auscope.vrl.Util;
 
 public class JobListController extends MultiActionController {
@@ -48,7 +48,7 @@ public class JobListController extends MultiActionController {
     protected final Log logger = LogFactory.getLog(getClass());
 
     private GridAccessController gridAccess;
-    private UserJobManager userJobManager;
+    private VRLJobManager jobManager;
 
     protected ModelAndView handleNoSuchRequestHandlingMethod(
             NoSuchRequestHandlingMethodException ex,
@@ -74,7 +74,7 @@ public class JobListController extends MultiActionController {
 
         String jobRef = request.getParameter("ref");
         logger.info("Cancelling job "+jobRef);
-        UserJob job = userJobManager.getUserJobByRef(
+        VRLJob job = jobManager.getJobByUserAndRef(
                 request.getRemoteUser(), jobRef);
         Map<String, Object> myModel = new HashMap<String, Object>();
 
@@ -91,7 +91,7 @@ public class JobListController extends MultiActionController {
             logger.info("New job state: "+newState);
 
             job.setStatus(newState);
-            userJobManager.saveUserJob(job);
+            jobManager.saveJob(job);
             myModel.put("success", true);
         }
 
@@ -119,7 +119,7 @@ public class JobListController extends MultiActionController {
         }
         String jobRef = request.getParameter("ref");
         logger.info("Getting file list for job "+jobRef+" of user "+user);
-        UserJob job = userJobManager.getUserJobByRef(user, jobRef);
+        VRLJob job = jobManager.getJobByUserAndRef(user, jobRef);
         Map<String, Object> myModel = new HashMap<String, Object>();
 
         if (job == null) {
@@ -167,7 +167,7 @@ public class JobListController extends MultiActionController {
         }
         String jobRef = request.getParameter("ref");
         String fileName = request.getParameter("filename");
-        UserJob job = userJobManager.getUserJobByRef(user, jobRef);
+        VRLJob job = jobManager.getJobByUserAndRef(user, jobRef);
         Map<String, Object> myModel = new HashMap<String, Object>();
         String errorString = null;
 
@@ -238,7 +238,7 @@ public class JobListController extends MultiActionController {
         }
         String jobRef = request.getParameter("ref");
         String filesParam = request.getParameter("files");
-        UserJob job = userJobManager.getUserJobByRef(user, jobRef);
+        VRLJob job = jobManager.getJobByUserAndRef(user, jobRef);
         Map<String, Object> myModel = new HashMap<String, Object>();
         String errorString = null;
 
@@ -316,7 +316,7 @@ public class JobListController extends MultiActionController {
      * @param response The servlet response
      *
      * @return A JSON object with a jobs attribute which is an array of
-     *         UserJob objects.
+     *         VRLJob objects.
      */
     public ModelAndView listJobs(HttpServletRequest request,
                                  HttpServletResponse response) {
@@ -326,16 +326,16 @@ public class JobListController extends MultiActionController {
             user = request.getRemoteUser();
         }
         logger.info("Updating status of jobs by "+user);
-        List<UserJob> userJobs = userJobManager.getUserJobs(user);
+        List<VRLJob> userJobs = jobManager.getJobsByUser(user);
         Map<String, Object> myModel = new HashMap<String, Object>();
 
-        for (UserJob j : userJobs) {
+        for (VRLJob j : userJobs) {
             String state = j.getStatus();
             if (!state.equals("Done") && !state.equals("Failed")) {
                 String newState = gridAccess.retrieveJobStatus(j.getReference());
                 if (newState != null) {
                     j.setStatus(newState);
-                    userJobManager.saveUserJob(j);
+                    jobManager.saveJob(j);
                 }
             }
             //gridAccess.getJobByReference(j.getReference());
@@ -366,7 +366,7 @@ public class JobListController extends MultiActionController {
         }
         String jobRef = request.getParameter("ref");
         logger.info("Re-submitting job "+jobRef+" of user "+user);
-        UserJob job = userJobManager.getUserJobByRef(user, jobRef);
+        VRLJob job = jobManager.getJobByUserAndRef(user, jobRef);
 
         if (job == null) {
             Map<String, Object> myModel = new HashMap<String, Object>();
@@ -403,7 +403,7 @@ public class JobListController extends MultiActionController {
         String jobRef = request.getParameter("ref");
         String fileName = request.getParameter("filename");
         logger.info("Re-using script file of job "+jobRef+" by user "+user);
-        UserJob job = userJobManager.getUserJobByRef(user, jobRef);
+        VRLJob job = jobManager.getJobByUserAndRef(user, jobRef);
         String errorString = null;
 
         if (job == null) {
@@ -449,8 +449,8 @@ public class JobListController extends MultiActionController {
         this.gridAccess = gridAccess;
     }
 
-    public void setUserJobManager(UserJobManager userJobManager) {
-        this.userJobManager = userJobManager;
+    public void setJobManager(VRLJobManager jobManager) {
+        this.jobManager = jobManager;
     }
 }
 

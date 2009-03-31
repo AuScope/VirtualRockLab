@@ -2,15 +2,21 @@
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
     "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <hibernate-mapping>
-    <class name="org.auscope.vrl.UserJob" table="userjobs">
+    <class name="org.auscope.vrl.VRLJob" table="vrljobs">
     <id name="reference" column="reference">
     </id>
-    <property name="userId"/>
+    <property name="user"/>
+    <property name="description"/>
     <property name="name"/>
+    <property name="numBonds"/>
+    <property name="numParticles"/>
+    <property name="numTimesteps"/>
     <property name="outputDir"/>
     <property name="scriptFile"/>
+    <property name="site"/>
     <property name="status"/>
-    <property name="timeStamp"/>
+    <property name="submitDate"/>
+    <property name="version"/>
 
 </class>
 </hibernate-mapping>

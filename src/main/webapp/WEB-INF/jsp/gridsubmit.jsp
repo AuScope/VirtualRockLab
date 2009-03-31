@@ -194,9 +194,9 @@
         <tr>
             <td align="right" width="25%">Script Filename:</td>
             <td width="25%">
-                <form:input path="arguments[0]"/>
+                <form:input path="scriptFile"/>
             </td>
-            <td width="50%"><form:errors path="arguments" cssClass="error"/></td>
+            <td width="50%"><form:errors path="scriptFile" cssClass="error"/></td>
         </tr>
         </table>
         <br>

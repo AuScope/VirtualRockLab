@@ -129,3 +129,17 @@ a:hover {
     font-size:11px;
 }
 
+.jobdesc-title {
+    font-weight: bold;
+    font-size: medium;
+    font-style: italic;
+    margin-bottom: 10px;
+}
+
+.jobdesc-key {
+    font-weight: bold;
+}
+
+.jobdesc-content {
+}
+

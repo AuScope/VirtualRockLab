@@ -135,7 +135,7 @@ public class GramJobControl implements JobControlInterface {
 
 
         if (job.getJobType().equalsIgnoreCase("single") &&
-                Integer.valueOf(job.getCpuCount()) > 1)
+                job.getCpuCount() > 1)
             finalJobString += " <environment>  <name>OMP_NUM_THREADS</name>" +
                 "  <value>" + job.getCpuCount()+ "</value> </environment>";
 
@@ -294,7 +294,7 @@ public class GramJobControl implements JobControlInterface {
                 "</value> </environment>";
 
             if (job.getJobType().equalsIgnoreCase("single") &&
-                    Integer.valueOf(job.getCpuCount()) > 1)
+                    job.getCpuCount() > 1)
                 finalJobString += " <environment>  <name>OMP_NUM_THREADS</name>" +
                     "  <value>" + job.getCpuCount()+ "</value> </environment>";
         
@@ -574,7 +574,7 @@ public class GramJobControl implements JobControlInterface {
             gridJob.setQueue(jobDesc.getQueue());
             gridJob.setMaxWallTime(jobDesc.getMaxWallTime().toString());
             gridJob.setMaxMemory(jobDesc.getMaxMemory().toString());
-            gridJob.setCpuCount(jobDesc.getCount().toString());
+            gridJob.setCpuCount(jobDesc.getCount().intValue());
             gridJob.setStdInput(jobDesc.getStdin());
             gridJob.setStdOutput(jobDesc.getStdout());
             gridJob.setStdError(jobDesc.getStderr());

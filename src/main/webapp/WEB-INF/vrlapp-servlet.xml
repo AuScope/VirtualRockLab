@@ -31,20 +31,20 @@
     <bean name="/gridsubmit.html" class="org.auscope.vrl.web.GridSubmitFormController">
         <property name="sessionForm" value="false"/>
         <property name="commandName" value="gridSubmit"/>
-        <property name="commandClass" value="org.auscope.gridtools.GridJob"/>
+        <property name="commandClass" value="org.auscope.vrl.VRLJob"/>
         <property name="validator">
-            <bean class="org.auscope.vrl.GridJobValidator"/>
+            <bean class="org.auscope.vrl.VRLJobValidator"/>
         </property>
         <property name="formView" value="gridsubmit"/>
         <property name="successView" value="joblist.html"/>
         <property name="gridAccess" ref="gridAccess"/>
-        <property name="userJobManager" ref="userJobManager"/>
+        <property name="jobManager" ref="vrlJobManager"/>
     </bean>
 
     <bean name="/joblist.html" class="org.auscope.vrl.web.JobListController">
         <property name="methodNameResolver" ref="methodNameResolver"/>
         <property name="gridAccess" ref="gridAccess"/>
-        <property name="userJobManager" ref="userJobManager"/>
+        <property name="jobManager" ref="vrlJobManager"/>
     </bean>
 
     <bean name="/scriptbuilder.html" class="org.auscope.vrl.web.ScriptBuilderController">

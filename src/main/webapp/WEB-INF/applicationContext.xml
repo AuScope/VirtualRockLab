@@ -25,13 +25,15 @@
         <property name="url" value="${jdbc.url}"/>
         <property name="username" value="${jdbc.username}"/>
         <property name="password" value="${jdbc.password}"/>
+        <property name="testOnBorrow" value="true"/>
+        <property name="validationQuery" value="SELECT 1"/>
     </bean>
 
     <bean id="vrlSessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
         <property name="dataSource" ref="vrlDataSource"/>
         <property name="mappingResources">
             <list>
-                <value>userjob.hbm.xml</value>
+                <value>vrljob.hbm.xml</value>
             </list>
         </property>
         <property name="hibernateProperties">
@@ -43,12 +45,12 @@
         <property name="sessionFactory" ref="vrlSessionFactory"/>
     </bean>
 
-    <bean id="userJobDao" class="org.auscope.vrl.UserJobDao">
+    <bean id="vrlJobDao" class="org.auscope.vrl.VRLJobDao">
         <property name="hibernateTemplate" ref="hibernateTemplate"/>    
     </bean>
 
-    <bean id="userJobManager" class="org.auscope.vrl.UserJobManager">
-        <property name="userJobDao" ref="userJobDao"/>
+    <bean id="vrlJobManager" class="org.auscope.vrl.VRLJobManager">
+        <property name="VRLJobDao" ref="vrlJobDao"/>
     </bean>
 
     <bean id="gridAccess" class="org.auscope.vrl.GridAccessController">

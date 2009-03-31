@@ -45,6 +45,12 @@ JobList.refreshAll = function() {
     JobList.jobStore.reload();
 }
 
+// loads and presents current user's jobs
+JobList.myJobs = function() {
+    JobList.jobStore.baseParams.user = null;
+    JobList.refreshAll();
+}
+
 // submits a "kill job" request after asking for confirmation
 JobList.killJob = function(ref) {
     Ext.Msg.confirm('Kill Job', 'Are you sure you want to kill the job?',
@@ -63,29 +69,34 @@ JobList.killJob = function(ref) {
     );
 }
 
-// downloads given file from given job reference
-JobList.downloadFile = function(ref, file) {
+// downloads given file from a specified user's job
+JobList.downloadFile = function(user, ref, file) {
     window.location = JobList.ControllerURL +
-        "?action=downloadFile&ref="+ref+"&filename="+file;
+        "?action=downloadFile&user="+user+"&ref="+ref+"&filename="+file;
 }
 
 // downloads a ZIP file containing given files of given job reference
-JobList.downloadMulti = function(ref, files) {
+JobList.downloadMulti = function(user, ref, files) {
     var fparam = files[0].data.name;
     for (var i=1; i<files.length; i++) {
         fparam += ','+files[i].data.name;
     }
     window.location = JobList.ControllerURL +
-        "?action=downloadMulti&ref="+ref+"&files="+fparam;
+        "?action=downloadMulti&user="+user+"&ref="+ref+"&files="+fparam;
 }
 
-JobList.resubmitJob = function(ref) {
-    window.location = JobList.ControllerURL + "?action=resubmitJob&ref="+ref;
-}
-
-JobList.useScript = function(ref, file) {
+JobList.resubmitJob = function(user, ref) {
     window.location = JobList.ControllerURL +
-        "?action=useScript&ref="+ref+"&filename="+file;
+        "?action=resubmitJob&user="+user+"&ref="+ref;
+}
+
+JobList.useScript = function(user, ref, file) {
+    window.location = JobList.ControllerURL +
+        "?action=useScript&user="+user+"&ref="+ref+"&filename="+file;
+}
+
+JobList.showQueryDialog = function() {
+    alert("To be implemented.");
 }
 
 //
@@ -102,12 +113,18 @@ JobList.initialize = function() {
         autoLoad: true,
         fields: [
             { name: 'name', type: 'string' },
+            { name: 'description', type: 'string' },
+            { name: 'site', type: 'string' },
+            { name: 'version', type: 'string' },
+            { name: 'numTimesteps', type: 'int' },
+            { name: 'numParticles', type: 'int' },
+            { name: 'numBonds', type: 'int' },
             { name: 'outputDir', type: 'string' },
             { name: 'reference', type: 'string' },
             { name: 'scriptFile', type: 'string' },
             { name: 'status', type: 'string'},
-            { name: 'timeStamp', type: 'string'},
-            { name: 'userId', type: 'string'}
+            { name: 'submitDate', type: 'string'},
+            { name: 'user', type: 'string'}
         ]
     });
 
@@ -139,9 +156,9 @@ JobList.initialize = function() {
         id: 'job-grid',
         store: JobList.jobStore,
         columns: [
-            { header: 'User', width: 60, sortable: true, dataIndex: 'userId'},
+            { header: 'User', width: 60, sortable: true, dataIndex: 'user'},
             { header: 'Job Name', sortable: true, dataIndex: 'name'},
-            { header: 'Submit Date', width: 160, sortable: true, dataIndex: 'timeStamp'},
+            { header: 'Submit Date', width: 160, sortable: true, dataIndex: 'submitDate'},
             { header: 'Status', sortable: true, dataIndex: 'status', renderer: jobStatusRenderer}
         ],
         sm: new Ext.grid.RowSelectionModel({
@@ -168,7 +185,7 @@ JobList.initialize = function() {
                         itemclick: function(item) {
                             switch (item.id) {
                                 case 'resubmit-job':
-                                    JobList.resubmitJob(jobData.reference);
+                                    JobList.resubmitJob(jobData.user, jobData.reference);
                                     break;
                                 case 'kill-job':
                                     JobList.killJob(jobData.reference);
@@ -215,10 +232,10 @@ JobList.initialize = function() {
         var jobData = jobGrid.getSelectionModel().getSelected().data;
         if (fileGrid.getSelectionModel().getCount() == 1) {
             var fileName = fileGrid.getSelectionModel().getSelected().data.name;
-            JobList.downloadFile(jobData.reference, fileName);
+            JobList.downloadFile(jobData.user, jobData.reference, fileName);
         } else {
             var files = fileGrid.getSelectionModel().getSelections();
-            JobList.downloadMulti(jobData.reference, files);
+            JobList.downloadMulti(jobData.user, jobData.reference, files);
         }
     }
 
@@ -226,7 +243,7 @@ JobList.initialize = function() {
         'rowdblclick': function(grid, rowIndex, e) {
             var jobData = jobGrid.getSelectionModel().getSelected().data;
             var fileName = grid.getStore().getAt(rowIndex).data.name;
-            JobList.downloadFile(jobData.reference, fileName);
+            JobList.downloadFile(jobData.user, jobData.reference, fileName);
         },
         'rowcontextmenu': function(grid, rowIndex, e) {
             grid.getSelectionModel().selectRow(rowIndex);
@@ -243,7 +260,7 @@ JobList.initialize = function() {
                                     onMenuDownload();
                                     break;
                                 case 'use-script':
-                                    JobList.useScript(jobData.reference,
+                                    JobList.useScript(jobData.user, jobData.reference,
                                         grid.getStore().getAt(rowIndex).data.name);
                                     break;
                             }
@@ -269,10 +286,16 @@ JobList.initialize = function() {
 
     // a template for the job description html area
     JobList.jobDescTpl = new Ext.Template(
-        '<h1 style="font-size:medium; font-style:italic">{name}</h1><br/>',
-        '<p>Description:</p><br/><p>{outputDir}</p><br/>',
-        '<ul><li>Input script filename: {scriptFile}</li>',
-        '<li>Endpoint Reference: {reference}</li></ul>'
+        '<p class="jobdesc-title">{name}</p>',
+        '<table width="100%"><col width="25%"></col><col class="jobdesc-content"></col>',
+        '<tr><td class="jobdesc-key">Submitted on:</td><td>{submitDate}</td></tr>',
+        '<tr><td class="jobdesc-key">Computation site:</td><td>{site}</td></tr>',
+        '<tr><td class="jobdesc-key">ESyS-Particle version:</td><td>{version}</td></tr>',
+        '<tr><td class="jobdesc-key">Input script filename:</td><td>{scriptFile}</td></tr>',
+        '<tr><td class="jobdesc-key">Number of timesteps:</td><td>{numTimesteps}</td></tr>',
+        '<tr><td class="jobdesc-key">Number of particles:</td><td>{numParticles}</td></tr>',
+        '<tr><td class="jobdesc-key">Number of bonds:</td><td>{numBonds}</td></tr></table><br/>',
+        '<p class="jobdesc-key">Description:</p><br/><p>{description}</p>'
     );
     JobList.jobDescTpl.compile();
 
@@ -315,6 +338,8 @@ JobList.initialize = function() {
             margins: '2 2 2 0',
             layout: 'fit',
             buttons: [
+                { text: 'My Jobs', handler: JobList.myJobs },
+                { text: 'Query', handler: JobList.showQueryDialog },
                 { text: 'Refresh', handler: JobList.refreshAll }
             ],
             items: [ jobDetails ]

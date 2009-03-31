@@ -27,11 +27,10 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.auscope.gridtools.GridJob;
 import org.auscope.vrl.GridAccessController;
-import org.auscope.vrl.UserJob;
-import org.auscope.vrl.UserJobManager;
 import org.auscope.vrl.Util;
+import org.auscope.vrl.VRLJob;
+import org.auscope.vrl.VRLJobManager;
 
 public class GridSubmitFormController extends SimpleFormController {
 
@@ -40,7 +39,7 @@ public class GridSubmitFormController extends SimpleFormController {
 
     private static final String CODE_NAME = "esys_particle";
     private GridAccessController gridAccess;
-    private UserJobManager userJobManager;
+    private VRLJobManager jobManager;
 
     protected Map referenceData(HttpServletRequest request) throws Exception {
 
@@ -69,8 +68,10 @@ public class GridSubmitFormController extends SimpleFormController {
 
         String user = request.getRemoteUser();
         MultipartHttpServletRequest mfReq = (MultipartHttpServletRequest)request;
-        GridJob job = (GridJob) command;
+        VRLJob job = (VRLJob) command;
 
+        job.setArguments(new String[] { job.getScriptFile() });
+        
         // JavaScript returns one string for the transfers delimited by commas
         String transfersString = job.getInTransfers()[0];
         String[] inTransfers = transfersString.split(",");
@@ -105,6 +106,7 @@ public class GridSubmitFormController extends SimpleFormController {
             logger.error("Could not create directory "+jobOutputDir);
             jobOutputDir = gridAccess.getLocalGridFtpStageOutDir();
         }
+        job.setOutputDir(jobOutputDir);
         job.setOutTransfers(new String[] { gridAccess.getLocalGridFtpServer() +
             jobOutputDir });
 
@@ -119,12 +121,13 @@ public class GridSubmitFormController extends SimpleFormController {
             return showForm(request, response, errors);
 
         } else {
-            logger.info("Resulting EPR: "+submitEPR);
-
+            logger.info("SUCCESS! EPR: "+submitEPR);
             String status = gridAccess.retrieveJobStatus(submitEPR);
-            UserJob userJob = new UserJob(user, job.getName(),
-                    jobOutputDir, submitEPR, job.getArguments()[0], status, new Date().toString());
-            userJobManager.saveUserJob(userJob);
+            job.setReference(submitEPR);
+            job.setStatus(status);
+            job.setSubmitDate(new Date().toString());
+            job.setUser(user);
+            jobManager.saveJob(job);
             logger.info("Returning to " + getSuccessView());
         }
 
@@ -134,10 +137,7 @@ public class GridSubmitFormController extends SimpleFormController {
     protected Object formBackingObject(HttpServletRequest request)
             throws ServletException {
 
-        String user = request.getRemoteUser();
-        final String site = "ESSCC";
-        final String name = "gridjob";
-        final String email = "";
+        final String user = request.getRemoteUser();
         final String code = CODE_NAME;
         final String jobType = "mpi";
         final String maxWallTime = "2";
@@ -145,13 +145,21 @@ public class GridSubmitFormController extends SimpleFormController {
         final String stdInput = "";
         final String stdOutput = "stdOutput.txt";
         final String stdError = "stdError.txt";
-        String cpuCount = "2";
-        String[] arguments = { "script.py" };
+        String name = "gridjob";
+        String site = "ESSCC";
+        Integer cpuCount = 2;
+        Integer numBonds = 0;
+        Integer numParticles = 0;
+        Integer numTimesteps = 0;
+        String[] arguments = new String[0];
         String[] inTransfers;
         final String[] outTransfers = new String[0];
         String version = "";
         String queue = "";
+        String description = "";
+        String scriptFile = "";
 
+        // Preset some attributes
         String[] allVersions = gridAccess.retrieveCodeVersionsAtSite(site, code);
         if (allVersions.length > 0)
             version = allVersions[0];
@@ -177,11 +185,6 @@ public class GridSubmitFormController extends SimpleFormController {
         // The server part will be added before submission
         inTransfers = new String[] { jobInputDir };
 
-        logger.info("Creating new GridJob instance");
-        GridJob guiJob = new GridJob(site, name, email, code, version,
-            arguments, queue, jobType, maxWallTime, maxMemory, cpuCount,
-            inTransfers, outTransfers, stdInput, stdOutput, stdError);
-
         // Check if the ScriptBuilder was used. If so, there is a file in the
         // system temp directory which needs to be staged in.
         String newScript = request.getParameter("newscript");
@@ -193,39 +196,38 @@ public class GridSubmitFormController extends SimpleFormController {
             success = Util.moveFile(tmpScriptFile, newScriptFile);
             if (success) {
                 logger.info("Moved "+newScript+" to stageIn directory");
-                arguments[0] = newScript+".py";
-                guiJob.setArguments(arguments);
+                scriptFile = newScript+".py";
 
                 // Now look for a string like
                 // sim = LsmMpi( numWorkerProcesses = 2, ...)
                 // to extract the number of CPUs
+                // FIXME: This should probably go into a parser-class which
+                // extracts more information from the script...
                 try {
                     BufferedReader input = new BufferedReader(
                             new FileReader(newScriptFile));
                     String line = null;
                     while ((line = input.readLine()) != null) {
-                        int sidx;
-                        if ((sidx = line.indexOf("numWorkerProcesses")) != -1) {
-                            sidx = line.indexOf('=', sidx);
-                            if (sidx == -1) {
-                                continue;
-                            }
-                            sidx++;
-                            int eidx = line.indexOf(',', sidx);
-                            if (eidx == -1) {
-                                continue;
-                            }
-                            try {
-                                int iCount = Integer.parseInt(line.substring(
-                                            sidx, eidx).trim());
-                                cpuCount = String.valueOf(iCount+1);
-                                guiJob.setCpuCount(cpuCount);
-                                logger.info("Number of CPUs from script: "+cpuCount);
-                            } catch (NumberFormatException e) {
-                                logger.warn("Error parsing number of CPUs.");
-                            }
+                        int startIndex = line.indexOf("numWorkerProcesses");
+                        if (startIndex != -1) {
+                            startIndex = line.indexOf('=', startIndex);
+                            if (startIndex != -1) {
+                                startIndex++;
+                                int endIndex = line.indexOf(',', startIndex);
+                                if (endIndex != -1) {
+                                    try {
+                                        int iCount = Integer.parseInt(
+                                                line.substring(startIndex,
+                                                    endIndex).trim());
+                                        cpuCount = iCount+1;
+                                        logger.info("Number of CPUs from script: "+cpuCount);
+                                    } catch (NumberFormatException e) {
+                                        logger.warn("Error parsing number of CPUs.");
+                                    }
 
-                            break;
+                                    break;
+                                }
+                            }
                         }
                     }
                     input.close();
@@ -242,31 +244,48 @@ public class GridSubmitFormController extends SimpleFormController {
         String jobRef = request.getParameter("resubmitJob");
         if (jobRef != null) {
             logger.info("Request to re-submit a job.");
-            UserJob existingJob = userJobManager.getUserJobByRef(user, jobRef);
+            VRLJob existingJob = jobManager.getJobByUserAndRef(user, jobRef);
             if (existingJob != null) {
-                logger.info("Using files and values of "+existingJob.getName());
-                //TODO
+                logger.info("Using attributes of "+existingJob.getName());
+                site = existingJob.getSite();
+                name = existingJob.getName()+"_resubmit";
+                scriptFile = existingJob.getScriptFile();
+                description = existingJob.getDescription();
+                numBonds = existingJob.getNumBonds();
+                numParticles = existingJob.getNumParticles();
+                numTimesteps = existingJob.getNumTimesteps();
+
+                logger.info("Copying files from old job to stageIn directory");
+                File srcDir = new File(existingJob.getOutputDir());
+                File destDir = new File(jobInputDir);
+                success = Util.copyFilesRecursive(srcDir, destDir);
+                if (!success) {
+                    logger.error("Could not copy all files!");
+                    // TODO: Let user know this didn't work
+                }
             }
         }
 
-        return guiJob;
+        logger.info("Creating new VRLJob instance");
+        VRLJob job = new VRLJob(site, name, code, version, arguments, queue,
+                jobType, maxWallTime, maxMemory, cpuCount, inTransfers,
+                outTransfers, stdInput, stdOutput, stdError);
+
+        job.setScriptFile(scriptFile);
+        job.setDescription(description);
+        job.setNumBonds(numBonds);
+        job.setNumParticles(numParticles);
+        job.setNumTimesteps(numTimesteps);
+
+        return job;
     }
 
     public void setGridAccess(GridAccessController gridAccess) {
         this.gridAccess = gridAccess;
     }
 
-    public GridAccessController getGridAccess() {
-        return gridAccess;
+    public void setJobManager(VRLJobManager jobManager) {
+        this.jobManager = jobManager;
     }
-
-    public void setUserJobManager(UserJobManager userJobManager) {
-        this.userJobManager = userJobManager;
-    }
-
-    public UserJobManager getUserJobManager() {
-        return userJobManager;
-    }
-
 }
 

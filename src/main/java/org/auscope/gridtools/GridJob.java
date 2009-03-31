@@ -20,8 +20,6 @@ public class GridJob implements Serializable
     private String   siteGridFTPServer;
     /** The job name. */
     private String   name;
-    /** The email. */
-    private String   email;
     /** The code. */
     private String   code;
     /** The executable name. */
@@ -39,7 +37,7 @@ public class GridJob implements Serializable
     /** The job type. */
     private String   jobType;
     /** The cpu count. */
-    private String   cpuCount;
+    private Integer  cpuCount;
     /** The in transfers. */
     private String[] inTransfers;
     /** The out transfers. */
@@ -61,10 +59,11 @@ public class GridJob implements Serializable
      */
     public GridJob()
     {
-        site = siteGridFTPServer = name = email = code = exeName = "";
-        version = queue = maxWallTime = maxMemory = jobType = ""; 
-        cpuCount = stdInput = stdOutput = stdError = "";
+        site = siteGridFTPServer = name = code = exeName = version = "";
+        queue = maxWallTime = maxMemory = jobType = ""; 
+        stdInput = stdOutput = stdError = "";
         arguments = inTransfers = outTransfers = modules = new String[0];
+        cpuCount = 0;
     }
 
     /**
@@ -76,7 +75,6 @@ public class GridJob implements Serializable
      *
      * @param site              The site the job will be run at
      * @param name              A descriptive name for this job
-     * @param email             The user's email address
      * @param code              Executable/code to be run
      * @param version           Version of code to use
      * @param arguments         Arguments for the code
@@ -91,15 +89,14 @@ public class GridJob implements Serializable
      * @param stdOutput         The std output file for the job
      * @param stdError          The std error file for the job
      */
-    public GridJob(String site, String name, String email, String code, 
-                   String version, String[] arguments, String queue, 
-                   String jobType, String maxWallTime, String maxMemory, 
-                   String cpuCount, String[] inTransfers, String[] outTransfers,
+    public GridJob(String site, String name, String code, String version,
+                   String[] arguments, String queue, String jobType,
+                   String maxWallTime, String maxMemory, Integer cpuCount,
+                   String[] inTransfers, String[] outTransfers,
                    String stdInput, String stdOutput, String stdError)
     {
         this.site = site;
         this.name = name;
-        this.email = email;
         this.code = code;
         this.version = version;
         this.arguments = arguments;
@@ -215,27 +212,6 @@ public class GridJob implements Serializable
     {
         assert (name != null);
         this.name = name;
-    }
-
-    /**
-     * Returns the user's Email address.
-     * 
-     * @return The user's Email
-     */
-    public String getEmail()
-    {
-        return email;
-    }
-    
-    /**
-     * Sets the user's Email address.
-     * 
-     * @param email The user's Email
-     */
-    public void setEmail(String email)
-    {
-        assert (email != null);
-        this.email = email;
     }
 
     /**
@@ -411,7 +387,7 @@ public class GridJob implements Serializable
      * 
      * @return The number of CPUs to use
      */
-    public String getCpuCount()
+    public Integer getCpuCount()
     {
         return cpuCount;
     }
@@ -421,7 +397,7 @@ public class GridJob implements Serializable
      * 
      * @param cpuCount The number of CPUs to use
      */ 
-    public void setCpuCount(String cpuCount)
+    public void setCpuCount(Integer cpuCount)
     {
         assert (cpuCount != null);
         this.cpuCount = cpuCount;
@@ -564,27 +540,28 @@ public class GridJob implements Serializable
      */
     public String toString()
     {
-        String sgftps=(siteGridFTPServer==null)?"null":"\""+siteGridFTPServer+"\"";
-        String en=(exeName==null)?"null":"\""+exeName+"\"";
+        String sgftps=(siteGridFTPServer==null) ? "null" :
+            "\""+siteGridFTPServer+"\"";
+        String en=(exeName==null) ? "null" : "\""+exeName+"\"";
         
-        return "site=\"" + site +
-               "\",siteGridFTPServer=" + sgftps +
-               ",name=\"" + name +
-               "\",email=\"" + email +
-               "\",code=\"" + code +
-               "\",exeName=" + en +
-               ",version=\"" + version +
-               "\",arguments=" + arrayToString(arguments) +
-               ",queue=\"" + queue +
-               "\",maxWallTime=\"" + maxWallTime +
-               "\",maxMemory=\"" + maxMemory +
-               "\",jobType=\"" + jobType +
-               "\",cpuCount=\"" + cpuCount +
-               "\",inTransfers=" + arrayToString(inTransfers) +
-               "\",outTransfers=" + arrayToString(outTransfers) +
+        return "site=\"" + site + "\"" +
+               ",siteGridFTPServer=" + sgftps +
+               ",name=\"" + name + "\"" +
+               ",code=\"" + code + "\"" +
+               ",exeName=" + en +
+               ",version=\"" + version + "\"" +
+               ",arguments=" + arrayToString(arguments) +
+               ",queue=\"" + queue + "\"" +
+               ",maxWallTime=\"" + maxWallTime + "\"" +
+               ",maxMemory=\"" + maxMemory + "\"" +
+               ",jobType=\"" + jobType + "\"" +
+               ",cpuCount=" + cpuCount +
+               ",inTransfers=" + arrayToString(inTransfers) +
+               ",outTransfers=" + arrayToString(outTransfers) +
                ",modules=" + arrayToString(modules) +
                ",stdInput=\"" + stdInput + "\"" +
                ",stdOutput=\"" + stdOutput + "\"" +
                ",stdError\"" + stdError + "\"";
     }
 }
+

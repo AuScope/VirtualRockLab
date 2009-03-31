@@ -5,20 +5,18 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.validation.Validator;
 import org.springframework.validation.Errors;
 
-import org.auscope.gridtools.GridJob;
 
-
-public class GridJobValidator implements Validator {
+public class VRLJobValidator implements Validator {
 
     /** Logger for this class and subclasses */
     protected final Log logger = LogFactory.getLog(getClass());
 
     public boolean supports(Class clazz) {
-        return GridJob.class.equals(clazz);
+        return VRLJob.class.equals(clazz);
     }
 
     public void validate(Object obj, Errors errors) {
-        GridJob job = (GridJob) obj;
+        VRLJob job = (VRLJob) obj;
         if (job == null) {
             errors.rejectValue("name", "error.not-specified", null, "Please provide a job name.");
         } else {
@@ -26,8 +24,8 @@ public class GridJobValidator implements Validator {
                 errors.rejectValue("name", "error.not-specified", null,
                         "Please provide a descriptive job name.");
             }
-            if (job.getArguments()[0].length() < 3) {
-                errors.rejectValue("arguments", "error.not-specified", null,
+            if (job.getScriptFile().length() < 3) {
+                errors.rejectValue("scriptFile", "error.not-specified", null,
                         "Please provide a script filename.");
             }
         }

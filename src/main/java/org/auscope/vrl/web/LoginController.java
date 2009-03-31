@@ -29,27 +29,38 @@ public class LoginController implements Controller {
             throws Exception {
 
         HttpSession session = request.getSession();
-        String user = request.getParameter("username");
+        String user;
+        String pass;
 
-        // the user tried to login
+        user = request.getParameter("username");
+
         if (user != null) {
-            String pass = request.getParameter("password");
+            // if the user just logged in store username and password in
+            // the session object
+            pass = request.getParameter("password");
             if (pass == null) {
                 pass = "";
             }
 
+            logger.info("Trying to initialize proxy with new login details");
             if (gridAccess.initProxy(user, pass)) {
                 session.setAttribute("myProxyUser", user);
                 session.setAttribute("myProxyPass", pass);
                 return new ModelAndView(
                         new RedirectView("joblist.html", true, false, false));
+            } else {
+                logger.info("Proxy init failed. Resetting session attributes.");
+                session.removeAttribute("myProxyUser");
+                session.removeAttribute("myProxyPass");
             }
-        }
 
-        // check if user is already logged in
-        if (session.getAttribute("myProxyUser") != null) {
-            return new ModelAndView(
-                    new RedirectView("joblist.html", true, false, false));
+        } else if ((user = (String)session.getAttribute("myProxyUser")) != null) {
+            logger.info("User is already logged in. Re-initializing proxy.");
+            pass = (String)session.getAttribute("myProxyPass");
+            if (gridAccess.initProxy(user, pass)) {
+                return new ModelAndView(
+                        new RedirectView("joblist.html", true, false, false));
+            }
         }
         
         return new ModelAndView("login");

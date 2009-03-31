@@ -8,7 +8,7 @@ import org.hibernate.Session;
 import org.springframework.orm.hibernate3.HibernateCallback;
 import org.springframework.orm.hibernate3.HibernateTemplate;
 
-public class UserJobDao {
+public class VRLJobDao {
 
     private HibernateTemplate hibernateTemplate;
 
@@ -20,34 +20,35 @@ public class UserJobDao {
         return hibernateTemplate;
     }
 
-    public List<UserJob> getUserJobList(final String userId) {
+    public List<VRLJob> getJobListByUser(final String user) {
         HibernateCallback callback = new HibernateCallback() {
             public Object doInHibernate(Session session) 
                 throws HibernateException, SQLException {
                 return session.createQuery(
-                        "FROM UserJob WHERE userId='"+userId+"'").list();
+                        "FROM VRLJob WHERE user='"+user+"'").list();
             }
         };
-        return (List<UserJob>)hibernateTemplate.execute(callback);
+        return (List<VRLJob>)hibernateTemplate.execute(callback);
     }
 
-    public UserJob getUserJobByRef(final String userId, final String reference) {
+    public VRLJob getJobByUserAndRef(final String user,
+                                      final String reference) {
         HibernateCallback callback = new HibernateCallback() {
             public Object doInHibernate(Session session) 
                 throws HibernateException, SQLException {
                 return session.createQuery(
-                        "FROM UserJob WHERE reference='"+reference+"'") .
-                    uniqueResult();
+                        "FROM VRLJob WHERE user='"+user+"' AND reference='" +
+                        reference + "'").uniqueResult();
             }
         };
-        return (UserJob)hibernateTemplate.execute(callback);
+        return (VRLJob)hibernateTemplate.execute(callback);
     }
 
-    public void saveUserJob(final UserJob userJob) {
+    public void saveVRLJob(final VRLJob vrlJob) {
         HibernateCallback callback = new HibernateCallback() {
             public Object doInHibernate(Session session)
                 throws HibernateException, SQLException {
-                session.saveOrUpdate(userJob);
+                session.saveOrUpdate(vrlJob);
                 return null;
             }
         };

@@ -38,6 +38,45 @@ ESySComponentLoader = Ext.extend(Ext.ux.XmlTreeLoader, {
     }
 });
 
+////////////////////////
+////// Callbacks ///////
+////////////////////////
+
+// called when the user tries to navigate away from this site
+ScriptBuilder.onWindowUnloading = function(e) {
+    if (this.confirmUnloading != false) {
+        e.browserEvent.returnValue = "All changes will be lost! Please use the Download button if you want to keep the current script file or 'Use Script' to submit it.";
+    }
+}
+
+// called when retrieving an initial script from the server failed
+ScriptBuilder.onGetScriptTextFailure = function(response, request) {
+    ScriptBuilder.textEditMode = false;
+    ScriptBuilder.updateSource();
+
+    // Show settings dialog for new script
+    ScriptBuilder.showDialog('SimContainer', 'New Script',
+            Ext.getCmp('usedcomps-panel').getRootNode());
+}
+
+// called when the server replied to the initial script text request
+ScriptBuilder.onGetScriptTextResponse = function(response, request) {
+    var resp = Ext.decode(response.responseText);
+    if (resp.model != null && resp.model.scriptText != null) {
+        Ext.getCmp('scriptname').setRawValue(resp.model.scriptName);
+        Ext.getCmp('sourcetext').setValue(resp.model.scriptText);
+        ScriptBuilder.switchToTextEditor();
+
+    } else {
+        // Reuse code from failure path
+        ScriptBuilder.onGetScriptTextFailure(response, request);
+    }
+}
+
+////////////////////////
+////// Functions ///////
+////////////////////////
+
 // opens the configuration dialog for given component type and ensures
 // that values are stored and restored accordingly
 ScriptBuilder.showDialog = function(compId, compTitle, existingNode) {
@@ -118,32 +157,10 @@ ScriptBuilder.switchToTextEditor = function() {
     Ext.getCmp('content-panel').remove('usedcomps-panel');
     Ext.getCmp('content-panel').doLayout();
     var descEl = Ext.getCmp('description-panel').body;
-    descEl.update(ScriptBuilder.compDescTextEditor).setStyle('background','#eee');
+    descEl.update(this.compDescTextEditor).setStyle('background','#eee');
     Ext.getCmp('edit-script-btn').disable();
     Ext.getCmp('sourcetext').enable();
-    ScriptBuilder.textEditMode = true;
-}
-
-ScriptBuilder.onGetScriptTextFailure = function(response, request) {
-    ScriptBuilder.textEditMode = false;
-    ScriptBuilder.updateSource();
-
-    // Show settings dialog for new script
-    ScriptBuilder.showDialog('SimContainer', 'New Script',
-            Ext.getCmp('usedcomps-panel').getRootNode());
-}
-
-ScriptBuilder.onGetScriptTextResponse = function(response, request) {
-    var resp = Ext.decode(response.responseText);
-    if (resp.model != null && resp.model.scriptText != null) {
-        Ext.getCmp('scriptname').setRawValue(resp.model.scriptName);
-        Ext.getCmp('sourcetext').setValue(resp.model.scriptText);
-        ScriptBuilder.switchToTextEditor();
-
-    } else {
-        // Reuse code from failure path
-        ScriptBuilder.onGetScriptTextFailure(response, request);
-    }
+    this.textEditMode = true;
 }
 
 
@@ -249,6 +266,7 @@ ScriptBuilder.initialize = function() {
                 Ext.Msg.confirm('Quit ScriptBuilder', 'Are you sure you want to quit?',
                     function(btn) {
                         if (btn=='yes') {
+                            ScriptBuilder.confirmUnloading = false;
                             window.location = "joblist.html";
                         }
                     }
@@ -275,7 +293,9 @@ ScriptBuilder.initialize = function() {
                 if (ScriptBuilder.textEditMode == false) {
                     Ext.getCmp('sourcetext').enable();
                 }
+                ScriptBuilder.confirmUnloading = false;
                 Ext.getCmp('source-panel').getForm().submit();
+                ScriptBuilder.confirmUnloading = true;
                 if (ScriptBuilder.textEditMode == false) {
                     Ext.getCmp('sourcetext').disable();
                 }
@@ -288,6 +308,7 @@ ScriptBuilder.initialize = function() {
                 if (ScriptBuilder.textEditMode == false) {
                     Ext.getCmp('sourcetext').enable();
                 }
+                ScriptBuilder.confirmUnloading = false;
                 Ext.getCmp('source-panel').getForm().submit();
             }
         }],
@@ -394,6 +415,10 @@ ScriptBuilder.initialize = function() {
         }]
     });
 
+    // Avoid accidentally navigating away from this page
+    Ext.EventManager.on(window, 'beforeunload',
+            ScriptBuilder.onWindowUnloading, ScriptBuilder);
+    
     // Check for existing script text to edit
     Ext.Ajax.request({
         url: ScriptBuilder.ControllerURL,

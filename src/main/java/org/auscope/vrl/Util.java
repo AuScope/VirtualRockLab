@@ -1,10 +1,8 @@
 package org.auscope.vrl;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -34,23 +32,35 @@ public class Util
     public static boolean copyFile(File source, File destination) {
         boolean success = false;
         logger.info(source.getPath()+" -> "+destination.getPath());
+        FileInputStream input = null;
+        FileOutputStream output = null;
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+
         try {
-            BufferedReader input = new BufferedReader(
-                    new FileReader(source));
-            BufferedWriter output = new BufferedWriter(
-                    new FileWriter(destination));
-            String line = null;
-            while ((line = input.readLine()) != null) {
-                output.write(line);
-                output.newLine();
+            input = new FileInputStream(source);
+            output = new FileOutputStream(destination);
+            while ((bytesRead = input.read(buffer)) >= 0) {
+                output.write(buffer, 0, bytesRead);
             }
-            input.close();
-            output.close();
             success = true;
 
         } catch (IOException e) {
             logger.warn("Could not copy file: "+e.getMessage());
+
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (IOException e) {}
+            }
+            if (output != null) {
+                try {
+                    output.close();
+                } catch (IOException e) {}
+            }
         }
+        
         return success;
     }
 
@@ -66,5 +76,39 @@ public class Util
         }
         return success;
     }
+
+    /**
+     * Recursively copies the contents of a directory into the destination
+     * directory.
+     * 
+     * @return true if contents were successfully copied, false otherwise
+     */
+    public static boolean copyFilesRecursive(File source, File destination) {
+        boolean success = false;
+
+        if (source.isDirectory()) {
+            if (!destination.exists()) {
+                if (!destination.mkdirs()) {
+                    success = false;
+                    return false;
+                }
+            }
+            String files[] = source.list();
+
+            for (int i=0; i<files.length; i++) {
+                File newSrc = new File(source, files[i]);
+                File newDest = new File(destination, files[i]);
+                success = copyFilesRecursive(newSrc, newDest);
+                if (!success) {
+                    break;
+                }
+            }
+        } else {
+            success = copyFile(source, destination);
+        }
+
+        return success;
+    }
+
 }
 
