@@ -1,14 +1,21 @@
 package org.auscope.vrl;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.globus.exec.generated.JobDescriptionType;
 
-// The following are for proxy checking
+// The following are for proxy initialization
+import org.globus.gsi.CertUtil;
+import org.globus.gsi.GlobusCredential;
+import org.globus.gsi.gssapi.GlobusGSSCredentialImpl;
 import org.globus.myproxy.MyProxyException;
 import org.globus.wsrf.utils.FaultHelper;
 import org.gridforum.jgss.ExtendedGSSManager;
@@ -348,6 +355,32 @@ public class GridAccessController {
     public String getSiteContactEmailAtSite(String site) {
         return RQC.getSiteContactEmailAtSite(site);
     }   
+
+    public boolean initProxy(PrivateKey key, String certificate) {
+        boolean retval = false;
+        try {
+            InputStream in = new ByteArrayInputStream(certificate.getBytes());
+            X509Certificate cert = CertUtil.loadCertificate(in);
+            X509Certificate[] certs = new X509Certificate[] { cert };
+
+            GlobusCredential gc = new GlobusCredential(key, certs);
+            gc.verify();
+            GSSCredential cred = new GlobusGSSCredentialImpl(gc,
+                    GSSCredential.INITIATE_AND_ACCEPT);
+            logger.info("Name: " + cred.getName().toString());
+            logger.info("Remaining lifetime: " + cred.getRemainingLifetime());
+            credential = cred;
+            RQC.setCredential(cred);
+            retval = true;
+
+        } catch (GSSException e) {
+            logger.error(FaultHelper.getMessage(e)); 
+        } catch (Exception e) {
+            logger.error(e.toString());
+        }
+
+        return retval;
+    }
 
     /**
      * Initializes proxy which will be used to authenticate the user for the

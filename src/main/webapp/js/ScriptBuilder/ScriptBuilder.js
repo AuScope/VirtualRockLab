@@ -62,9 +62,9 @@ ScriptBuilder.onGetScriptTextFailure = function(response, request) {
 // called when the server replied to the initial script text request
 ScriptBuilder.onGetScriptTextResponse = function(response, request) {
     var resp = Ext.decode(response.responseText);
-    if (resp.model != null && resp.model.scriptText != null) {
-        Ext.getCmp('scriptname').setRawValue(resp.model.scriptName);
-        Ext.getCmp('sourcetext').setValue(resp.model.scriptText);
+    if (resp.scriptText != null) {
+        Ext.getCmp('scriptname').setRawValue(resp.scriptName);
+        Ext.getCmp('sourcetext').setValue(resp.scriptText);
         ScriptBuilder.switchToTextEditor();
 
     } else {

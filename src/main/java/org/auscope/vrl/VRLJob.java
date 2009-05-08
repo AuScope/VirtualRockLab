@@ -9,26 +9,30 @@ import org.auscope.gridtools.GridJob;
  * @author Cihan Altinay
  */
 public class VRLJob extends GridJob {
-    /** A description of this job */
-    private String   description;
+    /** The prefixes of checkpoint files */
+    private String    checkpointPrefixes;
+    /** A description for this job */
+    private String    description;
+    /** A unique identifier for this job */
+    private Integer   id;
     /** The number of bonds */
-    private Integer  numBonds;
+    private Integer   numBonds;
     /** The number of particles */
-    private Integer  numParticles;
+    private Integer   numParticles;
     /** The number of timesteps */
-    private Integer  numTimesteps;
+    private Integer   numTimesteps;
     /** Directory containing output files */
-    private String   outputDir;
+    private String    outputDir;
     /** A unique job reference (e.g. EPR). */
-    private String   reference;
+    private String    reference;
     /** The script filename */
-    private String   scriptFile;
+    private String    scriptFile;
+    /** The ID of the series this job belongs to */
+    private Integer   seriesId;
     /** The job status */
-    private String   status;
+    private String    status;
     /** The submission date and time */
-    private String   submitDate;
-    /** The user owning this job */
-    private String   user;
+    private String    submitDate;
     
 
     /**
@@ -38,8 +42,8 @@ public class VRLJob extends GridJob {
      */
     public VRLJob() {
         description = outputDir = reference = scriptFile = status =
-            submitDate = user = "";
-        numBonds = numParticles = numTimesteps = 0;
+            submitDate = "";
+        id = numBonds = numParticles = numTimesteps = seriesId = 0;
     }
 
     /**
@@ -71,6 +75,48 @@ public class VRLJob extends GridJob {
         super(site, name, code, version, arguments, queue, jobType, maxWallTime,
                 maxMemory, cpuCount, inTransfers, outTransfers, stdInput,
                 stdOutput, stdError);
+        description = outputDir = reference = scriptFile = status =
+            submitDate = "";
+        id = numBonds = numParticles = numTimesteps = seriesId = 0;
+    }
+    
+
+    /**
+     * Returns the unique identifier of this job.
+     * 
+     * @return The ID of this job.
+     */
+    public Integer getId() {
+        return id;
+    }
+
+    /**
+     * Sets the unique identifier of this job.
+     * 
+     * @param id The unique ID of this job.
+     */
+    private void setId(Integer id) {
+        assert (id != null);
+        this.id = id;
+    }
+
+    /**
+     * Returns the checkpoint file prefixes of this job.
+     * 
+     * @return The checkpoint file prefixes of this job.
+     */
+    public String getCheckpointPrefixes() {
+        return checkpointPrefixes;
+    }
+
+    /**
+     * Sets the checkpoint file prefixes of this job.
+     * 
+     * @param checkpointPrefixes The checkpoint file prefixes of this job.
+     */
+    public void setCheckpointPrefixes(String checkpointPrefixes) {
+        assert (checkpointPrefixes != null);
+        this.checkpointPrefixes = checkpointPrefixes;
     }
 
     /**
@@ -90,25 +136,6 @@ public class VRLJob extends GridJob {
     public void setDescription(String description) {
         assert (description != null);
         this.description = description;
-    }
-
-    /**
-     * Returns the user owning this job.
-     * 
-     * @return The user owning this job.
-     */
-    public String getUser() {
-        return user;
-    }
-
-    /**
-     * Sets the user owning this job.
-     * 
-     * @param user The user owning this job.
-     */
-    public void setUser(String user) {
-        assert (user != null);
-        this.user = user;
     }
 
     /**
@@ -226,6 +253,25 @@ public class VRLJob extends GridJob {
     }
 
     /**
+     * Returns the series ID this job belongs to.
+     * 
+     * @return The series ID of this job.
+     */
+    public Integer getSeriesId() {
+        return seriesId;
+    }
+
+    /**
+     * Sets the ID of the series this job belongs to.
+     * 
+     * @param seriesId The series ID of this job.
+     */
+    public void setSeriesId(Integer seriesId) {
+        assert (seriesId != null);
+        this.seriesId = seriesId;
+    }
+
+    /**
      * Returns the submit date of this job.
      * 
      * @return The submit date of this job.
@@ -264,23 +310,24 @@ public class VRLJob extends GridJob {
     }
 
     /**
-     * Returns a String representing the state of this <code>UserJob</code>
+     * Returns a String representing the state of this <code>VRLJob</code>
      * object.
      * 
      * @return A summary of the values of this object's fields
      */
     public String toString() {
         return super.toString() +
-               ",user=\"" + user + "\"" +
-               ",description=\"" + description + "\"" +
-               ",numBonds=" + numBonds +
-               ",numParticles=" + numParticles +
-               ",numTimesteps=" + numTimesteps +
-               ",outputDir=\"" + outputDir + "\"" +
-               ",reference=\"" + reference + "\"" +
-               ",scriptFile=\"" + scriptFile + "\"" +
-               ",submitDate=\"" + submitDate + "\"" +
-               ",status=\"" + status + "\"";
+               ", id=" + id +
+               ", seriesId=" + seriesId +
+               ", description=\"" + description + "\"" +
+               ", numBonds=" + numBonds +
+               ", numParticles=" + numParticles +
+               ", numTimesteps=" + numTimesteps +
+               ", outputDir=\"" + outputDir + "\"" +
+               ", reference=\"" + reference + "\"" +
+               ", scriptFile=\"" + scriptFile + "\"" +
+               ", submitDate=\"" + submitDate + "\"" +
+               ", status=\"" + status + "\"";
     }
 }
 

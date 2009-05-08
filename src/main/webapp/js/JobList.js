@@ -23,36 +23,72 @@ JobList.onKillJobResponse = function(response, request) {
 // retrieves filelist of selected job and updates the Details panel
 JobList.updateJobDetails = function() {
     var jobGrid = Ext.getCmp('job-grid');
-    var descEl = Ext.getCmp('details-panel').body;
+    var descEl = Ext.getCmp('details-tab').body;
+    var detailsPanel = Ext.getCmp('details-panel');
 
     if (jobGrid.getSelectionModel().getSelected()) {
         var jobData = jobGrid.getSelectionModel().getSelected().data;
-        JobList.jobFileStore.baseParams.ref = jobData.reference;
+        JobList.jobFileStore.baseParams.jobId = jobData.id;
         JobList.jobFileStore.reload();
         JobList.jobDescTpl.overwrite(descEl, jobData);
+        detailsPanel.enable();
     } else {
         JobList.jobFileStore.removeAll();
-        if (jobGrid.getStore().getTotalCount() > 0) {
-            descEl.update("Please select a job to see its details");
+        detailsPanel.setActiveTab('details-tab');
+        detailsPanel.disable();
+    }
+}
+
+// retrieves list of jobs of selected series
+JobList.updateJobList = function() {
+    var jobGrid = Ext.getCmp('job-grid');
+    var seriesGrid = Ext.getCmp('series-grid');
+    var descEl = Ext.getCmp('details-tab').body;
+
+    if (seriesGrid.getSelectionModel().getSelected()) {
+        jobGrid.enable();
+        var seriesData = seriesGrid.getSelectionModel().getSelected().data;
+        JobList.jobStore.baseParams.seriesId = seriesData.id;
+        JobList.jobStore.reload();
+        JobList.seriesDescTpl.overwrite(descEl, seriesData);
+    } else {
+        JobList.jobStore.removeAll();
+        jobGrid.disable();
+        if (seriesGrid.getStore().getTotalCount() > 0) {
+            descEl.update('<p class="jobdesc-title">Please select a series to see its details and the associated jobs.</p>');
         } else {
-            descEl.update("");
+            descEl.update('<p class="jobdesc-title">No series found.</p>');
         }
     }
 }
 
 // (re-)retrieves job details from the server
 JobList.refreshAll = function() {
-    JobList.jobStore.reload();
+    JobList.seriesStore.reload();
 }
 
-// loads and presents current user's jobs
-JobList.myJobs = function() {
-    JobList.jobStore.baseParams.user = null;
+// loads series matching given query
+JobList.querySeries = function(user, name, desc) {
+    if (Ext.isEmpty(user)) {
+        JobList.seriesStore.baseParams.qUser = null;
+    } else {
+        JobList.seriesStore.baseParams.qUser = user;
+    }
+    if (Ext.isEmpty(name)) {
+        JobList.seriesStore.baseParams.qSeriesName = null;
+    } else {
+        JobList.seriesStore.baseParams.qSeriesName = name;
+    }
+    if (Ext.isEmpty(desc)) {
+        JobList.seriesStore.baseParams.qSeriesDesc = null;
+    } else {
+        JobList.seriesStore.baseParams.qSeriesDesc = desc;
+    }
     JobList.refreshAll();
 }
 
 // submits a "kill job" request after asking for confirmation
-JobList.killJob = function(ref) {
+JobList.killJob = function(jobId) {
     Ext.Msg.confirm('Kill Job', 'Are you sure you want to kill the job?',
         function(btn) {
             if (btn == 'yes') {
@@ -61,7 +97,7 @@ JobList.killJob = function(ref) {
                     success: JobList.onKillJobResponse,
                     failure: JobList.onRequestFailure, 
                     params: { 'action': 'killJob',
-                              'ref': ref
+                              'jobId': jobId
                             }
                 });
             }
@@ -69,34 +105,99 @@ JobList.killJob = function(ref) {
     );
 }
 
-// downloads given file from a specified user's job
-JobList.downloadFile = function(user, ref, file) {
-    window.location = JobList.ControllerURL +
-        "?action=downloadFile&user="+user+"&ref="+ref+"&filename="+file;
+JobList.killSeriesJobs = function(seriesId) {
+    Ext.Msg.confirm('Kill Series Jobs', 'Are you sure you want to kill ALL jobs in this series?',
+        function(btn) {
+            if (btn == 'yes') {
+                Ext.Ajax.request({
+                    url: JobList.ControllerURL,
+                    success: JobList.onKillJobResponse,
+                    failure: JobList.onRequestFailure, 
+                    params: { 'action': 'killSeriesJobs',
+                              'seriesId': seriesId
+                            }
+                });
+            }
+        }
+    );
 }
 
-// downloads a ZIP file containing given files of given job reference
-JobList.downloadMulti = function(user, ref, files) {
+// downloads given file from a specified job
+JobList.downloadFile = function(job, file) {
+    window.location = JobList.ControllerURL +
+        "?action=downloadFile&jobId="+job+"&filename="+file;
+}
+
+// downloads a ZIP file containing given files of given job
+JobList.downloadMulti = function(job, files) {
     var fparam = files[0].data.name;
     for (var i=1; i<files.length; i++) {
         fparam += ','+files[i].data.name;
     }
     window.location = JobList.ControllerURL +
-        "?action=downloadMulti&user="+user+"&ref="+ref+"&files="+fparam;
+        "?action=downloadMulti&jobId="+job+"&files="+fparam;
 }
 
-JobList.resubmitJob = function(user, ref) {
+JobList.resubmitSeries = function(series) {
     window.location = JobList.ControllerURL +
-        "?action=resubmitJob&user="+user+"&ref="+ref;
+        "?action=resubmitSeries&seriesId="+series;
 }
 
-JobList.useScript = function(user, ref, file) {
+JobList.resubmitJob = function(job) {
     window.location = JobList.ControllerURL +
-        "?action=useScript&user="+user+"&ref="+ref+"&filename="+file;
+        "?action=resubmitJob&jobId="+job;
+}
+
+JobList.useScript = function(job, file) {
+    window.location = JobList.ControllerURL +
+        "?action=useScript&jobId="+job+"&filename="+file;
 }
 
 JobList.showQueryDialog = function() {
-    alert("To be implemented.");
+    var queryForm = new Ext.FormPanel({
+        bodyStyle: 'padding:5px;',
+        defaults: { anchor: "100%" },
+        items: [{
+            xtype: 'textfield',
+            id: 'qUser',
+            fieldLabel: 'User Name'
+        }, {
+            xtype: 'textfield',
+            id: 'qSeriesName',
+            fieldLabel: 'Series Name'
+        }, {
+            xtype: 'textfield',
+            id: 'qSeriesDesc',
+            fieldLabel: 'Description'
+        }]
+    });
+
+    var queryWindow = new Ext.Window({
+        title: 'Query job series',
+        plain: true,
+        width: 500,
+        resizable: false,
+        autoScroll: true,
+        constrainHeader: true,
+        bodyStyle: 'padding:5px;',
+        items: queryForm,
+        modal: true,
+        buttons: [{
+            text: 'Query',
+            handler: function() {
+                var qUser = Ext.getCmp('qUser').getRawValue();
+                var qName = Ext.getCmp('qSeriesName').getRawValue();
+                var qDesc = Ext.getCmp('qSeriesDesc').getRawValue();
+                JobList.querySeries(qUser, qName, qDesc);
+                queryWindow.close();
+            }
+        }, {
+            text: 'Cancel',
+            handler: function() { queryWindow.close(); }
+        }]
+    });
+
+    queryWindow.show();
 }
 
 //
@@ -106,12 +207,27 @@ JobList.initialize = function() {
     
     Ext.QuickTips.init();
 
+    JobList.seriesStore = new Ext.data.JsonStore({
+        url: JobList.ControllerURL,
+        baseParams: { 'action': 'querySeries' },
+        root: 'series',
+        autoLoad: true,
+        fields: [
+            { name: 'id', type: 'int' },
+            { name: 'name', type: 'string' },
+            { name: 'description', type: 'string' },
+            { name: 'user', type: 'string'}
+        ]
+    });
+
+    JobList.seriesStore.on({ 'load': JobList.updateJobList });
+
     JobList.jobStore = new Ext.data.JsonStore({
         url: JobList.ControllerURL,
         baseParams: { 'action': 'listJobs' },
-        root: 'model.jobs',
-        autoLoad: true,
+        root: 'jobs',
         fields: [
+            { name: 'id', type: 'int' },
             { name: 'name', type: 'string' },
             { name: 'description', type: 'string' },
             { name: 'site', type: 'string' },
@@ -123,17 +239,14 @@ JobList.initialize = function() {
             { name: 'reference', type: 'string' },
             { name: 'scriptFile', type: 'string' },
             { name: 'status', type: 'string'},
-            { name: 'submitDate', type: 'string'},
-            { name: 'user', type: 'string'}
+            { name: 'submitDate', type: 'string'}
         ]
     });
-
-    JobList.jobStore.on({ 'load': JobList.updateJobDetails });
 
     JobList.jobFileStore = new Ext.data.JsonStore({
         url: JobList.ControllerURL,
         baseParams: { 'action': 'jobFiles' },
-        root: 'model.files',
+        root: 'files',
         sortInfo: { field: 'name', direction: 'ASC' },
         fields: [
             { name: 'name', type: 'string' },
@@ -141,22 +254,80 @@ JobList.initialize = function() {
         ]
     });
 
-    function jobStatusRenderer(val) {
-        if (val == "Failed") {
-            return '<span style="color:red;">' + val + '</span>';
-        } else if (val == "Active") {
-            return '<span style="color:green;">' + val + '</span>';
-        } else if (val == "Done") {
-            return '<span style="color:blue;">' + val + '</span>';
+    //
+    // Series Grid & functions
+    //
+    var seriesGrid = new Ext.grid.GridPanel({
+        id: 'series-grid',
+        title: 'Series List',
+        region: 'center',
+        height: 250,
+        store: JobList.seriesStore,
+        columns: [
+            { header: 'User', width: 150, sortable: true, dataIndex: 'user'},
+            { header: 'Series Name', sortable: true, dataIndex: 'name'}
+        ],
+        sm: new Ext.grid.RowSelectionModel({
+            singleSelect: true,
+            listeners: { 'selectionchange': function(sm) {
+                            JobList.updateJobList();
+                         }
+                       }
+        }),
+        stripeRows: true
+    });
+
+    seriesGrid.on({
+        'rowcontextmenu': function(grid, rowIndex, e) {
+            grid.getSelectionModel().selectRow(rowIndex);
+            var seriesData = grid.getStore().getAt(rowIndex).data;
+            if (!this.contextMenu) {
+                this.contextMenu = new Ext.menu.Menu({
+                    items: [
+                        { id: 'rerun-series', text: 'Re-run series' },
+                        { id: 'kill-series-jobs', text: 'Kill jobs' }
+                    ],
+                    listeners: {
+                        itemclick: function(item) {
+                            switch (item.id) {
+                                case 'rerun-series':
+                                    JobList.resubmitSeries(seriesData.id);
+                                    break;
+                                case 'kill-series-jobs':
+                                    JobList.killSeriesJobs(seriesData.id);
+                                    break;
+                            }
+                        }
+                    }
+                });
+            }
+            e.stopEvent();
+            this.contextMenu.showAt(e.getXY());
         }
-        return val;
+    });
+
+    //
+    // Job Grid & functions
+    //
+    function jobStatusRenderer(value, cell, record) {
+        if (value == "Failed") {
+            return '<span style="color:red;">' + value + '</span>';
+        } else if (value == "Active") {
+            return '<span style="color:green;">' + value + '</span>';
+        } else if (value == "Done") {
+            return '<span style="color:blue;">' + value + '</span>';
+        }
+        return value;
     }
 
     var jobGrid = new Ext.grid.GridPanel({
         id: 'job-grid',
+        title: 'Jobs of selected series',
+        region: 'south',
+        split: true,
+        height: 200,
         store: JobList.jobStore,
         columns: [
-            { header: 'User', width: 60, sortable: true, dataIndex: 'user'},
             { header: 'Job Name', sortable: true, dataIndex: 'name'},
             { header: 'Submit Date', width: 160, sortable: true, dataIndex: 'submitDate'},
             { header: 'Status', sortable: true, dataIndex: 'status', renderer: jobStatusRenderer}
@@ -185,10 +356,10 @@ JobList.initialize = function() {
                         itemclick: function(item) {
                             switch (item.id) {
                                 case 'resubmit-job':
-                                    JobList.resubmitJob(jobData.user, jobData.reference);
+                                    JobList.resubmitJob(jobData.id);
                                     break;
                                 case 'kill-job':
-                                    JobList.killJob(jobData.reference);
+                                    JobList.killJob(jobData.id);
                                     break;
                             }
                         }
@@ -205,6 +376,9 @@ JobList.initialize = function() {
         }
     });
 
+    //
+    // File Grid & functions
+    //
     function fileTypeRenderer(val) {
         var jobData = jobGrid.getSelectionModel().getSelected().data;
         if (val == jobData.scriptFile) {
@@ -232,10 +406,10 @@ JobList.initialize = function() {
         var jobData = jobGrid.getSelectionModel().getSelected().data;
         if (fileGrid.getSelectionModel().getCount() == 1) {
             var fileName = fileGrid.getSelectionModel().getSelected().data.name;
-            JobList.downloadFile(jobData.user, jobData.reference, fileName);
+            JobList.downloadFile(jobData.id, fileName);
         } else {
             var files = fileGrid.getSelectionModel().getSelections();
-            JobList.downloadMulti(jobData.user, jobData.reference, files);
+            JobList.downloadMulti(jobData.id, files);
         }
     }
 
@@ -243,7 +417,7 @@ JobList.initialize = function() {
         'rowdblclick': function(grid, rowIndex, e) {
             var jobData = jobGrid.getSelectionModel().getSelected().data;
             var fileName = grid.getStore().getAt(rowIndex).data.name;
-            JobList.downloadFile(jobData.user, jobData.reference, fileName);
+            JobList.downloadFile(jobData.id, fileName);
         },
         'rowcontextmenu': function(grid, rowIndex, e) {
             grid.getSelectionModel().selectRow(rowIndex);
@@ -260,8 +434,9 @@ JobList.initialize = function() {
                                     onMenuDownload();
                                     break;
                                 case 'use-script':
-                                    JobList.useScript(jobData.user, jobData.reference,
-                                        grid.getStore().getAt(rowIndex).data.name);
+                                    var scriptName = grid.getSelectionModel().
+                                        getSelected().data.name;
+                                    JobList.useScript(jobData.id, scriptName);
                                     break;
                             }
                         }
@@ -299,16 +474,25 @@ JobList.initialize = function() {
     );
     JobList.jobDescTpl.compile();
 
+    // a template for the series description html area
+    JobList.seriesDescTpl = new Ext.Template(
+        '<p class="jobdesc-title">{name}</p><br/>',
+        '<p class="jobdesc-key">Description:</p><br/><p>{description}</p>'
+    );
+    JobList.seriesDescTpl.compile();
+
     jobDetails = new Ext.TabPanel({
+        id: 'details-panel',
+        disabled: true,
         activeTab: 0,
         split: true,
         items: [
             {
-                title: 'Details',
+                title: 'Description',
                 bodyStyle: 'padding:10px',
                 defaults: { border: false },
                 layout: 'fit',
-                items: [ { id: 'details-panel', html: '' } ]
+                items: [ { id: 'details-tab', html: '' } ]
             },
             fileGrid
         ]
@@ -323,22 +507,21 @@ JobList.initialize = function() {
             height: 100
         },{
             id: 'job-panel',
-            title: 'Job Overview',
             border: false,
             region: 'west',
             split: true,
             margins: '2 2 2 0',
-            layout: 'fit',
+            layout: 'border',
             width: '400',
-            items: [ jobGrid ]
+            items: [ seriesGrid, jobGrid ]
         },{
-            id: 'job-details-panel',
-            title: 'Job Details',
+            id: 'main-panel',
+            title: 'Details',
             region: 'center',
             margins: '2 2 2 0',
             layout: 'fit',
             buttons: [
-                { text: 'My Jobs', handler: JobList.myJobs },
+                { text: 'My Jobs', handler: JobList.querySeries },
                 { text: 'Query', handler: JobList.showQueryDialog },
                 { text: 'Refresh', handler: JobList.refreshAll }
             ],

@@ -1,17 +1,10 @@
 package org.auscope.vrl.web;
 
-import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
-import org.springframework.web.servlet.mvc.multiaction.NoSuchRequestHandlingMethodException;
-import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.view.RedirectView;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -19,6 +12,14 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
+import org.springframework.web.servlet.mvc.multiaction.NoSuchRequestHandlingMethodException;
+import org.springframework.web.servlet.view.RedirectView;
+
+/**
+ *
+ */
 public class ScriptBuilderController extends MultiActionController {
 
     protected final Log logger = LogFactory.getLog(getClass());
@@ -128,13 +129,12 @@ public class ScriptBuilderController extends MultiActionController {
             throws Exception {
 
         logger.info("Script source requested.");
-        Map<String, Object> myModel = new HashMap<String, Object>();
+        ModelAndView mav = new ModelAndView("jsonView");
         if (scriptText != null) {
-            myModel.put("scriptName", scriptName);
-            myModel.put("scriptText", scriptText);
+            mav.addObject("scriptName", scriptName);
+            mav.addObject("scriptText", scriptText);
         }
-        return new ModelAndView("jsonView", "model", myModel);
+        return mav;
     }
-
 }
 

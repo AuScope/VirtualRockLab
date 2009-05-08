@@ -545,23 +545,23 @@ public class GridJob implements Serializable
         String en=(exeName==null) ? "null" : "\""+exeName+"\"";
         
         return "site=\"" + site + "\"" +
-               ",siteGridFTPServer=" + sgftps +
-               ",name=\"" + name + "\"" +
-               ",code=\"" + code + "\"" +
-               ",exeName=" + en +
-               ",version=\"" + version + "\"" +
-               ",arguments=" + arrayToString(arguments) +
-               ",queue=\"" + queue + "\"" +
-               ",maxWallTime=\"" + maxWallTime + "\"" +
-               ",maxMemory=\"" + maxMemory + "\"" +
-               ",jobType=\"" + jobType + "\"" +
-               ",cpuCount=" + cpuCount +
-               ",inTransfers=" + arrayToString(inTransfers) +
-               ",outTransfers=" + arrayToString(outTransfers) +
-               ",modules=" + arrayToString(modules) +
-               ",stdInput=\"" + stdInput + "\"" +
-               ",stdOutput=\"" + stdOutput + "\"" +
-               ",stdError\"" + stdError + "\"";
+               ", siteGridFTPServer=" + sgftps +
+               ", name=\"" + name + "\"" +
+               ", code=\"" + code + "\"" +
+               ", exeName=" + en +
+               ", version=\"" + version + "\"" +
+               ", arguments=" + arrayToString(arguments) +
+               ", queue=\"" + queue + "\"" +
+               ", maxWallTime=\"" + maxWallTime + "\"" +
+               ", maxMemory=\"" + maxMemory + "\"" +
+               ", jobType=\"" + jobType + "\"" +
+               ", cpuCount=" + cpuCount +
+               ", inTransfers=" + arrayToString(inTransfers) +
+               ", outTransfers=" + arrayToString(outTransfers) +
+               ", modules=" + arrayToString(modules) +
+               ", stdInput=\"" + stdInput + "\"" +
+               ", stdOutput=\"" + stdOutput + "\"" +
+               ", stdError=\"" + stdError + "\"";
     }
 }
 

@@ -15,7 +15,7 @@
     </style>
 </head>
 
-<body onload="init()">
+<body>
     <%@ include file="page_header.jsp" %>
     <div id="body"></div>
 

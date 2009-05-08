@@ -3,56 +3,44 @@ package org.auscope.vrl;
 import java.sql.SQLException;
 import java.util.List;
 
-import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.springframework.orm.hibernate3.HibernateCallback;
-import org.springframework.orm.hibernate3.HibernateTemplate;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
-public class VRLJobDao {
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
 
-    private HibernateTemplate hibernateTemplate;
+public class VRLJobDao extends HibernateDaoSupport {
 
-    public void setHibernateTemplate(HibernateTemplate hibernateTemplate) {
-        this.hibernateTemplate = hibernateTemplate;
+    protected final Log logger = LogFactory.getLog(getClass());
+
+    public List<VRLJob> getJobsOfSeries(final int seriesID) {
+        return (List<VRLJob>) getHibernateTemplate()
+            .findByNamedParam("from VRLJob j where j.seriesId=:searchID",
+                    "searchID", seriesID);
     }
 
-    public HibernateTemplate getHibernateTemplate() {
-        return hibernateTemplate;
+    public List<VRLJob> getJobsByUser(final String user) {
+        return (List<VRLJob>) getHibernateTemplate()
+            .findByNamedParam("from VRLJob j where j.user=:searchUser",
+                    "searchUser", user);
+        /*
+        return sessionFactory.getCurrentSession()
+            .createQuery("from jobs j where j.user=:searchUser")
+            .setString("searchUser", user)
+            .list();
+        */
     }
 
-    public List<VRLJob> getJobListByUser(final String user) {
-        HibernateCallback callback = new HibernateCallback() {
-            public Object doInHibernate(Session session) 
-                throws HibernateException, SQLException {
-                return session.createQuery(
-                        "FROM VRLJob WHERE user='"+user+"'").list();
-            }
-        };
-        return (List<VRLJob>)hibernateTemplate.execute(callback);
+    public VRLJob get(final int id) {
+        return (VRLJob) getHibernateTemplate().get(VRLJob.class, id);
+        /*
+        return (VRLJob) sessionFactory.getCurrentSession()
+            .load(VRLJob.class, id);
+        */
     }
 
-    public VRLJob getJobByUserAndRef(final String user,
-                                      final String reference) {
-        HibernateCallback callback = new HibernateCallback() {
-            public Object doInHibernate(Session session) 
-                throws HibernateException, SQLException {
-                return session.createQuery(
-                        "FROM VRLJob WHERE user='"+user+"' AND reference='" +
-                        reference + "'").uniqueResult();
-            }
-        };
-        return (VRLJob)hibernateTemplate.execute(callback);
-    }
-
-    public void saveVRLJob(final VRLJob vrlJob) {
-        HibernateCallback callback = new HibernateCallback() {
-            public Object doInHibernate(Session session)
-                throws HibernateException, SQLException {
-                session.saveOrUpdate(vrlJob);
-                return null;
-            }
-        };
-        hibernateTemplate.execute(callback);
+    public void save(final VRLJob job) {
+        getHibernateTemplate().saveOrUpdate(job);
+        //sessionFactory.getCurrentSession().saveOrUpdate(job);
     }
 }
 

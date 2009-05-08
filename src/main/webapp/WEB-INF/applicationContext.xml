@@ -34,23 +34,29 @@
         <property name="mappingResources">
             <list>
                 <value>vrljob.hbm.xml</value>
+                <value>vrlseries.hbm.xml</value>
             </list>
         </property>
         <property name="hibernateProperties">
             <value>hibernate.dialect=org.hibernate.dialect.HSQLDialect</value>
         </property>
     </bean>
-  
-    <bean id="hibernateTemplate" class="org.springframework.orm.hibernate3.HibernateTemplate">
+
+    <bean id="transactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
         <property name="sessionFactory" ref="vrlSessionFactory"/>
     </bean>
 
     <bean id="vrlJobDao" class="org.auscope.vrl.VRLJobDao">
-        <property name="hibernateTemplate" ref="hibernateTemplate"/>    
+        <property name="sessionFactory" ref="vrlSessionFactory"/>
+    </bean>
+
+    <bean id="vrlSeriesDao" class="org.auscope.vrl.VRLSeriesDao">
+        <property name="sessionFactory" ref="vrlSessionFactory"/>
     </bean>
 
     <bean id="vrlJobManager" class="org.auscope.vrl.VRLJobManager">
         <property name="VRLJobDao" ref="vrlJobDao"/>
+        <property name="VRLSeriesDao" ref="vrlSeriesDao"/>
     </bean>
 
     <bean id="gridAccess" class="org.auscope.vrl.GridAccessController">

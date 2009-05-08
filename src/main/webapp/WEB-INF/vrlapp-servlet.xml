@@ -13,7 +13,7 @@
         <property name="order" value="1"/>
     </bean>
 
-    <bean id="jspViewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
         <property name="order" value="2"/>
         <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
         <property name="prefix" value="/WEB-INF/jsp/"/>
@@ -24,27 +24,24 @@
         <property name="paramName" value="action"/>
     </bean>
 
+    <!-- The main controller beans follow -->
+
+    <bean name="/about.html" class="org.auscope.vrl.web.AboutController"/>
+
     <bean name="/login.html" class="org.auscope.vrl.web.LoginController">
         <property name="gridAccess" ref="gridAccess"/>
     </bean>
 
-    <bean name="/gridsubmit.html" class="org.auscope.vrl.web.GridSubmitFormController">
-        <property name="sessionForm" value="false"/>
-        <property name="commandName" value="gridSubmit"/>
-        <property name="commandClass" value="org.auscope.vrl.VRLJob"/>
-        <property name="validator">
-            <bean class="org.auscope.vrl.VRLJobValidator"/>
-        </property>
-        <property name="formView" value="gridsubmit"/>
-        <property name="successView" value="joblist.html"/>
+    <bean name="/gridsubmit.html" class="org.auscope.vrl.web.GridSubmitController">
         <property name="gridAccess" ref="gridAccess"/>
         <property name="jobManager" ref="vrlJobManager"/>
+        <property name="methodNameResolver" ref="methodNameResolver"/>
     </bean>
 
     <bean name="/joblist.html" class="org.auscope.vrl.web.JobListController">
-        <property name="methodNameResolver" ref="methodNameResolver"/>
         <property name="gridAccess" ref="gridAccess"/>
         <property name="jobManager" ref="vrlJobManager"/>
+        <property name="methodNameResolver" ref="methodNameResolver"/>
     </bean>
 
     <bean name="/scriptbuilder.html" class="org.auscope.vrl.web.ScriptBuilderController">
