@@ -15,11 +15,6 @@
     <script type="text/javascript" src="js/ext/adapter/ext/ext-base.js"></script>
     <script type="text/javascript" src="js/ext/ext-all.js"></script>
     <script type="text/javascript" src="js/GridSubmit.js"></script>
-    <c:if test='${error != null}'>
-    <script type="text/javascript">
-        GridSubmit.error = "${error}";
-    </script>
-    </c:if>
 </head>
 
 <body>

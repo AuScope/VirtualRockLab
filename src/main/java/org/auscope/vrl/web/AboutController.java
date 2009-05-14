@@ -18,7 +18,6 @@ import org.springframework.web.servlet.mvc.Controller;
 
 /**
  * Controller for the About popup window.
- *
  */
 public class AboutController implements Controller {
 

@@ -18,56 +18,38 @@ import org.springframework.web.servlet.mvc.multiaction.NoSuchRequestHandlingMeth
 import org.springframework.web.servlet.view.RedirectView;
 
 /**
- *
+ * Controller for the ScriptBuilder view.
  */
 public class ScriptBuilderController extends MultiActionController {
 
-    protected final Log logger = LogFactory.getLog(getClass());
-    
-    private String scriptName;
-    private String scriptText;
+    private final Log logger = LogFactory.getLog(getClass());
     
     protected ModelAndView handleNoSuchRequestHandlingMethod(
             NoSuchRequestHandlingMethodException ex,
             HttpServletRequest request,
-            HttpServletResponse response) throws Exception {
+            HttpServletResponse response) {
 
-        logger.info("No/invalid action parameter. Returning scriptbuilder view");
-        scriptName = null;
-        scriptText = null;
+        logger.info("No/invalid action parameter.");
         String scriptFile = request.getParameter("usescript");
         if (scriptFile != null) {
-            logger.info("Script source to edit provided.");
-            String tempDir = System.getProperty("java.io.tmpdir");
-            try {
-                BufferedReader input = new BufferedReader(
-                    new FileReader(tempDir+File.separator+scriptFile));
-                StringBuffer contents = new StringBuffer();
-                String line = null;
-                while ((line = input.readLine()) != null) {
-                    contents.append(line).append(
-                            System.getProperty("line.separator"));
-                }
-                input.close();
-                if (scriptFile.lastIndexOf(".py") > 0) {
-                    scriptName = scriptFile.substring(0,
-                            scriptFile.lastIndexOf(".py"));
-                } else {
-                    scriptName = scriptFile;
-                }
-                scriptText = contents.toString();
-
-            } catch (IOException e) {
-                logger.error("Error reading file.");
-            }
+            logger.info("Storing script filename in session.");
+            request.getSession().setAttribute("usescript", scriptFile);
         }
 
+        logger.info("Returning scriptbuilder view.");
         return new ModelAndView("scriptbuilder");
     }
 
+    /**
+     * Processes a script download request.
+     * 
+     * @param request The servlet request including a sourcetext parameter
+     * @param response The servlet response receiving the file
+     *
+     * @return null if successful, the scriptbuilder view otherwise.
+     */
     public ModelAndView downloadScript(HttpServletRequest request,
-                                       HttpServletResponse response)
-            throws Exception {
+                                       HttpServletResponse response) {
 
         logger.info("User requested script download");
         String script = request.getParameter("sourcetext");
@@ -81,18 +63,31 @@ public class ScriptBuilderController extends MultiActionController {
             response.setHeader("Content-Disposition",
                     "attachment; filename=\""+scriptName+".py\"");
 
-            PrintWriter writer = response.getWriter();
-            writer.print(script);
-            writer.close();
-            return null;
+            try {
+                PrintWriter writer = response.getWriter();
+                writer.print(script);
+                writer.close();
+                return null;
+            } catch (IOException e) {
+                logger.error("Could not open output stream!");
+            }
         }
         logger.info("No source text provided. Returning scriptbuilder view.");
         return new ModelAndView("scriptbuilder");
     }
 
+    /**
+     * Writes provided script text to a file and redirects to the grid
+     * submission interface.
+     * 
+     * @param request The servlet request including a sourcetext parameter
+     * @param response The servlet response
+     *
+     * @return The gridsubmit view if successful, the scriptbuilder view
+     *         otherwise.
+     */
     public ModelAndView useScript(HttpServletRequest request,
-                                  HttpServletResponse response)
-            throws Exception {
+                                  HttpServletResponse response) {
 
         logger.info("User requested script use");
         String script = request.getParameter("sourcetext");
@@ -124,12 +119,53 @@ public class ScriptBuilderController extends MultiActionController {
         return new ModelAndView("scriptbuilder");
     }
 
+    /**
+     * Returns the contents of a script file to be edited.
+     * 
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return A JSON object containing a scriptName attribute and a
+     *         scriptText attribute.
+     */
     public ModelAndView getScriptText(HttpServletRequest request,
-                                      HttpServletResponse response)
-            throws Exception {
+                                      HttpServletResponse response) {
 
-        logger.info("Script source requested.");
         ModelAndView mav = new ModelAndView("jsonView");
+        String scriptFile = (String) request.getSession()
+            .getAttribute("usescript");
+
+        String scriptName = null;
+        String scriptText = null;
+
+        if (scriptFile != null) {
+            logger.info("Reading script source.");
+            String tempDir = System.getProperty("java.io.tmpdir");
+            try {
+                BufferedReader input = new BufferedReader(
+                    new FileReader(tempDir+File.separator+scriptFile));
+                StringBuffer contents = new StringBuffer();
+                String line = null;
+                while ((line = input.readLine()) != null) {
+                    contents.append(line).append(
+                            System.getProperty("line.separator"));
+                }
+                input.close();
+                if (scriptFile.lastIndexOf(".py") > 0) {
+                    scriptName = scriptFile.substring(0,
+                            scriptFile.lastIndexOf(".py"));
+                } else {
+                    scriptName = scriptFile;
+                }
+                scriptText = contents.toString();
+
+            } catch (IOException e) {
+                logger.error("Error reading file.");
+            }
+        }
+
+        request.getSession().removeAttribute("usescript");
+
         if (scriptText != null) {
             mav.addObject("scriptName", scriptName);
             mav.addObject("scriptText", scriptText);

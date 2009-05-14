@@ -57,7 +57,10 @@ public class LoginController implements Controller {
     }
 
     /**
+     * Parses the request data and uses the values to create a certificate
+     * request.
      *
+     * @return A <code>CertificateRequest</code> object.
      */
     private CertificateRequest createRequest(CertificateKeys keys,
                                              final String requestData) {

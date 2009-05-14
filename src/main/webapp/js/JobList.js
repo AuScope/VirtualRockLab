@@ -1,3 +1,8 @@
+/*
+ * This file is part of AuScope VirtualRockLab.
+ * (c) 2009 ESSCC, The University of Queensland, Australia
+ * All rights reserved.
+ */
 
 // reference local blank image
 Ext.BLANK_IMAGE_URL = 'js/ext/resources/images/default/s.gif';
@@ -6,19 +11,37 @@ Ext.namespace('JobList');
 
 JobList.ControllerURL = "joblist.html";
 
+// shows an error dialog with given message
+JobList.errorDlg = function(message) {
+    Ext.Msg.show({
+        title: 'Error',
+        msg: message,
+        buttons: Ext.Msg.OK,
+        icon: Ext.Msg.ERROR
+    });
+}
+
+////////////////////////
+////// Callbacks ///////
+////////////////////////
+
 // called when an Ajax request fails
 JobList.onRequestFailure = function(response, request) {
-    Ext.Msg.alert('Error', 'Could not execute last request. Status: '+
-            response.status+' ('+response.statusText+')');
+    JobList.errorDlg('Could not execute last request. Status: '+
+        response.status+' ('+response.statusText+')');
 }
 
 // callback for killJob action
 JobList.onKillJobResponse = function(response, request) {
     if (response.responseText.error != null) {
-        Ext.Msg.alert('Error', response.responseText.error);
+        JobList.errorDlg(response.responseText.error);
     }
     JobList.jobStore.reload();
 }
+
+////////////////////////
+////// Functions ///////
+////////////////////////
 
 // retrieves filelist of selected job and updates the Details panel
 JobList.updateJobDetails = function() {
@@ -89,8 +112,14 @@ JobList.querySeries = function(user, name, desc) {
 
 // submits a "kill job" request after asking for confirmation
 JobList.killJob = function(jobId) {
-    Ext.Msg.confirm('Kill Job', 'Are you sure you want to kill the job?',
-        function(btn) {
+    Ext.Msg.show({
+        title: 'Cancel Job',
+        msg: 'Are you sure you want to cancel the selected job?',
+        buttons: Ext.Msg.YESNO,
+        icon: Ext.Msg.WARNING,
+        animEl: 'job-grid',
+        closable: false,
+        fn: function(btn) {
             if (btn == 'yes') {
                 Ext.Ajax.request({
                     url: JobList.ControllerURL,
@@ -102,12 +131,18 @@ JobList.killJob = function(jobId) {
                 });
             }
         }
-    );
+    });
 }
 
 JobList.killSeriesJobs = function(seriesId) {
-    Ext.Msg.confirm('Kill Series Jobs', 'Are you sure you want to kill ALL jobs in this series?',
-        function(btn) {
+    Ext.Msg.show({
+        title: 'Cancel Series Jobs',
+        msg: 'Are you sure you want to cancel ALL jobs in the selected series?',
+        buttons: Ext.Msg.YESNO,
+        icon: Ext.Msg.WARNING,
+        animEl: 'series-grid',
+        closable: false,
+        fn: function(btn) {
             if (btn == 'yes') {
                 Ext.Ajax.request({
                     url: JobList.ControllerURL,
@@ -119,7 +154,7 @@ JobList.killSeriesJobs = function(seriesId) {
                 });
             }
         }
-    );
+    });
 }
 
 // downloads given file from a specified job
@@ -129,28 +164,21 @@ JobList.downloadFile = function(job, file) {
 }
 
 // downloads a ZIP file containing given files of given job
-JobList.downloadMulti = function(job, files) {
+JobList.downloadAsZip = function(job, files) {
     var fparam = files[0].data.name;
     for (var i=1; i<files.length; i++) {
         fparam += ','+files[i].data.name;
     }
     window.location = JobList.ControllerURL +
-        "?action=downloadMulti&jobId="+job+"&files="+fparam;
-}
-
-JobList.resubmitSeries = function(series) {
-    window.location = JobList.ControllerURL +
-        "?action=resubmitSeries&seriesId="+series;
+        "?action=downloadAsZip&jobId="+job+"&files="+fparam;
 }
 
 JobList.resubmitJob = function(job) {
-    window.location = JobList.ControllerURL +
-        "?action=resubmitJob&jobId="+job;
+    window.location = JobList.ControllerURL + "?action=resubmitJob&jobId="+job;
 }
 
 JobList.useScript = function(job, file) {
-    window.location = JobList.ControllerURL +
-        "?action=useScript&jobId="+job+"&filename="+file;
+    window.location = JobList.ControllerURL + "?action=useScript&jobId="+job;
 }
 
 JobList.showQueryDialog = function() {
@@ -284,15 +312,11 @@ JobList.initialize = function() {
             if (!this.contextMenu) {
                 this.contextMenu = new Ext.menu.Menu({
                     items: [
-                        { id: 'rerun-series', text: 'Re-run series' },
-                        { id: 'kill-series-jobs', text: 'Kill jobs' }
+                        { id: 'kill-series-jobs', text: 'Cancel jobs' }
                     ],
                     listeners: {
                         itemclick: function(item) {
                             switch (item.id) {
-                                case 'rerun-series':
-                                    JobList.resubmitSeries(seriesData.id);
-                                    break;
                                 case 'kill-series-jobs':
                                     JobList.killSeriesJobs(seriesData.id);
                                     break;
@@ -350,7 +374,7 @@ JobList.initialize = function() {
                 this.contextMenu = new Ext.menu.Menu({
                     items: [
                         { id: 'resubmit-job', text: 'Re-submit Job' },
-                        { id: 'kill-job', text: 'Kill Job' }
+                        { id: 'kill-job', text: 'Cancel Job' }
                     ],
                     listeners: {
                         itemclick: function(item) {
@@ -404,13 +428,14 @@ JobList.initialize = function() {
 
     function onMenuDownload() {
         var jobData = jobGrid.getSelectionModel().getSelected().data;
-        if (fileGrid.getSelectionModel().getCount() == 1) {
-            var fileName = fileGrid.getSelectionModel().getSelected().data.name;
-            JobList.downloadFile(jobData.id, fileName);
-        } else {
-            var files = fileGrid.getSelectionModel().getSelections();
-            JobList.downloadMulti(jobData.id, files);
-        }
+        var fileName = fileGrid.getSelectionModel().getSelected().data.name;
+        JobList.downloadFile(jobData.id, fileName);
+    }
+
+    function onMenuDownloadZip() {
+        var jobData = jobGrid.getSelectionModel().getSelected().data;
+        var files = fileGrid.getSelectionModel().getSelections();
+        JobList.downloadAsZip(jobData.id, files);
     }
 
     fileGrid.on({
@@ -425,7 +450,8 @@ JobList.initialize = function() {
                 this.contextMenu = new Ext.menu.Menu({
                     items: [
                         { id: 'download-file', text: 'Download' },
-                        { id: 'use-script', text: 'Use Script' }
+                        { id: 'download-zip', text: 'Download as Zip' },
+                        { id: 'use-script', text: 'Edit and use script' }
                     ],
                     listeners: {
                         itemclick: function(item) {
@@ -433,10 +459,11 @@ JobList.initialize = function() {
                                 case 'download-file':
                                     onMenuDownload();
                                     break;
+                                case 'download-zip':
+                                    onMenuDownloadZip();
+                                    break;
                                 case 'use-script':
-                                    var scriptName = grid.getSelectionModel().
-                                        getSelected().data.name;
-                                    JobList.useScript(jobData.id, scriptName);
+                                    JobList.useScript(jobData.id);
                                     break;
                             }
                         }
@@ -451,9 +478,9 @@ JobList.initialize = function() {
                 Ext.getCmp('use-script').disable();
             }
             if (grid.getSelectionModel().getCount() > 1) {
-                Ext.getCmp('download-file').setText("Download as Zip");
+                Ext.getCmp('download-file').disable();
             } else {
-                Ext.getCmp('download-file').setText("Download");
+                Ext.getCmp('download-file').enable();
             }
             this.contextMenu.showAt(e.getXY());
         }
@@ -530,7 +557,7 @@ JobList.initialize = function() {
     });
 
     if (JobList.error != null) {
-        Ext.Msg.alert('Error', JobList.error);
+        JobList.errorDlg(JobList.error);
         JobList.error = null;
     }
 }

@@ -3,12 +3,22 @@ package org.auscope.vrl;
 import org.auscope.gridtools.GridJob;
 
 /**
- * Simple class that stores information about a VRL job submitted to the grid
- * by a user.
+ * Simple class that stores information about a VRL job which can be submitted
+ * to the grid by a user.
+ * An instance of this class represents the state of a VRL job at some point in
+ * time. It can be treated as a simple data structure (e.g. in an array).
+ * <p>
+ * Assertions should be enabled when using this class to prevent others from
+ * setting values to <code>null</code>.
+ * 
  * 
  * @author Cihan Altinay
  */
 public class VRLJob extends GridJob {
+    /** The name of the software to run VRL jobs with */
+    public static final String CODE_NAME = "esys_particle";
+    /** The job type */
+    private static final String JOB_TYPE = "mpi";
     /** The prefixes of checkpoint files */
     private String    checkpointPrefixes;
     /** A description for this job */
@@ -36,27 +46,27 @@ public class VRLJob extends GridJob {
     
 
     /**
-     * Does some <em>very</em> basic setting up of the class variables. Just
-     * to prevent errors. The strings are initialized to the empty String, and 
-     * the arrays are initialized to a length of zero. 
+     * Does some basic setting up of the class variables to prevent errors.
+     * Strings are initialized to the empty String, and integers are
+     * initialized with zero. 
      */
     public VRLJob() {
+        super();
         description = outputDir = reference = scriptFile = status =
             submitDate = "";
         id = numBonds = numParticles = numTimesteps = seriesId = 0;
+        setCode(CODE_NAME);
+        setJobType(JOB_TYPE);
     }
 
     /**
-     * Alternate constructor - calls super class' constructor with the same
-     * arguments.
+     * Alternate constructor initializing <code>GridJob</code> members.
      *
      * @param site              The site the job will be run at
      * @param name              A descriptive name for this job
-     * @param code              Executable/code to be run
      * @param version           Version of code to use
      * @param arguments         Arguments for the code
      * @param queue             Which queue to use
-     * @param jobType           The type of job to run
      * @param maxWallTime       Amount of time we plan to use
      * @param maxMemory         Amount of memory we plan to use
      * @param cpuCount          Number of CPUs to use (if jobType is single)
@@ -66,15 +76,15 @@ public class VRLJob extends GridJob {
      * @param stdOutput         The std output file for the job
      * @param stdError          The std error file for the job
      */
-    public VRLJob(String site, String name, String code, String version,
-                  String[] arguments, String queue, String jobType,
-                  String maxWallTime, String maxMemory, Integer cpuCount,
-                  String[] inTransfers, String[] outTransfers,
-                  String stdInput, String stdOutput, String stdError)
+    public VRLJob(String site, String name, String version, String[] arguments,
+                  String queue, String maxWallTime, String maxMemory,
+                  Integer cpuCount, String[] inTransfers,
+                  String[] outTransfers, String stdInput, String stdOutput,
+                  String stdError)
     {
-        super(site, name, code, version, arguments, queue, jobType, maxWallTime,
-                maxMemory, cpuCount, inTransfers, outTransfers, stdInput,
-                stdOutput, stdError);
+        super(site, name, CODE_NAME, version, arguments, queue, JOB_TYPE,
+                maxWallTime, maxMemory, cpuCount, inTransfers, outTransfers,
+                stdInput, stdOutput, stdError);
         description = outputDir = reference = scriptFile = status =
             submitDate = "";
         id = numBonds = numParticles = numTimesteps = seriesId = 0;

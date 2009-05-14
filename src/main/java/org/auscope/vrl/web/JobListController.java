@@ -28,11 +28,12 @@ import org.springframework.web.servlet.mvc.multiaction.NoSuchRequestHandlingMeth
 import org.springframework.web.servlet.view.RedirectView;
 
 /**
- *
+ * Controller for the job list view.
  */
 public class JobListController extends MultiActionController {
 
-    protected final Log logger = LogFactory.getLog(getClass());
+    /** Logger for this class */
+    private final Log logger = LogFactory.getLog(getClass());
 
     private GridAccessController gridAccess;
     private VRLJobManager jobManager;
@@ -48,7 +49,7 @@ public class JobListController extends MultiActionController {
     protected ModelAndView handleNoSuchRequestHandlingMethod(
             NoSuchRequestHandlingMethodException ex,
             HttpServletRequest request,
-            HttpServletResponse response) throws Exception {
+            HttpServletResponse response) {
 
         logger.info("No/invalid action parameter; returning default view");
         return new ModelAndView("joblist");
@@ -67,28 +68,31 @@ public class JobListController extends MultiActionController {
                                 HttpServletResponse response) {
 
         String jobIdStr = request.getParameter("jobId");
-        logger.info("Cancelling job with ID "+jobIdStr);
-        int jobId;
         VRLJob job = null;
         ModelAndView mav = new ModelAndView("jsonView");
 
-        try {
-            jobId = Integer.parseInt(jobIdStr);
-            job = jobManager.getJobById(jobId);
-        } catch (NumberFormatException e) {
-            logger.error("Error parsing job ID!");
+        if (jobIdStr != null) {
+            try {
+                int jobId = Integer.parseInt(jobIdStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID!");
+            }
+        } else {
+            logger.warn("No job ID specified!");
         }
 
         if (job == null) {
-            final String errorString = "Requested job not in job manager! Not cancelling.";
+            final String errorString = "The requested job was not found.";
             logger.error(errorString);
             mav.addObject("error", errorString);
             mav.addObject("success", false);
 
         } else {
+            logger.info("Cancelling job with ID "+jobIdStr);
             String newState = gridAccess.killJob(job.getReference());
             if (newState == null)
-                newState = "Unknown";
+                newState = "Cancelled";
             logger.info("New job state: "+newState);
 
             job.setStatus(newState);
@@ -112,35 +116,39 @@ public class JobListController extends MultiActionController {
                                        HttpServletResponse response) {
 
         String seriesIdStr = request.getParameter("seriesId");
-        logger.info("Cancelling jobs of series "+seriesIdStr);
-        int seriesId;
         List<VRLJob> jobs = null;
         ModelAndView mav = new ModelAndView("jsonView");
 
-        try {
-            seriesId = Integer.parseInt(seriesIdStr);
-            jobs = jobManager.getSeriesJobs(seriesId);
-        } catch (NumberFormatException e) {
-            logger.error("Error parsing series ID!");
+        if (seriesIdStr != null) {
+            try {
+                int seriesId = Integer.parseInt(seriesIdStr);
+                jobs = jobManager.getSeriesJobs(seriesId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing series ID!");
+            }
+        } else {
+            logger.warn("No series ID specified!");
         }
 
         if (jobs == null) {
-            final String errorString = "Requested series not in job manager!";
+            final String errorString = "The requested series was not found.";
             logger.error(errorString);
             mav.addObject("error", errorString);
             mav.addObject("success", false);
 
         } else {
+            logger.info("Cancelling jobs of series "+seriesIdStr);
             for (VRLJob job : jobs) {
                 String oldStatus = job.getStatus();
-                if (oldStatus.equals("Failed") || oldStatus.equals("Done")) {
+                if (oldStatus.equals("Failed") || oldStatus.equals("Done") ||
+                        oldStatus.equals("Cancelled")) {
                     logger.info("Skipping finished job "+job.getId());
                     continue;
                 }
                 logger.info("Killing job with ID "+job.getId());
                 String newState = gridAccess.killJob(job.getReference());
                 if (newState == null)
-                    newState = "Unknown";
+                    newState = "Cancelled";
                 logger.info("New job state: "+newState);
 
                 job.setStatus(newState);
@@ -168,24 +176,27 @@ public class JobListController extends MultiActionController {
                                  HttpServletResponse response) {
 
         String jobIdStr = request.getParameter("jobId");
-        logger.info("Getting file list for job with ID "+jobIdStr+".");
-        int jobId;
         VRLJob job = null;
         ModelAndView mav = new ModelAndView("jsonView");
 
-        try {
-            jobId = Integer.parseInt(jobIdStr);
-            job = jobManager.getJobById(jobId);
-        } catch (NumberFormatException e) {
-            logger.error("Error parsing job ID!");
+        if (jobIdStr != null) {
+            try {
+                int jobId = Integer.parseInt(jobIdStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID!");
+            }
+        } else {
+            logger.warn("No job ID specified!");
         }
 
         if (job == null) {
-            final String errorString = "Requested job not in job manager!";
+            final String errorString = "The requested job was not found.";
             logger.error(errorString);
             mav.addObject("error", errorString);
 
         } else {
+            logger.info("Generating file list for job with ID "+jobIdStr+".");
             FileInformation[] fileDetails = null;
 
             File dir = new File(job.getOutputDir());
@@ -198,6 +209,10 @@ public class JobListController extends MultiActionController {
                     fileDetails[i] = new FileInformation(
                             files[i].getName(), files[i].length());
                 }
+            } else {
+                final String errorString = "Could not access job files.";
+                logger.error(errorString);
+                mav.addObject("error", errorString);
             }
 
             mav.addObject("files", fileDetails);
@@ -213,28 +228,28 @@ public class JobListController extends MultiActionController {
      *                filename parameter
      * @param response The servlet response receiving the data
      *
-     * @return null on success or the joblist Model and View with an error
-     *         parameter on failure
+     * @return null on success or the joblist view with an error parameter on
+     *         failure.
      */
     public ModelAndView downloadFile(HttpServletRequest request,
                                      HttpServletResponse response) {
 
         String jobIdStr = request.getParameter("jobId");
         String fileName = request.getParameter("filename");
-        logger.info("Download "+fileName+" of job with ID "+jobIdStr+".");
-
-        int jobId;
         VRLJob job = null;
         String errorString = null;
 
-        try {
-            jobId = Integer.parseInt(jobIdStr);
-            job = jobManager.getJobById(jobId);
-        } catch (NumberFormatException e) {
-            logger.error("Error parsing job ID!");
+        if (jobIdStr != null) {
+            try {
+                int jobId = Integer.parseInt(jobIdStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID!");
+            }
         }
 
         if (job != null && fileName != null) {
+            logger.info("Download "+fileName+" of job with ID "+jobIdStr+".");
             File f = new File(job.getOutputDir()+File.separator+fileName);
             if (!f.canRead()) {
                 logger.error("File "+f.getPath()+" not readable!");
@@ -263,6 +278,7 @@ public class JobListController extends MultiActionController {
             }
         }
 
+        // We only end up here in case of an error so return a suitable message
         if (errorString == null) {
             if (job == null) {
                 errorString = new String("Invalid job specified!");
@@ -280,34 +296,36 @@ public class JobListController extends MultiActionController {
     }
 
     /**
-     * Sends the contents of multiple job files as a ZIP archive to the client.
+     * Sends the contents of one or more job files as a ZIP archive to the
+     * client.
      * 
      * @param request The servlet request including a jobId parameter and a
      *                files parameter with the filenames separated by comma
      * @param response The servlet response receiving the data
      *
-     * @return null on success or the joblist Model and View with an error
-     *         parameter on failure
+     * @return null on success or the joblist view with an error parameter on
+     *         failure.
      */
-    public ModelAndView downloadMulti(HttpServletRequest request,
+    public ModelAndView downloadAsZip(HttpServletRequest request,
                                       HttpServletResponse response) {
 
         String jobIdStr = request.getParameter("jobId");
         String filesParam = request.getParameter("files");
-        int jobId;
         VRLJob job = null;
         String errorString = null;
 
-        try {
-            jobId = Integer.parseInt(jobIdStr);
-            job = jobManager.getJobById(jobId);
-        } catch (NumberFormatException e) {
-            logger.error("Error parsing job ID!");
+        if (jobIdStr != null) {
+            try {
+                int jobId = Integer.parseInt(jobIdStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID!");
+            }
         }
 
         if (job != null && filesParam != null) {
             String[] fileNames = filesParam.split(",");
-            logger.info("Archiving " + fileNames.length + " files of job " +
+            logger.info("Archiving " + fileNames.length + " file(s) of job " +
                     jobIdStr);
 
             response.setContentType("application/zip");
@@ -344,7 +362,7 @@ public class JobListController extends MultiActionController {
 
                 } else {
                     zout.close();
-                    errorString = new String("None of the files could be read!");
+                    errorString = new String("Could not access the files!");
                     logger.error(errorString);
                 }
 
@@ -355,6 +373,7 @@ public class JobListController extends MultiActionController {
             }
         }
 
+        // We only end up here in case of an error so return a suitable message
         if (errorString == null) {
             if (job == null) {
                 errorString = new String("Invalid job specified!");
@@ -372,14 +391,14 @@ public class JobListController extends MultiActionController {
     }
 
     /**
-     * Returns a JSON object containing an array of series matching the query
+     * Returns a JSON object containing an array of series that match the query
      * parameters.
      * 
-     * @param request The servlet request
+     * @param request The servlet request with query parameters
      * @param response The servlet response
      *
      * @return A JSON object with a series attribute which is an array of
-     *         VRLSeries objects.
+     *         VRLSeries objects matching the criteria.
      */
     public ModelAndView querySeries(HttpServletRequest request,
                                     HttpServletResponse response) {
@@ -393,22 +412,21 @@ public class JobListController extends MultiActionController {
             logger.info("No query parameters provided. Will return "+qUser+"'s series.");
         }
 
-        logger.info("Querying series...");
         logger.info("qUser="+qUser+", qName="+qName+", qDesc="+qDesc);
-        List<VRLSeries> result = jobManager.querySeries(qUser, qName, qDesc);
+        List<VRLSeries> series = jobManager.querySeries(qUser, qName, qDesc);
 
-        logger.info("Returning list of "+result.size()+" series.");
-        return new ModelAndView("jsonView", "series", result);
+        logger.info("Returning list of "+series.size()+" series.");
+        return new ModelAndView("jsonView", "series", series);
     }
 
     /**
      * Returns a JSON object containing an array of jobs for the given series.
      * 
-     * @param request The servlet request
+     * @param request The servlet request including a seriesId parameter
      * @param response The servlet response
      *
      * @return A JSON object with a jobs attribute which is an array of
-     *         VRLJob objects.
+     *         <code>VRLJob</code> objects.
      */
     public ModelAndView listJobs(HttpServletRequest request,
                                  HttpServletResponse response) {
@@ -417,11 +435,15 @@ public class JobListController extends MultiActionController {
         List<VRLJob> seriesJobs = null;
         ModelAndView mav = new ModelAndView("jsonView");
 
-        try {
-            int seriesId = Integer.parseInt(seriesIdStr);
-            seriesJobs = jobManager.getSeriesJobs(seriesId);
-        } catch (NumberFormatException e) {
-            logger.error("Error parsing series ID '"+seriesIdStr+"'");
+        if (seriesIdStr != null) {
+            try {
+                int seriesId = Integer.parseInt(seriesIdStr);
+                seriesJobs = jobManager.getSeriesJobs(seriesId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing series ID '"+seriesIdStr+"'");
+            }
+        } else {
+            logger.warn("No series ID specified!");
         }
 
         if (seriesJobs != null) {
@@ -429,10 +451,11 @@ public class JobListController extends MultiActionController {
                     seriesIdStr + ".");
             for (VRLJob j : seriesJobs) {
                 String state = j.getStatus();
-                if (!state.equals("Done") && !state.equals("Failed")) {
+                if (!state.equals("Done") && !state.equals("Failed") &&
+                        !state.equals("Cancelled")) {
                     String newState = gridAccess.retrieveJobStatus(
                             j.getReference());
-                    if (newState != null) {
+                    if (newState != null && !state.equals(newState)) {
                         j.setStatus(newState);
                         jobManager.saveJob(j);
                     }
@@ -451,30 +474,33 @@ public class JobListController extends MultiActionController {
      * @param request The servlet request including a jobId parameter
      * @param response The servlet response
      *
-     * @return The gridsubmit model and view prepared to resubmit the job or
-     *         the joblist model and view with an error parameter if the job
-     *         was not found.
+     * @return The gridsubmit view prepared to resubmit the job or the joblist
+     *         view with an error parameter if the job was not found.
      */
     public ModelAndView resubmitJob(HttpServletRequest request,
                                     HttpServletResponse response) {
 
         String jobIdStr = request.getParameter("jobId");
-        logger.info("Re-submitting job " + jobIdStr + ".");
         VRLJob job = null;
 
-        try {
-            int jobId = Integer.parseInt(jobIdStr);
-            job = jobManager.getJobById(jobId);
-        } catch (NumberFormatException e) {
-            logger.error("Error parsing job ID!");
+        if (jobIdStr != null) {
+            try {
+                int jobId = Integer.parseInt(jobIdStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID!");
+            }
+        } else {
+            logger.warn("No job ID specified!");
         }
 
         if (job == null) {
-            final String errorString = "Requested job not in job manager!";
+            final String errorString = "Could not retrieve job details!";
             logger.error(errorString);
             return new ModelAndView("joblist", "error", errorString);
         }
 
+        logger.info("Re-submitting job " + jobIdStr + ".");
         ModelAndView mav =  new ModelAndView(
                 new RedirectView("gridsubmit.html"));
         mav.addObject("resubmitJob", jobIdStr);
@@ -491,37 +517,43 @@ public class JobListController extends MultiActionController {
      *         the joblist model and view with an error parameter if the series
      *         was not found.
      */
+    /* DISABLED until properly implemented
     public ModelAndView resubmitSeries(HttpServletRequest request,
                                        HttpServletResponse response) {
 
         String seriesIdStr = request.getParameter("seriesId");
-        logger.info("Re-submitting series " + seriesIdStr + ".");
         VRLSeries series = null;
 
-        try {
-            int seriesId = Integer.parseInt(seriesIdStr);
-            series = jobManager.getSeriesById(seriesId);
-        } catch (NumberFormatException e) {
-            logger.error("Error parsing series ID!");
+        if (seriesIdStr != null) {
+            try {
+                int seriesId = Integer.parseInt(seriesIdStr);
+                series = jobManager.getSeriesById(seriesId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing series ID!");
+            }
+        } else {
+            logger.warn("No series ID specified!");
         }
 
         if (series == null) {
-            final String errorString = "Requested series not in job manager!";
+            final String errorString = "Could not retrieve series details!";
             logger.error(errorString);
             return new ModelAndView("joblist", "error", errorString);
         }
 
+        logger.info("Re-submitting series " + seriesIdStr + ".");
         ModelAndView mav =  new ModelAndView(
                 new RedirectView("gridsubmit.html"));
         mav.addObject("resubmitSeries", seriesIdStr);
         return mav;
     }
+    */
 
     /**
-     * Re-use existing script
+     * Allows the user to edit a copy of an input script from a previous job
+     * and use it for a new job.
      * 
-     * @param request The servlet request including a jobId parameter and a
-     *                filename parameter
+     * @param request The servlet request including a jobId parameter
      * @param response The servlet response
      *
      * @return The scriptbuilder model and view for editing the script or
@@ -532,37 +564,40 @@ public class JobListController extends MultiActionController {
                                   HttpServletResponse response) {
 
         String jobIdStr = request.getParameter("jobId");
-        String fileName = request.getParameter("filename");
-        logger.info("Re-using script file of job " + jobIdStr + ".");
 
-        int jobId;
         VRLJob job = null;
         String errorString = null;
+        String scriptFileName = null;
+        File sourceFile = null;
 
-        try {
-            jobId = Integer.parseInt(jobIdStr);
-            job = jobManager.getJobById(jobId);
-        } catch (NumberFormatException e) {
-            logger.error("Error parsing job ID!");
+        if (jobIdStr != null) {
+            try {
+                int jobId = Integer.parseInt(jobIdStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID!");
+            }
+        } else {
+            logger.warn("No job ID specified!");
         }
 
         if (job == null) {
-            errorString = new String("Requested job not in job manager!");
+            errorString = new String("Could not access the job!");
             logger.error(errorString);
-        } else if (fileName == null) {
-            errorString = new String("No filename provided!");
-            logger.error(errorString);
-        }
-
-        File sourceFile = new File(job.getOutputDir()+File.separator+fileName);
-        if (!sourceFile.canRead()) {
-            errorString = new String("Script file could not be read.");
-            logger.error("File "+sourceFile.getPath()+" not readable!");
+        } else {
+            scriptFileName = job.getScriptFile();
+            sourceFile = new File(
+                    job.getOutputDir()+File.separator+scriptFileName);
+            if (!sourceFile.canRead()) {
+                errorString = new String("Script file could not be read.");
+                logger.error("File "+sourceFile.getPath()+" not readable!");
+            }
         }
 
         if (errorString == null) {
+            logger.info("Copying script file of job " + jobIdStr + " to temp.");
             String tempDir = System.getProperty("java.io.tmpdir");
-            File tempScript = new File(tempDir+File.separator+fileName);
+            File tempScript = new File(tempDir+File.separator+scriptFileName);
             boolean success = Util.copyFile(sourceFile, tempScript);
             if (success) {
                 tempScript.deleteOnExit();
@@ -578,7 +613,7 @@ public class JobListController extends MultiActionController {
 
         ModelAndView mav =  new ModelAndView(
                 new RedirectView("scriptbuilder.html"));
-        mav.addObject("usescript", fileName);
+        mav.addObject("usescript", scriptFileName);
         return mav;
     }
 }
