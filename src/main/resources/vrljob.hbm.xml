@@ -20,7 +20,7 @@
         <property name="numTimesteps"/>
         <property name="numParticles"/>
         <property name="numBonds"/>
-        <property name="checkpointPrefixes"/>
+        <property name="checkpointPrefix"/>
     </class>
 </hibernate-mapping>
 

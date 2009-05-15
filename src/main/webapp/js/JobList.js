@@ -11,19 +11,22 @@ Ext.namespace('JobList');
 
 JobList.ControllerURL = "joblist.html";
 
-// shows an error dialog with given message
-JobList.errorDlg = function(message) {
-    Ext.Msg.show({
-        title: 'Error',
-        msg: message,
-        buttons: Ext.Msg.OK,
-        icon: Ext.Msg.ERROR
-    });
-}
-
 ////////////////////////
 ////// Callbacks ///////
 ////////////////////////
+
+// called when a JsonStore fails retrieving data from the server
+JobList.onLoadException = function(proxy, options, response, e) {
+    JobList.hideProgressDlg();
+    if (response.status != 0) {
+        JobList.errorDlg("Could not interpret server response "+
+            "(most likely your session has expired). "+
+            "Please try reloading the page.");
+    } else {
+        JobList.errorDlg("Could not retrieve data from the server ("+
+            response.statusText+").");
+    }
+}
 
 // called when an Ajax request fails
 JobList.onRequestFailure = function(response, request) {
@@ -43,21 +46,48 @@ JobList.onKillJobResponse = function(response, request) {
 ////// Functions ///////
 ////////////////////////
 
+// shows an error dialog with given message
+JobList.errorDlg = function(message) {
+    Ext.Msg.show({
+        title: 'Error',
+        msg: message,
+        buttons: Ext.Msg.OK,
+        icon: Ext.Msg.ERROR
+    });
+}
+
+// hides the data retrieval progress dialog
+JobList.hideProgressDlg = function() {
+    if (JobList.progressDlg) {
+        JobList.progressDlg.hide();
+        JobList.progressDlg = undefined;
+    }
+}
+
+// notifies the user through a progress dialog that data is being retrieved
+JobList.showProgressDlg = function() {
+    if (!JobList.progressDlg) {
+        JobList.progressDlg = Ext.Msg.wait('Retrieving data, please wait...');
+    }
+}
+
 // retrieves filelist of selected job and updates the Details panel
 JobList.updateJobDetails = function() {
     var jobGrid = Ext.getCmp('job-grid');
-    var descEl = Ext.getCmp('details-tab').body;
+    var descEl = Ext.getCmp('description-panel').body;
     var detailsPanel = Ext.getCmp('details-panel');
 
     if (jobGrid.getSelectionModel().getSelected()) {
         var jobData = jobGrid.getSelectionModel().getSelected().data;
         JobList.jobFileStore.baseParams.jobId = jobData.id;
         JobList.jobFileStore.reload();
+        jobData.seriesName = Ext.getCmp('series-grid').
+            getSelectionModel().getSelected().data.name;
         JobList.jobDescTpl.overwrite(descEl, jobData);
         detailsPanel.enable();
     } else {
         JobList.jobFileStore.removeAll();
-        detailsPanel.setActiveTab('details-tab');
+        detailsPanel.setActiveTab('description-tab');
         detailsPanel.disable();
     }
 }
@@ -66,7 +96,9 @@ JobList.updateJobDetails = function() {
 JobList.updateJobList = function() {
     var jobGrid = Ext.getCmp('job-grid');
     var seriesGrid = Ext.getCmp('series-grid');
-    var descEl = Ext.getCmp('details-tab').body;
+    var descEl = Ext.getCmp('description-panel').body;
+
+    JobList.hideProgressDlg();
 
     if (seriesGrid.getSelectionModel().getSelected()) {
         jobGrid.enable();
@@ -107,7 +139,7 @@ JobList.querySeries = function(user, name, desc) {
     } else {
         JobList.seriesStore.baseParams.qSeriesDesc = desc;
     }
-    JobList.refreshAll();
+    JobList.seriesStore.reload();
 }
 
 // submits a "kill job" request after asking for confirmation
@@ -245,10 +277,13 @@ JobList.initialize = function() {
             { name: 'name', type: 'string' },
             { name: 'description', type: 'string' },
             { name: 'user', type: 'string'}
-        ]
+        ],
+        listeners: {
+            'beforeload': JobList.showProgressDlg,
+            'load': JobList.updateJobList,
+            'loadexception': JobList.onLoadException
+        }
     });
-
-    JobList.seriesStore.on({ 'load': JobList.updateJobList });
 
     JobList.jobStore = new Ext.data.JsonStore({
         url: JobList.ControllerURL,
@@ -260,6 +295,7 @@ JobList.initialize = function() {
             { name: 'description', type: 'string' },
             { name: 'site', type: 'string' },
             { name: 'version', type: 'string' },
+            { name: 'checkpointPrefix', type: 'string' },
             { name: 'numTimesteps', type: 'int' },
             { name: 'numParticles', type: 'int' },
             { name: 'numBonds', type: 'int' },
@@ -268,7 +304,12 @@ JobList.initialize = function() {
             { name: 'scriptFile', type: 'string' },
             { name: 'status', type: 'string'},
             { name: 'submitDate', type: 'string'}
-        ]
+        ],
+        listeners: {
+            'beforeload': JobList.showProgressDlg,
+            'load': JobList.hideProgressDlg,
+            'loadexception': JobList.onLoadException
+        }
     });
 
     JobList.jobFileStore = new Ext.data.JsonStore({
@@ -279,12 +320,26 @@ JobList.initialize = function() {
         fields: [
             { name: 'name', type: 'string' },
             { name: 'size', type: 'int' }
-        ]
+        ],
+        listeners: {
+            'beforeload': JobList.showProgressDlg,
+            'load': JobList.hideProgressDlg,
+            'loadexception': JobList.onLoadException
+        }
     });
 
     //
     // Series Grid & functions
     //
+    var cancelSeriesAction = new Ext.Action({
+        text: 'Cancel jobs',
+        iconCls: 'cross-icon',
+        handler: function() {
+            var seriesId = seriesGrid.getSelectionModel().getSelected().data.id;
+            JobList.killSeriesJobs(seriesId);
+        }
+    });
+
     var seriesGrid = new Ext.grid.GridPanel({
         id: 'series-grid',
         title: 'Series List',
@@ -311,18 +366,7 @@ JobList.initialize = function() {
             var seriesData = grid.getStore().getAt(rowIndex).data;
             if (!this.contextMenu) {
                 this.contextMenu = new Ext.menu.Menu({
-                    items: [
-                        { id: 'kill-series-jobs', text: 'Cancel jobs' }
-                    ],
-                    listeners: {
-                        itemclick: function(item) {
-                            switch (item.id) {
-                                case 'kill-series-jobs':
-                                    JobList.killSeriesJobs(seriesData.id);
-                                    break;
-                            }
-                        }
-                    }
+                    items: [ cancelSeriesAction ]
                 });
             }
             e.stopEvent();
@@ -372,10 +416,14 @@ JobList.initialize = function() {
             var jobData = grid.getStore().getAt(rowIndex).data;
             if (!this.contextMenu) {
                 this.contextMenu = new Ext.menu.Menu({
-                    items: [
-                        { id: 'resubmit-job', text: 'Re-submit Job' },
-                        { id: 'kill-job', text: 'Cancel Job' }
-                    ],
+                    items: [{
+                        id: 'resubmit-job',
+                        text: 'Re-submit Job'
+                    }, {
+                        id: 'kill-job',
+                        iconCls: 'cross-icon',
+                        text: 'Cancel Job'
+                    }],
                     listeners: {
                         itemclick: function(item) {
                             switch (item.id) {
@@ -403,18 +451,47 @@ JobList.initialize = function() {
     //
     // File Grid & functions
     //
-    function fileTypeRenderer(val) {
+    function fileTypeRenderer(value, cell, record) {
         var jobData = jobGrid.getSelectionModel().getSelected().data;
-        if (val == jobData.scriptFile) {
-            return '<span style="font-weight:bold;">*' + val + '</span>';
-        } else if (val == ".py") {
-            return '<span style="color:green;">' + val + '</span>';
-        } else if (val == "Done") {
-            return '<span style="color:blue;">' + val + '</span>';
+        if (value == jobData.scriptFile) {
+            return '<span style="font-weight:bold;">*' + value + '</span>';
+        } else if (value.lastIndexOf(".py") == value.length-3) {
+            return '<span style="color:green;">' + value + '</span>';
+        } else if (value.indexOf(jobData.checkpointPrefix) == 0) {
+            return '<span style="color:blue;">' + value + '</span>';
         }
-        return val;
+        return value;
     }
 
+    var downloadAction = new Ext.Action({
+        text: 'Download',
+        disabled: true,
+        iconCls: 'disk-icon',
+        handler: function() {
+            var jobData = jobGrid.getSelectionModel().getSelected().data;
+            var fileName = fileGrid.getSelectionModel().getSelected().data.name;
+            JobList.downloadFile(jobData.id, fileName);
+        }
+    });
+    var downloadZipAction = new Ext.Action({
+        text: 'Download as Zip',
+        disabled: true,
+        iconCls: 'disk-icon',
+        handler: function() {
+            var jobData = jobGrid.getSelectionModel().getSelected().data;
+            var files = fileGrid.getSelectionModel().getSelections();
+            JobList.downloadAsZip(jobData.id, files);
+        }
+    });
+    var useScriptAction = new Ext.Action({
+        text: 'Edit and use script',
+        iconCls: 'grid-icon',
+        handler: function() {
+            var jobData = jobGrid.getSelectionModel().getSelected().data;
+            JobList.useScript(jobData.id);
+        }
+    });
+    
     fileGrid = new Ext.grid.GridPanel({
         id: 'file-grid',
         title: 'Files',
@@ -423,20 +500,31 @@ JobList.initialize = function() {
             { header: 'Filename', width: 200, sortable: true, dataIndex: 'name', renderer: fileTypeRenderer},
             { header: 'Size', width: 100, sortable: true, dataIndex: 'size', renderer: Ext.util.Format.fileSize, align: 'right'}
         ],
-        stripeRows: true
+        stripeRows: true,
+        sm: new Ext.grid.RowSelectionModel({
+            singleSelect: false,
+            listeners: {
+                'selectionchange': function(sm) {
+                    if (fileGrid.getSelectionModel().getCount() == 0) {
+                        downloadAction.setDisabled(true);
+                        downloadZipAction.setDisabled(true);
+                    } else {
+                        if (fileGrid.getSelectionModel().getCount() != 1) {
+                            downloadAction.setDisabled(true);
+                        } else {
+                            downloadAction.setDisabled(false);
+                        }
+                        downloadZipAction.setDisabled(false);
+                    }
+                }
+            }
+        }),
+        tbar: [{
+            text: 'Actions',
+            iconCls: 'folder-icon',
+            menu: [downloadAction, downloadZipAction, useScriptAction]
+        }]
     });
-
-    function onMenuDownload() {
-        var jobData = jobGrid.getSelectionModel().getSelected().data;
-        var fileName = fileGrid.getSelectionModel().getSelected().data.name;
-        JobList.downloadFile(jobData.id, fileName);
-    }
-
-    function onMenuDownloadZip() {
-        var jobData = jobGrid.getSelectionModel().getSelected().data;
-        var files = fileGrid.getSelectionModel().getSelections();
-        JobList.downloadAsZip(jobData.id, files);
-    }
 
     fileGrid.on({
         'rowdblclick': function(grid, rowIndex, e) {
@@ -448,40 +536,10 @@ JobList.initialize = function() {
             grid.getSelectionModel().selectRow(rowIndex);
             if (!this.contextMenu) {
                 this.contextMenu = new Ext.menu.Menu({
-                    items: [
-                        { id: 'download-file', text: 'Download' },
-                        { id: 'download-zip', text: 'Download as Zip' },
-                        { id: 'use-script', text: 'Edit and use script' }
-                    ],
-                    listeners: {
-                        itemclick: function(item) {
-                            switch (item.id) {
-                                case 'download-file':
-                                    onMenuDownload();
-                                    break;
-                                case 'download-zip':
-                                    onMenuDownloadZip();
-                                    break;
-                                case 'use-script':
-                                    JobList.useScript(jobData.id);
-                                    break;
-                            }
-                        }
-                    }
+                    items: [ downloadAction, downloadZipAction ]
                 });
             }
             e.stopEvent();
-            var jobData = jobGrid.getSelectionModel().getSelected().data;
-            if (grid.getStore().getAt(rowIndex).data.name == jobData.scriptFile) {
-                Ext.getCmp('use-script').enable();
-            } else {
-                Ext.getCmp('use-script').disable();
-            }
-            if (grid.getSelectionModel().getCount() > 1) {
-                Ext.getCmp('download-file').disable();
-            } else {
-                Ext.getCmp('download-file').enable();
-            }
             this.contextMenu.showAt(e.getXY());
         }
     });
@@ -490,6 +548,7 @@ JobList.initialize = function() {
     JobList.jobDescTpl = new Ext.Template(
         '<p class="jobdesc-title">{name}</p>',
         '<table width="100%"><col width="25%"></col><col class="jobdesc-content"></col>',
+        '<tr><td class="jobdesc-key">Part of series:</td><td>{seriesName}</td></tr>',
         '<tr><td class="jobdesc-key">Submitted on:</td><td>{submitDate}</td></tr>',
         '<tr><td class="jobdesc-key">Computation site:</td><td>{site}</td></tr>',
         '<tr><td class="jobdesc-key">ESyS-Particle version:</td><td>{version}</td></tr>',
@@ -515,11 +574,12 @@ JobList.initialize = function() {
         split: true,
         items: [
             {
+                id: 'description-tab',
                 title: 'Description',
                 bodyStyle: 'padding:10px',
                 defaults: { border: false },
                 layout: 'fit',
-                items: [ { id: 'details-tab', html: '' } ]
+                items: [ { id: 'description-panel', html: '' } ]
             },
             fileGrid
         ]
@@ -540,6 +600,23 @@ JobList.initialize = function() {
             margins: '2 2 2 0',
             layout: 'border',
             width: '400',
+            buttons: [{
+                text: 'My Jobs',
+                tooltip: 'Retrieves the list of your series and jobs',
+                handler: JobList.querySeries
+            }, {
+                text: 'Query...',
+                tooltip: 'Displays the query dialog to search for jobs',
+                handler: JobList.showQueryDialog,
+                cls: 'x-btn-text-icon',
+                iconCls: 'find-icon'
+            }, {
+                text: 'Refresh',
+                tooltip: 'Reloads the status and file list of currently displayed jobs',
+                handler: JobList.refreshAll,
+                cls: 'x-btn-text-icon',
+                iconCls: 'refresh-icon'
+            }],
             items: [ seriesGrid, jobGrid ]
         },{
             id: 'main-panel',
@@ -547,11 +624,6 @@ JobList.initialize = function() {
             region: 'center',
             margins: '2 2 2 0',
             layout: 'fit',
-            buttons: [
-                { text: 'My Jobs', handler: JobList.querySeries },
-                { text: 'Query', handler: JobList.showQueryDialog },
-                { text: 'Refresh', handler: JobList.refreshAll }
-            ],
             items: [ jobDetails ]
         }]
     });

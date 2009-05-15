@@ -156,7 +156,7 @@ ScriptBuilder.updateSource = function() {
 ScriptBuilder.switchToTextEditor = function() {
     Ext.getCmp('content-panel').remove('usedcomps-panel');
     Ext.getCmp('content-panel').doLayout();
-    var descEl = Ext.getCmp('description-panel').body;
+    var descEl = Ext.getCmp('sb-description-panel').body;
     descEl.update(this.compDescTextEditor).setStyle('background','#eee');
     Ext.getCmp('edit-script-btn').disable();
     Ext.getCmp('sourcetext').enable();
@@ -350,11 +350,11 @@ ScriptBuilder.initialize = function() {
     treePanel.on({
         'click': function(node) {
             if (node.leaf) { // click on a component
-                var descEl = Ext.getCmp('description-panel').body;
+                var descEl = Ext.getCmp('sb-description-panel').body;
                 descEl.update('').setStyle('background','#fff');
                 compDescTpl.overwrite(descEl, node.attributes);
             } else { // click on a category
-                var descEl = Ext.getCmp('description-panel').body;
+                var descEl = Ext.getCmp('sb-description-panel').body;
                 if (ScriptBuilder.textEditMode == true) {
                     descEl.update(ScriptBuilder.compDescTextEditor).setStyle('background','#eee');
                 } else {
@@ -373,7 +373,7 @@ ScriptBuilder.initialize = function() {
     // This is the description panel that contains the description for the
     // selected component.
     var descriptionPanel = {
-        id: 'description-panel',
+        id: 'sb-description-panel',
         title: 'Component Description',
         region: 'south',
         split: true,

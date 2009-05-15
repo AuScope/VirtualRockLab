@@ -19,8 +19,8 @@ public class VRLJob extends GridJob {
     public static final String CODE_NAME = "esys_particle";
     /** The job type */
     private static final String JOB_TYPE = "mpi";
-    /** The prefixes of checkpoint files */
-    private String    checkpointPrefixes;
+    /** The prefix of checkpoint files */
+    private String    checkpointPrefix;
     /** A description for this job */
     private String    description;
     /** A unique identifier for this job */
@@ -111,22 +111,22 @@ public class VRLJob extends GridJob {
     }
 
     /**
-     * Returns the checkpoint file prefixes of this job.
+     * Returns the checkpoint file prefix of this job.
      * 
-     * @return The checkpoint file prefixes of this job.
+     * @return The checkpoint file prefix of this job.
      */
-    public String getCheckpointPrefixes() {
-        return checkpointPrefixes;
+    public String getCheckpointPrefix() {
+        return checkpointPrefix;
     }
 
     /**
-     * Sets the checkpoint file prefixes of this job.
+     * Sets the checkpoint file prefix of this job.
      * 
-     * @param checkpointPrefixes The checkpoint file prefixes of this job.
+     * @param checkpointPrefix The checkpoint file prefix of this job.
      */
-    public void setCheckpointPrefixes(String checkpointPrefixes) {
-        assert (checkpointPrefixes != null);
-        this.checkpointPrefixes = checkpointPrefixes;
+    public void setCheckpointPrefix(String checkpointPrefix) {
+        assert (checkpointPrefix != null);
+        this.checkpointPrefix = checkpointPrefix;
     }
 
     /**
@@ -330,6 +330,7 @@ public class VRLJob extends GridJob {
                ", id=" + id +
                ", seriesId=" + seriesId +
                ", description=\"" + description + "\"" +
+               ", checkpointPrefix=\"" + checkpointPrefix + "\"" +
                ", numBonds=" + numBonds +
                ", numParticles=" + numParticles +
                ", numTimesteps=" + numTimesteps +

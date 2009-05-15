@@ -100,17 +100,17 @@ img {
     margin: 10px 0;
 }
 
-#description-panel h2 {
+#sb-description-panel h2 {
     padding:10px 10px 0;
     font-size:12px;
     color:#15428B;
 }
 
-#description-panel p {
+#sb-description-panel p {
     padding:10px 10px 0;
 }
 
-#description-panel pre {
+#sb-description-panel pre {
     border-top:1px dotted #ddd;
     border-bottom:1px dotted #ddd;
     margin-top:10px;
@@ -118,7 +118,7 @@ img {
     background:#f5f5f5;
 }
 
-#description-panel .desc-info {
+#sb-description-panel .desc-info {
     margin:12px;
     padding:12px;
     border:1px dotted #999;
@@ -145,5 +145,29 @@ img {
 }
 
 .jobdesc-content {
+}
+
+.disk-icon {
+    background-image: url("../img/disk.png") !important
+}
+
+.folder-icon {
+    background-image: url("../img/folder.png") !important
+}
+
+.grid-icon {
+    background-image: url("../img/grid.png") !important
+}
+
+.refresh-icon {
+    background-image: url("../img/refresh.png") !important
+}
+
+.find-icon {
+    background-image: url("../img/find.png") !important
+}
+
+.cross-icon {
+    background-image: url("../img/cross.png") !important
 }
 

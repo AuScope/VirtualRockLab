@@ -1,17 +1,13 @@
 package org.auscope.vrl.web;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.Exception;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -20,6 +16,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.auscope.vrl.FileInformation;
 import org.auscope.vrl.GridAccessController;
+import org.auscope.vrl.ScriptParser;
 import org.auscope.vrl.Util;
 import org.auscope.vrl.VRLJob;
 import org.auscope.vrl.VRLJobManager;
@@ -32,14 +29,13 @@ import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
 import org.springframework.web.servlet.mvc.multiaction.NoSuchRequestHandlingMethodException;
 
 /**
- * 
+ * Controller for the job submission view.
  */
 public class GridSubmitController extends MultiActionController {
 
-    /** Logger for this class and subclasses */
-    protected final Log logger = LogFactory.getLog(getClass());
+    /** Logger for this class */
+    private final Log logger = LogFactory.getLog(getClass());
 
-    private static final String CODE_NAME = "esys_particle";
     private GridAccessController gridAccess;
     private VRLJobManager jobManager;
 
@@ -54,7 +50,7 @@ public class GridSubmitController extends MultiActionController {
     protected ModelAndView handleNoSuchRequestHandlingMethod(
             NoSuchRequestHandlingMethodException ex,
             HttpServletRequest request,
-            HttpServletResponse response) throws Exception {
+            HttpServletResponse response) {
 
         // Store resubmission request or scriptBuilder filename in session
         // object to be able to modify VRLJob later accordingly.
@@ -73,7 +69,7 @@ public class GridSubmitController extends MultiActionController {
     }
 
     /**
-     * Returns a JSON object containing an array of the current user's series.
+     * Returns a JSON object containing a list of the current user's series.
      * 
      * @param request The servlet request
      * @param response The servlet response
@@ -87,10 +83,10 @@ public class GridSubmitController extends MultiActionController {
         String user = request.getRemoteUser();
 
         logger.info("Querying series of "+user);
-        List<VRLSeries> result = jobManager.querySeries(user, null, null);
+        List<VRLSeries> series = jobManager.querySeries(user, null, null);
 
-        logger.info("Returning list of "+result.size()+" series.");
-        return new ModelAndView("jsonView", "series", result);
+        logger.info("Returning list of "+series.size()+" series.");
+        return new ModelAndView("jsonView", "series", series);
     }
 
     /**
@@ -103,20 +99,20 @@ public class GridSubmitController extends MultiActionController {
     }
 
     /**
-     * Returns a JSON object containing an array of esys-particle sites.
+     * Returns a JSON object containing an array of ESyS-particle sites.
      * 
      * @param request The servlet request
      * @param response The servlet response
      *
      * @return A JSON object with a sites attribute which is an array of
-     *         all sites that have an installation of esys-particle.
+     *         sites on the grid that have an installation of ESyS-particle.
      */
     public ModelAndView listSites(HttpServletRequest request,
                                   HttpServletResponse response) {
 
         logger.info("Retrieving sites with ESyS-Particle installations.");
         String[] particleSites = gridAccess.
-                retrieveSitesWithSoftwareAndVersion(CODE_NAME, "");
+                retrieveSitesWithSoftwareAndVersion(VRLJob.CODE_NAME, "");
 
         List<SimpleBean> sites = new ArrayList<SimpleBean>();
         for (int i=0; i<particleSites.length; i++) {
@@ -128,31 +124,35 @@ public class GridSubmitController extends MultiActionController {
     }
 
     /**
-     * Returns a JSON object containing an array of esys-particle versions on
+     * Returns a JSON object containing an array of ESyS-particle versions at
      * the specified site.
      * 
-     * @param request The servlet request
+     * @param request The servlet request including a site parameter
      * @param response The servlet response
      *
      * @return A JSON object with a versions attribute which is an array of
-     *         versions installed on given site.
+     *         versions installed at requested site.
      */
     public ModelAndView listSiteVersions(HttpServletRequest request,
                                          HttpServletResponse response) {
 
         String site = request.getParameter("site");
-
-        logger.info("Retrieving versions on "+site);
-
-        String[] siteVersions = gridAccess.
-                retrieveCodeVersionsAtSite(site, CODE_NAME);
-
         List<SimpleBean> versions = new ArrayList<SimpleBean>();
-        for (int i=0; i<siteVersions.length; i++) {
-            versions.add(new SimpleBean(siteVersions[i]));
+
+        if (site != null) {
+            logger.info("Retrieving ESyS-Particle versions at "+site);
+
+            String[] siteVersions = gridAccess.
+                    retrieveCodeVersionsAtSite(site, VRLJob.CODE_NAME);
+
+            for (int i=0; i<siteVersions.length; i++) {
+                versions.add(new SimpleBean(siteVersions[i]));
+            }
+        } else {
+            logger.warn("No site specified!");
         }
 
-        logger.info("Returning list of "+siteVersions.length+" versions.");
+        logger.info("Returning list of "+versions.size()+" versions.");
         return new ModelAndView("jsonView", "versions", versions);
     }
 
@@ -162,8 +162,8 @@ public class GridSubmitController extends MultiActionController {
      * @param request The servlet request
      * @param response The servlet response
      *
-     * @return A JSON object with a job attribute containing a populated VRLJob
-     *         object.
+     * @return A JSON object with a data attribute containing a populated
+     *         VRLJob object and a success attribute.
      */
     public ModelAndView getJobObject(HttpServletRequest request,
                                      HttpServletResponse response) {
@@ -262,13 +262,13 @@ public class GridSubmitController extends MultiActionController {
      * @param response The servlet response
      *
      * @return A JSON object with a success attribute that indicates whether
-     *         the job was submitted successfully or not.
+     *         the job was successfully submitted.
      */
     public ModelAndView submitJob(HttpServletRequest request,
                                   HttpServletResponse response,
                                   VRLJob job) {
 
-        logger.error("Job details: "+job.toString());
+        logger.debug("Job details:\n"+job.toString());
         /*
         java.util.Enumeration eParams = request.getParameterNames();
         while (eParams.hasMoreElements()) {
@@ -281,7 +281,6 @@ public class GridSubmitController extends MultiActionController {
         boolean success = true;
         String jobInputDir = (String) request.getSession()
             .getAttribute("jobInputDir");
-
         String newSeriesName = request.getParameter("seriesName");
         String seriesIdStr = request.getParameter("seriesId");
 
@@ -289,15 +288,14 @@ public class GridSubmitController extends MultiActionController {
         // otherwise seriesId contains the id of the series to use.
         if (newSeriesName != null && newSeriesName != "") {
             String newSeriesDesc = request.getParameter("seriesDesc");
-            if (newSeriesDesc == null) {
-                newSeriesDesc = "";
-            }
 
             logger.info("Creating new series '"+newSeriesName+"'.");
             series = new VRLSeries();
             series.setUser(request.getRemoteUser());
             series.setName(newSeriesName);
-            series.setDescription(newSeriesDesc);
+            if (newSeriesDesc != null) {
+                series.setDescription(newSeriesDesc);
+            }
             jobManager.saveSeries(series);
             // Note that we can now access the series' new ID
 
@@ -316,10 +314,9 @@ public class GridSubmitController extends MultiActionController {
 
         } else {
             job.setSeriesId(series.getId());
-            job.setCode(CODE_NAME);
             job.setArguments(new String[] { job.getScriptFile() });
 
-            // Add server part to local stage in dir
+            // Add server part to local stage-in dir
             String stageInURL = gridAccess.getLocalGridFtpServer()+jobInputDir;
             job.setInTransfers(new String[] { stageInURL });
 
@@ -329,21 +326,22 @@ public class GridSubmitController extends MultiActionController {
             String jobID = request.getRemoteUser() + "-" + job.getName() +
                     "-" + dateFmt + File.separator;
             String jobOutputDir = gridAccess.getLocalGridFtpStageOutDir()+jobID;
-            boolean succ = (new File(jobOutputDir)).mkdir();
+            success = (new File(jobOutputDir)).mkdir();
 
-            if (!succ) {
+            String submitEPR = null;
+
+            if (success) {
+                job.setOutputDir(jobOutputDir);
+                job.setOutTransfers(new String[]
+                        { gridAccess.getLocalGridFtpServer() + jobOutputDir });
+
+                logger.info("Submitting job with name " + job.getName() +
+                        " to " + job.getSite());
+                // ACTION!
+                submitEPR = gridAccess.submitJob(job);
+            } else {
                 logger.error("Could not create directory "+jobOutputDir);
-                jobOutputDir = gridAccess.getLocalGridFtpStageOutDir();
             }
-            job.setOutputDir(jobOutputDir);
-            job.setOutTransfers(new String[]
-                    { gridAccess.getLocalGridFtpServer() + jobOutputDir });
-
-            logger.info("Submitting job with name " + job.getName() + " to " +
-                    job.getSite());
-
-            // ...and ACTION!
-            String submitEPR = gridAccess.submitJob(job);
 
             if (submitEPR == null) {
                 success = false;
@@ -363,9 +361,18 @@ public class GridSubmitController extends MultiActionController {
         return result;
     }
 
+    /**
+     * Creates a new VRLJob object with predefined values for some fields.
+     * If the ScriptBuilder was used the file is moved to the job input
+     * directory whereas a resubmission request is handled by using the
+     * attributes of the job to be resubmitted.
+     * 
+     * @param request The servlet request containing a session object
+     *
+     * @return The new job object.
+     */
     private VRLJob prepareModel(HttpServletRequest request) {
         final String user = request.getRemoteUser();
-        final String jobType = "mpi";
         final String maxWallTime = "2";
         final String maxMemory = "1024";
         final String stdInput = "";
@@ -374,7 +381,7 @@ public class GridSubmitController extends MultiActionController {
         final String[] arguments = new String[0];
         final String[] inTransfers = new String[0];
         final String[] outTransfers = new String[0];
-        String name = "gridjob";
+        String name = "vrljob";
         String site = "ESSCC";
         Integer cpuCount = 2;
         Integer numBonds = 0;
@@ -385,8 +392,9 @@ public class GridSubmitController extends MultiActionController {
         String description = "";
         String scriptFile = "";
 
-        // Preset some attributes
-        String[] allVersions = gridAccess.retrieveCodeVersionsAtSite(site, CODE_NAME);
+        // Set a default version and queue
+        String[] allVersions = gridAccess.retrieveCodeVersionsAtSite(
+                site, VRLJob.CODE_NAME);
         if (allVersions.length > 0)
             version = allVersions[0];
         
@@ -426,43 +434,15 @@ public class GridSubmitController extends MultiActionController {
                 logger.info("Moved "+newScript+" to stageIn directory");
                 scriptFile = newScript+".py";
 
-                // Now look for a string like
-                // sim = LsmMpi( numWorkerProcesses = 2, ...)
-                // to extract the number of CPUs
-                // FIXME: This should probably go into a parser-class which
-                // extracts more information from the script...
+                // Extract information from script file
+                ScriptParser parser = new ScriptParser();
                 try {
-                    BufferedReader input = new BufferedReader(
-                            new FileReader(newScriptFile));
-                    String line = null;
-                    while ((line = input.readLine()) != null) {
-                        int startIndex = line.indexOf("numWorkerProcesses");
-                        if (startIndex != -1) {
-                            startIndex = line.indexOf('=', startIndex);
-                            if (startIndex != -1) {
-                                startIndex++;
-                                int endIndex = line.indexOf(',', startIndex);
-                                if (endIndex != -1) {
-                                    try {
-                                        int iCount = Integer.parseInt(
-                                                line.substring(startIndex,
-                                                    endIndex).trim());
-                                        cpuCount = iCount+1;
-                                        logger.info("Number of CPUs from script: "+cpuCount);
-                                    } catch (NumberFormatException e) {
-                                        logger.warn("Error parsing number of CPUs.");
-                                    }
-
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    input.close();
+                    parser.parse(newScriptFile);
+                    cpuCount = parser.getNumWorkerProcesses()+1;
+                    numTimesteps = parser.getNumTimeSteps();
                 } catch (IOException e) {
-                    logger.warn("Could not open script file to extract number of CPUs: "+e.getMessage());
+                    logger.warn("Error parsing file: "+e.getMessage());
                 }
-
             } else {
                 logger.warn("Could not move "+newScript+" to stageIn!");
             }
@@ -494,7 +474,11 @@ public class GridSubmitController extends MultiActionController {
             numParticles = existingJob.getNumParticles();
             numTimesteps = existingJob.getNumTimesteps();
 
-            logger.info("Copying files from old job to stageIn directory");
+            allQueues = gridAccess.retrieveQueueNamesAtSite(site);
+            if (allQueues.length > 0)
+                queue = allQueues[0];
+
+            logger.info("Copying files from old job to stage-in directory");
             File srcDir = new File(existingJob.getOutputDir());
             File destDir = new File(jobInputDir);
             success = Util.copyFilesRecursive(srcDir, destDir);
@@ -505,9 +489,9 @@ public class GridSubmitController extends MultiActionController {
         }
 
         logger.info("Creating new VRLJob instance");
-        VRLJob job = new VRLJob(site, name, CODE_NAME, version, arguments,
-                queue, jobType, maxWallTime, maxMemory, cpuCount, inTransfers,
-                outTransfers, stdInput, stdOutput, stdError);
+        VRLJob job = new VRLJob(site, name, version, arguments, queue,
+                maxWallTime, maxMemory, cpuCount, inTransfers, outTransfers,
+                stdInput, stdOutput, stdError);
 
         job.setScriptFile(scriptFile);
         job.setDescription(description);
