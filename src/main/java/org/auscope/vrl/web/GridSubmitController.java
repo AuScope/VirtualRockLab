@@ -391,6 +391,7 @@ public class GridSubmitController extends MultiActionController {
         String queue = "";
         String description = "";
         String scriptFile = "";
+        String checkpointPrefix = "";
 
         // Set a default version and queue
         String[] allVersions = gridAccess.retrieveCodeVersionsAtSite(
@@ -473,6 +474,7 @@ public class GridSubmitController extends MultiActionController {
             numBonds = existingJob.getNumBonds();
             numParticles = existingJob.getNumParticles();
             numTimesteps = existingJob.getNumTimesteps();
+            checkpointPrefix = existingJob.getCheckpointPrefix();
 
             allQueues = gridAccess.retrieveQueueNamesAtSite(site);
             if (allQueues.length > 0)
@@ -498,6 +500,7 @@ public class GridSubmitController extends MultiActionController {
         job.setNumBonds(numBonds);
         job.setNumParticles(numParticles);
         job.setNumTimesteps(numTimesteps);
+        job.setCheckpointPrefix(checkpointPrefix);
 
         return job;
     }

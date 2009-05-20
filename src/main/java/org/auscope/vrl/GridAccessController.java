@@ -4,14 +4,20 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.globus.exec.generated.JobDescriptionType;
 
+import org.auscope.gridtools.GramJobControl;
+import org.auscope.gridtools.GridJob;
+import org.auscope.gridtools.MyProxyManager;
+import org.auscope.gridtools.RegistryQueryClient;
+import org.auscope.gridtools.SiteInfo;
+
+import org.globus.exec.generated.JobDescriptionType;
 // The following are for proxy initialization
 import org.globus.gsi.CertUtil;
 import org.globus.gsi.GlobusCredential;
@@ -22,12 +28,6 @@ import org.gridforum.jgss.ExtendedGSSManager;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
-
-import org.auscope.gridtools.GramJobControl;
-import org.auscope.gridtools.GridJob;
-import org.auscope.gridtools.MyProxyManager;
-import org.auscope.gridtools.RegistryQueryClient;
-import org.auscope.gridtools.SiteInfo;
 
 
 /**
@@ -81,7 +81,7 @@ public class GridAccessController {
     }
 
     /**
-     * Submits a job with certain properties. The GUI packages the job 
+     * Submits a job with certain properties. The View packages the job 
      * properties into a <code>GridJob</code> object, which we use to get the
      * information we need to submit the job properly.
      * <p>
@@ -90,69 +90,40 @@ public class GridAccessController {
      * <ul>
      *   <li>the <em>executable name</em> of the code - this may not be the
      *       same as the name (i.e. 'List' is '<code>ls</code>'),</li>
-     *   <li>the job type allowed by that code (i.e. single, MPI),</li>
      *   <li>the name of any modules that need to be loaded for the code 
      *       to work,</li>
      *   <li>and the site's GridFTP server (where the data will be staged to, 
      *       worked on, then staged from).</li>
      * </ul>
      * This method grabs this information, updates the <code>GridJob</code>
-     * object, then uses the <code>GramJobControl</code> to construct
-     * a job script and submit the job.
+     * object, then uses <code>GramJobControl</code> to construct a job script
+     * and submit the job.
      * 
      * @param  job A <code>GridJob</code> object which contains all the 
      *             information required to run a job
-     * @return The submitted job's End Point Reference (EPR)
+     * @return The submitted job's endpoint reference (EPR)
      */
     public String submitJob(GridJob job) {
-        String jobSubmitEPR = "";
-        try {
-            String siteAddr = RQC.getJobManagerAtSite(job.getSite());
-            //siteAddr += "/wsrf/services/ManagedJobFactoryService";
-            String moduleName = RQC.getModuleNameOfCodeAtSite(job.getSite(), job.getCode(), job.getVersion());
-            String exeName = RQC.getExeNameOfCodeAtSite(job.getSite(), job.getCode(), job.getVersion());
-            
-            String siteEmail = RQC.getSiteContactEmailAtSite(job.getSite());
+        String siteAddr = RQC.getJobManagerAtSite(job.getSite());
+        String moduleName = RQC.getModuleNameOfCodeAtSite(
+                job.getSite(), job.getCode(), job.getVersion());
+        String exeName = RQC.getExeNameOfCodeAtSite(
+                job.getSite(), job.getCode(), job.getVersion());
+        String gridFtpServer = RQC.getClusterGridFTPServerAtSite(
+                job.getSite());
 
-            job.setModules(new String[] {moduleName});
-            job.setExeName(exeName);
-            job.setSiteGridFTPServer(RQC.getClusterGridFTPServerAtSite(job.getSite()));
-            String jobStr = null;
-            GramJobControl gjc = new GramJobControl(credential);
+        job.setModules(new String[] { moduleName });
+        job.setExeName(exeName);
+        job.setSiteGridFTPServer(gridFtpServer);
+        GramJobControl gjc = new GramJobControl(credential);
+        String EPR = gjc.submitJob(job, siteAddr);
 
-            // Construct the XML Job Script.
-            if (job.getJobType().equalsIgnoreCase("single") ||
-                job.getJobType().equalsIgnoreCase("mpi"))
-            {
-                logger.info("Constructing job script...");
-                jobStr = gjc.constructJobScript(job);
-                logger.info("Submitting job:\n" + jobStr + "\nto " + siteAddr);
-                jobSubmitEPR = gjc.submitJob(jobStr, siteAddr);
-            } else {
-                logger.info("Constructing multijob script...");
-                JobDescriptionType[] jobStrMulti = gjc.constructMultiJobScript(job);
-                logger.info("Submitting job " + job);
-
-                jobSubmitEPR = gjc.submitMultiJob(jobStrMulti, siteAddr);
-            }
-
-            if (jobSubmitEPR == null) {                   
-                logger.error("Job did not submit (EPR was null)");
-
-                StringBuffer myBuffer = new StringBuffer();
-                myBuffer.append("Please contact - ");
-                myBuffer.append(siteEmail);
-                myBuffer.append(" or help@grid.apac.edu.au\n");
-                logger.error(myBuffer);
-            } else {
-                logger.info("Successfully submitted job script. EPR = " +
-                        jobSubmitEPR);
-            }
+        if (EPR == null) {                   
+            logger.error("Job did not submit (EPR was null).");
+        } else {
+            logger.info("Successfully submitted job. EPR = " + EPR);
         }
-        catch (Exception e) {
-            logger.error("Failed to submit job: " + e.getMessage());
-        }
-        return jobSubmitEPR;
+        return EPR;
     }
  
     public GridJob getJobByReference(String reference) {
@@ -185,15 +156,16 @@ public class GridAccessController {
     }
 
     /**
-     * Get the results from a job.
+     * Starts a new job that transfers current results from given job
+     * to the stage out location.
      * 
      * @param reference The reference of the job to get results from
      * 
-     * @return The results of the job
+     * @return true if successful, false otherwise
      */
-    public String retrieveJobResults(String reference) {
+    public boolean retrieveJobResults(String reference) {
         GramJobControl ggj = new GramJobControl(credential);
-        return ggj.getJobResults(reference);
+        return (ggj.getJobResults(reference) != null);
     }
 
     /**
@@ -338,7 +310,7 @@ public class GridAccessController {
     /**
      * Get a list of all the GridFTP servers available on the Grid. These are
      * used for data transfer.
-     * 
+     *
      * @return A list of GridFTP servers
      */
     public String[] retrieveAllGridFtpServersOnGrid() {
@@ -356,6 +328,12 @@ public class GridAccessController {
         return RQC.getSiteContactEmailAtSite(site);
     }   
 
+    /**
+     * Initializes proxy which will be used to authenticate the user for the
+     * grid. Uses private key and certificate to generate a proxy.
+     *
+     * @return true if credentials were successfully created, false otherwise
+     */
     public boolean initProxy(PrivateKey key, String certificate) {
         boolean retval = false;
         try {
@@ -384,8 +362,8 @@ public class GridAccessController {
 
     /**
      * Initializes proxy which will be used to authenticate the user for the
-     * grid.
-     * 
+     * grid. Uses a username and password for MyProxy authentication.
+     *
      * @return true if credentials were successfully created, false otherwise
      */
     public boolean initProxy(String proxyUser, String proxyPass) {
@@ -410,30 +388,36 @@ public class GridAccessController {
         } catch (Exception e) {
             logger.error("Could not get delegated proxy from server.");
         }
-        
-        // try to create new credential if the above failed.
-        if (credential == null) {
-            try {
-                GSSManager manager = ExtendedGSSManager.getInstance();
-                GSSCredential cred = manager.createCredential(
-                        GSSCredential.INITIATE_AND_ACCEPT);
+        return retval;
+    }
 
-                // Lifetime check - in seconds - 5 mins.
-                if (cred.getRemainingLifetime() > (5*60)) {
-                    logger.info("Valid proxy found: " +
-                            cred.getRemainingLifetime()/60 + "min, " +
-                            cred.getRemainingLifetime()%60 + "sec");
-                    retval = true;
-                } else {
-                    logger.info("Proxy lifetime too short: " +
+    /**
+     * Initializes proxy which will be used to authenticate the user for the
+     * grid. This method requires an existing proxy file of the current user.
+     * 
+     * @return true if credentials were successfully created, false otherwise
+     */
+    public boolean initProxy() {
+        boolean retval = false;
+        try {
+            GSSManager manager = ExtendedGSSManager.getInstance();
+            GSSCredential cred = manager.createCredential(
+                    GSSCredential.INITIATE_AND_ACCEPT);
+
+            // Lifetime check - in seconds - 5 mins.
+            if (cred.getRemainingLifetime() > (5*60)) {
+                logger.info("Valid proxy found: " +
                         cred.getRemainingLifetime()/60 + "min, " +
                         cred.getRemainingLifetime()%60 + "sec");
-                }
-            } catch (GSSException e) {
-                logger.error(FaultHelper.getMessage(e)); 
+                retval = true;
+            } else {
+                logger.info("Proxy lifetime too short: " +
+                    cred.getRemainingLifetime()/60 + "min, " +
+                    cred.getRemainingLifetime()%60 + "sec");
             }
+        } catch (GSSException e) {
+            logger.error(FaultHelper.getMessage(e)); 
         }
-        
         return retval;
     }
 }

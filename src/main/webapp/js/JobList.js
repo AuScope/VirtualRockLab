@@ -36,10 +36,21 @@ JobList.onRequestFailure = function(response, request) {
 
 // callback for killJob action
 JobList.onKillJobResponse = function(response, request) {
-    if (response.responseText.error != null) {
-        JobList.errorDlg(response.responseText.error);
+    var resp = Ext.decode(response.responseText);
+    if (resp.error != null) {
+        JobList.errorDlg(resp.error);
     }
     JobList.jobStore.reload();
+}
+
+// callback for retrieveFiles action
+JobList.onRetrieveFilesResponse = function(response, request) {
+    var resp = Ext.decode(response.responseText);
+    if (resp.error != null) {
+        JobList.errorDlg(resp.error);
+    } else {
+        Ext.Msg.alert("Success", "The output files of the selected job will be transferred as soon as possible. Please note that it may take a while though.");
+    }
 }
 
 ////////////////////////
@@ -48,11 +59,12 @@ JobList.onKillJobResponse = function(response, request) {
 
 // shows an error dialog with given message
 JobList.errorDlg = function(message) {
-    Ext.Msg.show({
+    JobList.errorDlg = Ext.Msg.show({
         title: 'Error',
         msg: message,
         buttons: Ext.Msg.OK,
-        icon: Ext.Msg.ERROR
+        icon: Ext.Msg.ERROR,
+        fn: function() { JobList.errorDlg = undefined; }
     });
 }
 
@@ -66,7 +78,7 @@ JobList.hideProgressDlg = function() {
 
 // notifies the user through a progress dialog that data is being retrieved
 JobList.showProgressDlg = function() {
-    if (!JobList.progressDlg) {
+    if (!JobList.progressDlg && !JobList.errorDlg) {
         JobList.progressDlg = Ext.Msg.wait('Retrieving data, please wait...');
     }
 }
@@ -140,6 +152,17 @@ JobList.querySeries = function(user, name, desc) {
         JobList.seriesStore.baseParams.qSeriesDesc = desc;
     }
     JobList.seriesStore.reload();
+}
+
+JobList.retrieveFiles = function(jobId) {
+    Ext.Ajax.request({
+        url: JobList.ControllerURL,
+        success: JobList.onRetrieveFilesResponse,
+        failure: JobList.onRequestFailure, 
+        params: { 'action': 'retrieveJobFiles',
+                  'jobId': jobId
+                }
+    });
 }
 
 // submits a "kill job" request after asking for confirmation
@@ -439,7 +462,7 @@ JobList.initialize = function() {
                 });
             }
             e.stopEvent();
-            if (jobData.status == 'Active') {
+            if (jobData.status == 'Active' || jobData.status == 'StageIn') {
                 Ext.getCmp('kill-job').enable();
             } else {
                 Ext.getCmp('kill-job').disable();
@@ -457,7 +480,8 @@ JobList.initialize = function() {
             return '<span style="font-weight:bold;">*' + value + '</span>';
         } else if (value.lastIndexOf(".py") == value.length-3) {
             return '<span style="color:green;">' + value + '</span>';
-        } else if (value.indexOf(jobData.checkpointPrefix) == 0) {
+        } else if (jobData.checkpointPrefix.length > 0 &&
+                value.indexOf(jobData.checkpointPrefix) == 0) {
             return '<span style="color:blue;">' + value + '</span>';
         }
         return value;
@@ -491,6 +515,14 @@ JobList.initialize = function() {
             JobList.useScript(jobData.id);
         }
     });
+    var retrieveFilesAction = new Ext.Action({
+        text: 'Retrieve latest files',
+        iconCls: 'grid-icon',
+        handler: function() {
+            var jobData = jobGrid.getSelectionModel().getSelected().data;
+            JobList.retrieveFiles(jobData.id);
+        }
+    });
     
     fileGrid = new Ext.grid.GridPanel({
         id: 'file-grid',
@@ -522,7 +554,9 @@ JobList.initialize = function() {
         tbar: [{
             text: 'Actions',
             iconCls: 'folder-icon',
-            menu: [downloadAction, downloadZipAction, useScriptAction]
+            menu: [ downloadAction, downloadZipAction, useScriptAction,
+                    retrieveFilesAction
+                  ]
         }]
     });
 
@@ -547,7 +581,7 @@ JobList.initialize = function() {
     // a template for the job description html area
     JobList.jobDescTpl = new Ext.Template(
         '<p class="jobdesc-title">{name}</p>',
-        '<table width="100%"><col width="25%"></col><col class="jobdesc-content"></col>',
+        '<table width="100%"><col width="150px"></col><col class="jobdesc-content"></col>',
         '<tr><td class="jobdesc-key">Part of series:</td><td>{seriesName}</td></tr>',
         '<tr><td class="jobdesc-key">Submitted on:</td><td>{submitDate}</td></tr>',
         '<tr><td class="jobdesc-key">Computation site:</td><td>{site}</td></tr>',

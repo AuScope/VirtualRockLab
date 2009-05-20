@@ -24,8 +24,7 @@ public class AboutController implements Controller {
     protected final Log logger = LogFactory.getLog(getClass());
 
     public ModelAndView handleRequest(HttpServletRequest request,
-                                      HttpServletResponse response)
-            throws Exception {
+                                      HttpServletResponse response) {
 
         String appServerHome = request.getSession().getServletContext()
             .getRealPath("/");

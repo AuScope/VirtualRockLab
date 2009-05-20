@@ -14,41 +14,41 @@ import java.io.Serializable;
  */
 public class GridJob implements Serializable
 {
-    /** The site. */
+    /** The HPC site this job is/was run at. */
     private String   site;
-    /** The site GridFTP server. */
+    /** The site's GridFTP server address. */
     private String   siteGridFTPServer;
     /** The job name. */
     private String   name;
-    /** The code. */
+    /** The code (software package). */
     private String   code;
-    /** The executable name. */
+    /** The code's executable name. */
     private String   exeName;
-    /** The version. */
+    /** The code version. */
     private String   version;
-    /** The arguments. */
+    /** The arguments passed to the code. */
     private String[] arguments;
-    /** The queue. */
+    /** The queue name at the site. */
     private String   queue;
-    /** The max wall time. */
+    /** The maximum wall time. */
     private String   maxWallTime;
-    /** The max memory. */
+    /** The maximum memory. */
     private String   maxMemory;
-    /** The job type. */
+    /** The job type (eg mpi). */
     private String   jobType;
-    /** The cpu count. */
+    /** The number of CPUs to use. */
     private Integer  cpuCount;
-    /** The in transfers. */
+    /** The file transfers prior running the job. */
     private String[] inTransfers;
-    /** The out transfers. */
+    /** The file transfers after running the job. */
     private String[] outTransfers;
-    /** The modules. */
+    /** The modules to load before running. */
     private String[] modules;
-    /** The stdInput */
+    /** The standard input filename */
     private String   stdInput;
-    /** The stdOutput */
+    /** The standard output filename */
     private String   stdOutput;
-    /** The stdError */
+    /** The standard error filename */
     private String   stdError;
     
 

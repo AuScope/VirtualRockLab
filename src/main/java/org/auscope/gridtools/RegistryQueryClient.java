@@ -66,14 +66,9 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
         new WSResourcePropertiesServiceAddressingLocator();
 
     /** Reference to the Log4J logger. */
-    private static Log logger = 
-        LogFactory.getLog(RegistryQueryClient.class.getName());
+    private Log logger = LogFactory.getLog(getClass());
 
     private GSSCredential credential = null;
-
-    static {
-        Util.registerTransport(); // For secure transport
-    }
 
     /**
      * Initialize the Registry Query Client. Should make sure that the MDS
@@ -124,61 +119,54 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      */
     private boolean updateCacheFile() {
         boolean success = false;
-        try {
-            // Get site based info only! no mds service info collected.
-            String xPathqueryString = "//*[local-name()='Site']"; 
-            String mdsStr = masterQueryMDS(SAPAC_MDS_SERVER, xPathqueryString);
+        // Get site based info only! No MDS service info collected.
+        String xPathqueryString = "//*[local-name()='Site']"; 
+        String mdsStr = masterQueryMDS(SAPAC_MDS_SERVER, xPathqueryString);
 
-            // If bad data - restore mds backup
-            if (mdsStr == null || mdsStr.length() == 0) {
-                try {
-                    byte[] iobuff = new byte[4096];
-                    int bytes;
+        // If bad data - restore mds backup
+        if (mdsStr == null || mdsStr.length() == 0) {
+            try {
+                byte[] iobuff = new byte[4096];
+                int bytes;
 
-                    FileInputStream fis = new FileInputStream(MDS_CACHE_BACKUP);
-                    FileOutputStream fos = new FileOutputStream(MDS_CACHE_FILE);
+                FileInputStream fis = new FileInputStream(MDS_CACHE_BACKUP);
+                FileOutputStream fos = new FileOutputStream(MDS_CACHE_FILE);
 
-                    while ( (bytes = fis.read( iobuff )) != -1 ) {
-                        fos.write( iobuff, 0, bytes );
-                    }
-                    fis.close();
-                    fos.close();
-                    success = true;
-                    
-                    logger.info("Cache file restored from backup");
+                while ( (bytes = fis.read( iobuff )) != -1 ) {
+                    fos.write( iobuff, 0, bytes );
                 }
-                catch (Exception e) {
-                    logger.error(e.getMessage());
-                }
-            } else {
-                // Good data - update cache and backup.
-                try {
-                    FileWriter fw = new FileWriter(MDS_CACHE_FILE);
-                    fw.write("<trmds>\n");
-                    fw.write(mdsStr);
-                    fw.write("\n</trmds>");
-                    logger.info("MDS cache file updated");
-                    fw.close();
-                    
-                    FileWriter fwCache = new FileWriter(MDS_CACHE_BACKUP);
-                    fwCache.write("<trmds backupCache=\"true\">\n");
-                    fwCache.write(mdsStr);
-                    fwCache.write("\n</trmds>");
-                    logger.info("MDS backup file updated");
-                    fwCache.close();
-                    
-                    success = true;
-                }
-                catch (Throwable e) {
-                    logger.error("Error writing MDS cache files - " + e);
-                }
+                fis.close();
+                fos.close();
+                success = true;
+                
+                logger.info("Cache file restored from backup");
             }
-            
+            catch (Exception e) {
+                logger.error(e.getMessage());
+            }
+        } else {
+            // Good data - update cache and backup.
+            try {
+                FileWriter fw = new FileWriter(MDS_CACHE_FILE);
+                fw.write("<trmds>\n");
+                fw.write(mdsStr);
+                fw.write("\n</trmds>");
+                logger.info("MDS cache file updated");
+                fw.close();
+                
+                FileWriter fwCache = new FileWriter(MDS_CACHE_BACKUP);
+                fwCache.write("<trmds backupCache=\"true\">\n");
+                fwCache.write(mdsStr);
+                fwCache.write("\n</trmds>");
+                logger.info("MDS backup file updated");
+                fwCache.close();
+                
+                success = true;
+            }
+            catch (Throwable e) {
+                logger.error("Error writing MDS cache files - " + e);
+            }
         }
-        catch (Exception e) {
-            logger.error(e.toString());
-        }
-
         return success;
     }
 
@@ -202,7 +190,6 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
                 // Get text value of first child
                 textVal = el.getFirstChild().getNodeValue();
             } catch (Exception e) {
-                textVal = "";
             }
         }
     
@@ -239,7 +226,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
     /**
      * Run an XPath query on the MDS information at a given address.
      * 
-     * @param url The address of the Monitoring & Discovery Service.
+     * @param url The address of the Monitoring and Discovery Service.
      * @param xPathqueryString The XPath query to run
      * @return A String containing the result of the query
      */
@@ -248,6 +235,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
  
         try {
             logger.info("Querying MDS server at " + url); 
+            Util.registerTransport(); // For secure transport
             Address servicePath = new Address(url);
             EndpointReferenceType serviceEPR = new EndpointReferenceType(
                     servicePath);
@@ -274,8 +262,8 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
             QueryResourcePropertiesResponse response = queryPort
                     .queryResourceProperties(qrp);
 
-            // so now, response contains 0 or more Entries.
-            // we need to loop over each entry and display the
+            // Now response contains 0 or more entries.
+            // We need to loop over each entry and extract the
             // appropriate interesting bits
 
             MessageElement[] entries = response.get_any();
@@ -309,7 +297,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
         NodeList hostLists = turboMDSquery(xpathQuery);
     
         if (hostLists != null) {
-            // Keep sites Unique using TreeSet
+            // Keep sites unique using TreeSet
             TreeSet<String> myTreeSet = new TreeSet<String>();
         
             for (int i = 0; i < hostLists.getLength(); i++) {

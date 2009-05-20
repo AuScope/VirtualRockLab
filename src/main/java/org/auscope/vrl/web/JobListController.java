@@ -56,6 +56,55 @@ public class JobListController extends MultiActionController {
     }
 
     /**
+     * Triggers the retrieval of latest job files
+     * 
+     * @param request The servlet request including a jobId parameter
+     * @param response The servlet response
+     *
+     * @return A JSON object with a success attribute and an error attribute
+     *         in case the job was not found in the job manager.
+     */
+    public ModelAndView retrieveJobFiles(HttpServletRequest request,
+                                         HttpServletResponse response) {
+
+        String jobIdStr = request.getParameter("jobId");
+        VRLJob job = null;
+        ModelAndView mav = new ModelAndView("jsonView");
+
+        if (jobIdStr != null) {
+            try {
+                int jobId = Integer.parseInt(jobIdStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID!");
+            }
+        } else {
+            logger.warn("No job ID specified!");
+        }
+
+        if (job == null) {
+            final String errorString = "The requested job was not found.";
+            logger.error(errorString);
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+
+        } else {
+            logger.info("jobID = " + jobIdStr);
+            boolean success = false;
+            String jobState = gridAccess.retrieveJobStatus(job.getReference());
+            if (jobState != null && jobState.equals("Active")) {
+                success = gridAccess.retrieveJobResults(job.getReference());
+            } else {
+                mav.addObject("error", "Cannot retrieve files of a job that is not running!");
+            }
+            logger.info("Success = "+success);
+            mav.addObject("success", success);
+        }
+
+        return mav;
+    }
+
+    /**
      * Kills the job given by its reference.
      * 
      * @param request The servlet request including a jobId parameter
