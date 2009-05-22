@@ -110,8 +110,11 @@ public class ScriptParser
                 "LsmMpi\\s*\\(\\s*numWorkerProcesses\\s*=\\s*(\\d+)");
         numTimeSteps = extractInt("setNumTimeSteps\\s*\\(\\s*(\\d+)\\s*\\)");
         timeStepSize = extractFloat("setTimeStepSize\\s*\\(\\s*(\\S+)\\s*\\)");
-        geometryFile = extractStrings("readGeometry\\s*\\(\\s*\"(.+)\"\\s*\\)")
-            .get(0);
+        List<String> geoFiles =
+            extractStrings("readGeometry\\s*\\(\\s*\"(.+)\"\\s*\\)");
+        if (!geoFiles.isEmpty()) {
+            geometryFile = geoFiles.get(0);
+        }
         checkPointPrefix = extractStrings(
             "CheckPointPrms\\s*\\(\\s*fileNamePrefix\\s*=\\s*\"(.+)\"").get(0);
         //fieldSavers = extractStrings("FieldSaverPrms\\s*\\("); //FIXME
@@ -160,7 +163,7 @@ public class ScriptParser
         }
 
         if (result.isEmpty()) {
-            logger.warn("No match for '"+regex+"'!");
+            logger.info("No match for '"+regex+"'.");
         }
         return result;
     }
