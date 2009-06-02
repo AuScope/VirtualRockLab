@@ -29,14 +29,7 @@ public class ScriptBuilderController extends MultiActionController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        logger.info("No/invalid action parameter.");
-        String scriptFile = request.getParameter("usescript");
-        if (scriptFile != null) {
-            logger.info("Storing script filename in session.");
-            request.getSession().setAttribute("usescript", scriptFile);
-        }
-
-        logger.info("Returning scriptbuilder view.");
+        logger.info("No/invalid action parameter; returning scriptbuilder view.");
         return new ModelAndView("scriptbuilder");
     }
 
@@ -110,10 +103,8 @@ public class ScriptBuilderController extends MultiActionController {
                 logger.error("Could not create temp file: " + e.getMessage());
             }
 
-            ModelAndView mav =  new ModelAndView(
-                    new RedirectView("gridsubmit.html"));
-            mav.addObject("newscript", scriptName);
-            return mav;
+            request.getSession().setAttribute("scriptFile", scriptName);
+            return new ModelAndView(new RedirectView("gridsubmit.html"));
         }
         logger.info("No source text provided. Returning scriptbuilder view.");
         return new ModelAndView("scriptbuilder");
@@ -133,7 +124,7 @@ public class ScriptBuilderController extends MultiActionController {
 
         ModelAndView mav = new ModelAndView("jsonView");
         String scriptFile = (String) request.getSession()
-            .getAttribute("usescript");
+            .getAttribute("scriptFile");
 
         String scriptName = null;
         String scriptText = null;
@@ -162,9 +153,8 @@ public class ScriptBuilderController extends MultiActionController {
             } catch (IOException e) {
                 logger.error("Error reading file.");
             }
+            request.getSession().removeAttribute("scriptFile");
         }
-
-        request.getSession().removeAttribute("usescript");
 
         if (scriptText != null) {
             mav.addObject("scriptName", scriptName);

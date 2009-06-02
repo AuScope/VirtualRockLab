@@ -67,7 +67,7 @@ public class GramJobControl implements JobControlInterface {
         this.credential = credential;
     }
 
-    public GSSCredential getCredential() throws GSSException {
+    private GSSCredential getCredential() throws GSSException {
         GSSCredential cred = this.credential;
         if (cred == null) {
             // if credential was not set try importing default
@@ -205,6 +205,12 @@ public class GramJobControl implements JobControlInterface {
                 finalJobString += "  <module>" + mod + "</module>";
             }
         }
+
+        // email address for notification
+        finalJobString += "  <email_address>" + job.getEmailAddress() +
+            "</email_address>  <email_on_execution>yes</email_on_execution>" +
+            "  <email_on_abort>yes</email_on_abort>" +
+            "  <email_on_termination>yes</email_on_termination>";
 
         // Code and version - just for debugging
         finalJobString += "  <code>" + job.getCode() + "</code>  <version>" +
@@ -475,7 +481,7 @@ public class GramJobControl implements JobControlInterface {
             job.setCredentials(getCredential());
             job.setTerminationTime(resourceDate);
             HostAuthorization iA = new HostAuthorization();
-        
+
             job.setAuthorization(iA);
             job.setDuration(null);
             // Listen for Job state changes if requested.
@@ -491,7 +497,7 @@ public class GramJobControl implements JobControlInterface {
         return gramJobHandle; // Return the handle...
     }
 
-    
+ 
     /**
      * Submit the job using WS-GRAM. Sends the job string to the specified host.
      * Returns the EPR of the job, unless an error occurred, in which case it

@@ -72,6 +72,7 @@ public class VRLJob extends GridJob {
      * @param cpuCount          Number of CPUs to use (if jobType is single)
      * @param inTransfers       Files to be transferred in
      * @param outTransfers      Files to be transferred out
+     * @param emailAddress      The email address for PBS notifications
      * @param stdInput          The std input file for the job
      * @param stdOutput         The std output file for the job
      * @param stdError          The std error file for the job
@@ -79,12 +80,12 @@ public class VRLJob extends GridJob {
     public VRLJob(String site, String name, String version, String[] arguments,
                   String queue, String maxWallTime, String maxMemory,
                   Integer cpuCount, String[] inTransfers,
-                  String[] outTransfers, String stdInput, String stdOutput,
-                  String stdError)
+                  String[] outTransfers, String emailAddress, String stdInput,
+                  String stdOutput, String stdError)
     {
         super(site, name, CODE_NAME, version, arguments, queue, JOB_TYPE,
                 maxWallTime, maxMemory, cpuCount, inTransfers, outTransfers,
-                stdInput, stdOutput, stdError);
+                emailAddress, stdInput, stdOutput, stdError);
         description = outputDir = reference = scriptFile = status =
             submitDate = "";
         id = numBonds = numParticles = numTimesteps = seriesId = 0;

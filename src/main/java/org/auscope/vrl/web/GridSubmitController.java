@@ -52,18 +52,6 @@ public class GridSubmitController extends MultiActionController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        // Store resubmission request or scriptBuilder filename in session
-        // object to be able to modify VRLJob later accordingly.
-        String newScript = (String) request.getParameter("newscript");
-        String resubmit = (String) request.getParameter("resubmitJob");
-        if (newScript != null) {
-            logger.info("Storing script filename in session.");
-            request.getSession().setAttribute("newscript", newScript);
-        } else if (resubmit != null) {
-            logger.info("Storing resubmitJob ID in session.");
-            request.getSession().setAttribute("resubmitJob", resubmit);
-        }
-
         logger.info("No/invalid action parameter; returning gridsubmit view.");
         return new ModelAndView("gridsubmit");
     }
@@ -124,6 +112,39 @@ public class GridSubmitController extends MultiActionController {
     }
 
     /**
+     * Returns a JSON object containing an array of job manager queues at
+     * the specified site.
+     * 
+     * @param request The servlet request including a site parameter
+     * @param response The servlet response
+     *
+     * @return A JSON object with a queues attribute which is an array of
+     *         job queues available at requested site.
+     */
+    public ModelAndView listSiteQueues(HttpServletRequest request,
+                                       HttpServletResponse response) {
+
+        String site = request.getParameter("site");
+        List<SimpleBean> queues = new ArrayList<SimpleBean>();
+
+        if (site != null) {
+            logger.info("Retrieving queue names at "+site);
+
+            String[] siteQueues = gridAccess.
+                    retrieveQueueNamesAtSite(site);
+
+            for (int i=0; i<siteQueues.length; i++) {
+                queues.add(new SimpleBean(siteQueues[i]));
+            }
+        } else {
+            logger.warn("No site specified!");
+        }
+
+        logger.info("Returning list of "+queues.size()+" queue names.");
+        return new ModelAndView("jsonView", "queues", queues);
+    }
+
+    /**
      * Returns a JSON object containing an array of ESyS-particle versions at
      * the specified site.
      * 
@@ -179,6 +200,37 @@ public class GridSubmitController extends MultiActionController {
     }
 
     /**
+     * Returns a JSON object containing an array of filenames and sizes which
+     * are currently in the job's stage in directory.
+     * 
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return A JSON object with a files attribute which is an array of
+     *         filenames.
+     */
+    public ModelAndView listJobFiles(HttpServletRequest request,
+                                     HttpServletResponse response) {
+
+        String jobInputDir = (String) request.getSession()
+            .getAttribute("jobInputDir");
+
+        List files = new ArrayList<FileInformation>();
+
+        if (jobInputDir != null) {
+            File dir = new File(jobInputDir);
+            String fileNames[] = dir.list();
+            for (int i=0; i<fileNames.length; i++) {
+                File f = new File(dir, fileNames[i]);
+                files.add(new FileInformation(fileNames[i], f.length()));
+            }
+        }
+
+        logger.info("Returning list of "+files.size()+" files.");
+        return new ModelAndView("jsonView", "files", files);
+    }
+
+    /**
      * Processes a file upload request returning a JSON object which indicates
      * whether the upload was successful and contains the filename and file
      * size.
@@ -189,7 +241,7 @@ public class GridSubmitController extends MultiActionController {
      * @return null
      */
     public ModelAndView uploadFile(HttpServletRequest request,
-                                  HttpServletResponse response) {
+                                   HttpServletResponse response) {
 
         String jobInputDir = (String) request.getSession()
             .getAttribute("jobInputDir");
@@ -279,6 +331,7 @@ public class GridSubmitController extends MultiActionController {
 
         VRLSeries series = null;
         boolean success = true;
+        final String user = request.getRemoteUser();
         String jobInputDir = (String) request.getSession()
             .getAttribute("jobInputDir");
         String newSeriesName = request.getParameter("seriesName");
@@ -291,7 +344,7 @@ public class GridSubmitController extends MultiActionController {
 
             logger.info("Creating new series '"+newSeriesName+"'.");
             series = new VRLSeries();
-            series.setUser(request.getRemoteUser());
+            series.setUser(user);
             series.setName(newSeriesName);
             if (newSeriesDesc != null) {
                 series.setDescription(newSeriesDesc);
@@ -323,14 +376,15 @@ public class GridSubmitController extends MultiActionController {
             // Create a new directory for the output files of this job
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
             String dateFmt = sdf.format(new Date());
-            String jobID = request.getRemoteUser() + "-" + job.getName() +
-                    "-" + dateFmt + File.separator;
+            String jobID = user + "-" + job.getName() + "-" + dateFmt +
+                File.separator;
             String jobOutputDir = gridAccess.getLocalGridFtpStageOutDir()+jobID;
             success = (new File(jobOutputDir)).mkdir();
 
             String submitEPR = null;
 
             if (success) {
+                job.setEmailAddress(user);
                 job.setOutputDir(jobOutputDir);
                 job.setOutTransfers(new String[]
                         { gridAccess.getLocalGridFtpServer() + jobOutputDir });
@@ -381,7 +435,7 @@ public class GridSubmitController extends MultiActionController {
         final String[] arguments = new String[0];
         final String[] inTransfers = new String[0];
         final String[] outTransfers = new String[0];
-        String name = "vrljob";
+        String name = "VRLjob";
         String site = "ESSCC";
         Integer cpuCount = 2;
         Integer numBonds = 0;
@@ -419,35 +473,6 @@ public class GridSubmitController extends MultiActionController {
 
         // Save in session to use it when submitting job
         request.getSession().setAttribute("jobInputDir", jobInputDir);
-
-        // Check if the ScriptBuilder was used. If so, there is a file in the
-        // system temp directory which needs to be staged in.
-        String newScript = (String) request.getSession().
-            getAttribute("newscript");
-        if (newScript != null) {
-            request.getSession().removeAttribute("newscript");
-            logger.info("Adding "+newScript+" to stageIn directory");
-            File tmpScriptFile = new File(System.getProperty("java.io.tmpdir") +
-                    File.separator+newScript+".py");
-            File newScriptFile = new File(jobInputDir, tmpScriptFile.getName());
-            success = Util.moveFile(tmpScriptFile, newScriptFile);
-            if (success) {
-                logger.info("Moved "+newScript+" to stageIn directory");
-                scriptFile = newScript+".py";
-
-                // Extract information from script file
-                ScriptParser parser = new ScriptParser();
-                try {
-                    parser.parse(newScriptFile);
-                    cpuCount = parser.getNumWorkerProcesses()+1;
-                    numTimesteps = parser.getNumTimeSteps();
-                } catch (IOException e) {
-                    logger.warn("Error parsing file: "+e.getMessage());
-                }
-            } else {
-                logger.warn("Could not move "+newScript+" to stageIn!");
-            }
-        }
 
         // Check if the user requested to re-submit a previous job.
         String jobIdStr = (String) request.getSession().
@@ -490,10 +515,39 @@ public class GridSubmitController extends MultiActionController {
             }
         }
 
+        // Check if the ScriptBuilder was used. If so, there is a file in the
+        // system temp directory which needs to be staged in.
+        String newScript = (String) request.getSession().
+            getAttribute("scriptFile");
+        if (newScript != null) {
+            request.getSession().removeAttribute("scriptFile");
+            logger.info("Adding "+newScript+" to stageIn directory");
+            File tmpScriptFile = new File(System.getProperty("java.io.tmpdir") +
+                    File.separator+newScript+".py");
+            File newScriptFile = new File(jobInputDir, tmpScriptFile.getName());
+            success = Util.moveFile(tmpScriptFile, newScriptFile);
+            if (success) {
+                logger.info("Moved "+newScript+" to stageIn directory");
+                scriptFile = newScript+".py";
+
+                // Extract information from script file
+                ScriptParser parser = new ScriptParser();
+                try {
+                    parser.parse(newScriptFile);
+                    cpuCount = parser.getNumWorkerProcesses()+1;
+                    numTimesteps = parser.getNumTimeSteps();
+                } catch (IOException e) {
+                    logger.warn("Error parsing file: "+e.getMessage());
+                }
+            } else {
+                logger.warn("Could not move "+newScript+" to stageIn!");
+            }
+        }
+
         logger.info("Creating new VRLJob instance");
         VRLJob job = new VRLJob(site, name, version, arguments, queue,
                 maxWallTime, maxMemory, cpuCount, inTransfers, outTransfers,
-                stdInput, stdOutput, stdError);
+                user, stdInput, stdOutput, stdError);
 
         job.setScriptFile(scriptFile);
         job.setDescription(description);

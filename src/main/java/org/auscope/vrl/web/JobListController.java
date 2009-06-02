@@ -119,6 +119,7 @@ public class JobListController extends MultiActionController {
         String jobIdStr = request.getParameter("jobId");
         VRLJob job = null;
         ModelAndView mav = new ModelAndView("jsonView");
+        boolean success = false;
 
         if (jobIdStr != null) {
             try {
@@ -135,19 +136,27 @@ public class JobListController extends MultiActionController {
             final String errorString = "The requested job was not found.";
             logger.error(errorString);
             mav.addObject("error", errorString);
-            mav.addObject("success", false);
 
         } else {
-            logger.info("Cancelling job with ID "+jobIdStr);
-            String newState = gridAccess.killJob(job.getReference());
-            if (newState == null)
-                newState = "Cancelled";
-            logger.info("New job state: "+newState);
+            // check if current user is the owner of the job
+            VRLSeries s = jobManager.getSeriesById(job.getSeriesId());
+            if (request.getRemoteUser().equals(s.getUser())) {
+                logger.info("Cancelling job with ID "+jobIdStr);
+                String newState = gridAccess.killJob(job.getReference());
+                if (newState == null)
+                    newState = "Cancelled";
+                logger.info("New job state: "+newState);
 
-            job.setStatus(newState);
-            jobManager.saveJob(job);
-            mav.addObject("success", true);
+                job.setStatus(newState);
+                jobManager.saveJob(job);
+                success = true;
+            } else {
+                logger.warn(request.getRemoteUser()+"'s attempt to kill "+
+                        s.getUser()+"'s job denied!");
+                mav.addObject("error", "You are not authorised to cancel this job.");
+            }
         }
+        mav.addObject("success", success);
 
         return mav;
     }
@@ -167,10 +176,12 @@ public class JobListController extends MultiActionController {
         String seriesIdStr = request.getParameter("seriesId");
         List<VRLJob> jobs = null;
         ModelAndView mav = new ModelAndView("jsonView");
+        boolean success = false;
+        int seriesId = -1;
 
         if (seriesIdStr != null) {
             try {
-                int seriesId = Integer.parseInt(seriesIdStr);
+                seriesId = Integer.parseInt(seriesIdStr);
                 jobs = jobManager.getSeriesJobs(seriesId);
             } catch (NumberFormatException e) {
                 logger.error("Error parsing series ID!");
@@ -186,26 +197,35 @@ public class JobListController extends MultiActionController {
             mav.addObject("success", false);
 
         } else {
-            logger.info("Cancelling jobs of series "+seriesIdStr);
-            for (VRLJob job : jobs) {
-                String oldStatus = job.getStatus();
-                if (oldStatus.equals("Failed") || oldStatus.equals("Done") ||
-                        oldStatus.equals("Cancelled")) {
-                    logger.info("Skipping finished job "+job.getId());
-                    continue;
-                }
-                logger.info("Killing job with ID "+job.getId());
-                String newState = gridAccess.killJob(job.getReference());
-                if (newState == null)
-                    newState = "Cancelled";
-                logger.info("New job state: "+newState);
+            // check if current user is the owner of the series
+            VRLSeries s = jobManager.getSeriesById(seriesId);
+            if (request.getRemoteUser().equals(s.getUser())) {
+                logger.info("Cancelling jobs of series "+seriesIdStr);
+                for (VRLJob job : jobs) {
+                    String oldStatus = job.getStatus();
+                    if (oldStatus.equals("Failed") || oldStatus.equals("Done") ||
+                            oldStatus.equals("Cancelled")) {
+                        logger.info("Skipping finished job "+job.getId());
+                        continue;
+                    }
+                    logger.info("Killing job with ID "+job.getId());
+                    String newState = gridAccess.killJob(job.getReference());
+                    if (newState == null)
+                        newState = "Cancelled";
+                    logger.info("New job state: "+newState);
 
-                job.setStatus(newState);
-                jobManager.saveJob(job);
+                    job.setStatus(newState);
+                    jobManager.saveJob(job);
+                }
+                success = true;
+            } else {
+                logger.warn(request.getRemoteUser()+"'s attempt to kill "+
+                        s.getUser()+"'s jobs denied!");
+                mav.addObject("error", "You are not authorised to cancel the jobs of this series.");
             }
-            mav.addObject("success", true);
         }
 
+        mav.addObject("success", success);
         return mav;
     }
 
@@ -508,6 +528,8 @@ public class JobListController extends MultiActionController {
                         j.setStatus(newState);
                         jobManager.saveJob(j);
                     }
+                    //FIXME: job might have finished but status cannot be
+                    //retrieved anymore...
                 }
             }
             mav.addObject("jobs", seriesJobs);
@@ -523,8 +545,8 @@ public class JobListController extends MultiActionController {
      * @param request The servlet request including a jobId parameter
      * @param response The servlet response
      *
-     * @return The gridsubmit view prepared to resubmit the job or the joblist
-     *         view with an error parameter if the job was not found.
+     * @return The scriptbuilder view prepared to resubmit the job or the
+     *         joblist view with an error parameter if the job was not found.
      */
     public ModelAndView resubmitJob(HttpServletRequest request,
                                     HttpServletResponse response) {
@@ -550,10 +572,8 @@ public class JobListController extends MultiActionController {
         }
 
         logger.info("Re-submitting job " + jobIdStr + ".");
-        ModelAndView mav =  new ModelAndView(
-                new RedirectView("gridsubmit.html"));
-        mav.addObject("resubmitJob", jobIdStr);
-        return mav;
+        request.getSession().setAttribute("resubmitJob", jobIdStr);
+        return useScript(request, response);
     }
 
     /**
@@ -660,10 +680,8 @@ public class JobListController extends MultiActionController {
             return new ModelAndView("joblist", "error", errorString);
         }
 
-        ModelAndView mav =  new ModelAndView(
-                new RedirectView("scriptbuilder.html"));
-        mav.addObject("usescript", scriptFileName);
-        return mav;
+        request.getSession().setAttribute("scriptFile", scriptFileName);
+        return new ModelAndView(new RedirectView("scriptbuilder.html"));
     }
 }
 

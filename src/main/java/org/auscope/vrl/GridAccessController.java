@@ -1,9 +1,5 @@
 package org.auscope.vrl;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.InputStream;
-import java.io.IOException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
@@ -19,7 +15,6 @@ import org.auscope.gridtools.SiteInfo;
 
 import org.globus.exec.generated.JobDescriptionType;
 // The following are for proxy initialization
-import org.globus.gsi.CertUtil;
 import org.globus.gsi.GlobusCredential;
 import org.globus.gsi.gssapi.GlobusGSSCredentialImpl;
 import org.globus.myproxy.MyProxyException;
@@ -40,11 +35,10 @@ import org.ietf.jgss.GSSManager;
  */
 public class GridAccessController {
     /** The handle to the <code>RegistryQueryClient</code> model. */
-    private final static RegistryQueryClient RQC = new RegistryQueryClient();
+    private final RegistryQueryClient RQC = new RegistryQueryClient();
 
-    /** The logger for this class and subclasses */
-    private static Log logger = LogFactory.getLog(
-            GridAccessController.class.getName());
+    /** The logger for this class */
+    private Log logger = LogFactory.getLog(getClass());
 
     private String gridFtpServer = "";
     private String gridFtpStageInDir = "";
@@ -54,7 +48,12 @@ public class GridAccessController {
     private String myProxyServer = "myproxy.arcs.org.au";
     private int myProxyPort = 7512;
     private int myProxyLifetime = 12*60*60;
-    private GSSCredential credential;
+
+    /** Minimum lifetime for a proxy to be valid */
+    private final int MIN_LIFETIME = 5*60;
+
+    /** Current grid credential object */
+    private GSSCredential credential = null;
 
     public void setLocalGridFtpServer(String gridFtpServer) {
         this.gridFtpServer = gridFtpServer;
@@ -334,23 +333,20 @@ public class GridAccessController {
      *
      * @return true if credentials were successfully created, false otherwise
      */
-    public boolean initProxy(PrivateKey key, String certificate) {
+    public boolean initProxy(PrivateKey key, X509Certificate certificate) {
         boolean retval = false;
         try {
-            InputStream in = new ByteArrayInputStream(certificate.getBytes());
-            X509Certificate cert = CertUtil.loadCertificate(in);
-            X509Certificate[] certs = new X509Certificate[] { cert };
+            X509Certificate[] certs = new X509Certificate[] { certificate };
 
             GlobusCredential gc = new GlobusCredential(key, certs);
             gc.verify();
-            GSSCredential cred = new GlobusGSSCredentialImpl(gc,
+            credential = new GlobusGSSCredentialImpl(gc,
                     GSSCredential.INITIATE_AND_ACCEPT);
-            logger.info("Name: " + cred.getName().toString());
-            logger.info("Remaining lifetime: " + cred.getRemainingLifetime());
-            credential = cred;
-            RQC.setCredential(cred);
-            retval = true;
-
+            if (isProxyValid()) {
+                logger.info("Acquired valid credentials.");
+                RQC.setCredential(credential);
+                retval = true;
+            }
         } catch (GSSException e) {
             logger.error(FaultHelper.getMessage(e)); 
         } catch (Exception e) {
@@ -369,24 +365,19 @@ public class GridAccessController {
     public boolean initProxy(String proxyUser, String proxyPass) {
         boolean retval = false;
         try {
-            GSSCredential cred = MyProxyManager.getDelegation(
+            credential = MyProxyManager.getDelegation(
                     myProxyServer, myProxyPort,
                     proxyUser, proxyPass.toCharArray(),
                     myProxyLifetime);
 
-            logger.info("Got Credential from "+myProxyServer);
-            logger.info("Name: " + cred.getName().toString());
-            logger.info("Remaining lifetime: " + cred.getRemainingLifetime());
-            credential = cred;
-            RQC.setCredential(cred);
-            retval = true;
-
-        } catch (MyProxyException e) {
-            logger.error("Could not get delegated proxy from server.");
-        } catch (GSSException e) {
-            logger.error("GSS Exception: get remaining lifetime error.");
+            if (isProxyValid()) {
+                logger.info("Got credential from "+myProxyServer);
+                RQC.setCredential(credential);
+                retval = true;
+            }
         } catch (Exception e) {
-            logger.error("Could not get delegated proxy from server.");
+            logger.error("Could not get delegated proxy from server: " +
+                    e.getMessage());
         }
         return retval;
     }
@@ -401,24 +392,40 @@ public class GridAccessController {
         boolean retval = false;
         try {
             GSSManager manager = ExtendedGSSManager.getInstance();
-            GSSCredential cred = manager.createCredential(
+            credential = manager.createCredential(
                     GSSCredential.INITIATE_AND_ACCEPT);
 
-            // Lifetime check - in seconds - 5 mins.
-            if (cred.getRemainingLifetime() > (5*60)) {
-                logger.info("Valid proxy found: " +
-                        cred.getRemainingLifetime()/60 + "min, " +
-                        cred.getRemainingLifetime()%60 + "sec");
+            if (isProxyValid()) {
+                RQC.setCredential(credential);
                 retval = true;
-            } else {
-                logger.info("Proxy lifetime too short: " +
-                    cred.getRemainingLifetime()/60 + "min, " +
-                    cred.getRemainingLifetime()%60 + "sec");
             }
         } catch (GSSException e) {
             logger.error(FaultHelper.getMessage(e)); 
         }
         return retval;
+    }
+
+    /**
+     * Checks the validity of currently set grid credentials. To be considered
+     * valid, the grid proxy must have a minimum remaining lifetime (5 minutes
+     * by default).
+     * 
+     * @return true if and only if the current credentials are valid
+     */
+    public boolean isProxyValid() {
+        if (credential != null) {
+            try {
+                int lifetime = credential.getRemainingLifetime();
+                logger.debug("Name: " + credential.getName().toString() +
+                        ", Lifetime: " + lifetime + "seconds");
+                if (lifetime > MIN_LIFETIME) {
+                    return true;
+                }
+            } catch (GSSException e) {
+                logger.error(FaultHelper.getMessage(e)); 
+            }
+        }
+        return false;
     }
 }
 

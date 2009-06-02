@@ -9,7 +9,7 @@
         class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
         <property name="locations">
             <list>
-                <value>classpath:gridftp.properties</value>
+                <value>classpath:server.properties</value>
                 <value>classpath:jdbc.properties</value>
             </list>
         </property>

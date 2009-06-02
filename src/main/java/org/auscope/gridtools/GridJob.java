@@ -44,6 +44,8 @@ public class GridJob implements Serializable
     private String[] outTransfers;
     /** The modules to load before running. */
     private String[] modules;
+    /** The email address for notifications */
+    private String   emailAddress;
     /** The standard input filename */
     private String   stdInput;
     /** The standard output filename */
@@ -57,11 +59,10 @@ public class GridJob implements Serializable
      * to prevent errors. The strings are initialized to the empty String, and 
      * the arrays are initialized to a length of zero. 
      */
-    public GridJob()
-    {
+    public GridJob() {
         site = siteGridFTPServer = name = code = exeName = version = "";
         queue = maxWallTime = maxMemory = jobType = ""; 
-        stdInput = stdOutput = stdError = "";
+        emailAddress = stdInput = stdOutput = stdError = "";
         arguments = inTransfers = outTransfers = modules = new String[0];
         cpuCount = 0;
     }
@@ -85,6 +86,7 @@ public class GridJob implements Serializable
      * @param cpuCount          Number of CPUs to use (if jobType is single)
      * @param inTransfers       Files to be transferred in
      * @param outTransfers      Files to be transferred out
+     * @param emailAddress      The email address for PBS job notifications
      * @param stdInput          The std input file for the job
      * @param stdOutput         The std output file for the job
      * @param stdError          The std error file for the job
@@ -93,7 +95,8 @@ public class GridJob implements Serializable
                    String[] arguments, String queue, String jobType,
                    String maxWallTime, String maxMemory, Integer cpuCount,
                    String[] inTransfers, String[] outTransfers,
-                   String stdInput, String stdOutput, String stdError)
+                   String emailAddress, String stdInput, String stdOutput,
+                   String stdError)
     {
         this.site = site;
         this.name = name;
@@ -107,6 +110,7 @@ public class GridJob implements Serializable
         this.cpuCount = cpuCount;
         this.inTransfers = inTransfers;
         this.outTransfers = outTransfers;
+        this.emailAddress = emailAddress;
         this.stdInput = stdInput;
         this.stdOutput = stdOutput;
         this.stdError = stdError;
@@ -130,8 +134,7 @@ public class GridJob implements Serializable
      * 
      * @return A string representing the array that was input
      */
-    private String arrayToString(String[] inputArr)
-    {
+    private String arrayToString(String[] inputArr) {
         if (inputArr == null)
             return "null";
         
@@ -156,8 +159,7 @@ public class GridJob implements Serializable
      * 
      * @return The site to run at
      */
-    public String getSite()
-    {
+    public String getSite() {
         return site;
     }
 
@@ -166,8 +168,7 @@ public class GridJob implements Serializable
      * 
      * @param site The site to run at
      */
-    public void setSite(String site)
-    {
+    public void setSite(String site) {
         assert (site != null);
         this.site = site;
     }
@@ -177,8 +178,7 @@ public class GridJob implements Serializable
      * 
      * @return The address of the local gateway
      */
-    public String getSiteGridFTPServer()
-    {
+    public String getSiteGridFTPServer() {
         return siteGridFTPServer;
     }
 
@@ -187,8 +187,7 @@ public class GridJob implements Serializable
      * 
      * @param siteGridFTPServer The address of the local gateway
      */
-    public void setSiteGridFTPServer(String siteGridFTPServer)
-    {
+    public void setSiteGridFTPServer(String siteGridFTPServer) {
         assert (siteGridFTPServer != null);
         this.siteGridFTPServer = siteGridFTPServer;
     }
@@ -198,8 +197,7 @@ public class GridJob implements Serializable
      * 
      * @return The job's name
      */
-    public String getName()
-    {
+    public String getName() {
         return name;
     }
     
@@ -208,8 +206,7 @@ public class GridJob implements Serializable
      * 
      * @param name The job's name
      */
-    public void setName(String name)
-    {
+    public void setName(String name) {
         assert (name != null);
         this.name = name;
     }
@@ -219,8 +216,7 @@ public class GridJob implements Serializable
      * 
      * @return The code name
      */
-    public String getCode()
-    {
+    public String getCode() {
         return code;
     }
     
@@ -229,8 +225,7 @@ public class GridJob implements Serializable
      * 
      * @param code The code name
      */
-    public void setCode(String code)
-    {
+    public void setCode(String code) {
         assert (code != null);
         this.code = code;
     }
@@ -240,8 +235,7 @@ public class GridJob implements Serializable
      * 
      * @return Executable name of the code
      */
-    public String getExeName()
-    {
+    public String getExeName() {
         return exeName;
     }
 
@@ -250,8 +244,7 @@ public class GridJob implements Serializable
      * 
      * @param exeName Executable name of the code
      */
-    public void setExeName(String exeName)
-    {
+    public void setExeName(String exeName) {
         assert (exeName != null);
         this.exeName = exeName;
     }
@@ -261,8 +254,7 @@ public class GridJob implements Serializable
      * 
      * @return The code version
      */
-    public String getVersion()
-    {
+    public String getVersion() {
         return version;
     }
     
@@ -271,8 +263,7 @@ public class GridJob implements Serializable
      * 
      * @param version The code version
      */
-    public void setVersion(String version)
-    {
+    public void setVersion(String version) {
         assert (version != null);
         this.version = version;
     }
@@ -282,8 +273,7 @@ public class GridJob implements Serializable
      * 
      * @return Any arguments to the code
      */
-    public String[] getArguments()
-    {
+    public String[] getArguments() {
         return arguments;
     }
     
@@ -292,8 +282,7 @@ public class GridJob implements Serializable
      * 
      * @param arguments Any arguments to the code
      */
-    public void setArguments(String[] arguments)
-    {
+    public void setArguments(String[] arguments) {
         assert (arguments != null);
         this.arguments = arguments;
     }
@@ -303,8 +292,7 @@ public class GridJob implements Serializable
      * 
      * @return The queue to run the job on
      */
-    public String getQueue()
-    {
+    public String getQueue() {
         return queue;
     }
     
@@ -313,8 +301,7 @@ public class GridJob implements Serializable
      * 
      * @param queue The queue to run the job on
      */
-    public void setQueue(String queue)
-    {
+    public void setQueue(String queue) {
         assert (queue != null);
         this.queue = queue;
     }
@@ -324,8 +311,7 @@ public class GridJob implements Serializable
      * 
      * @return The amount of time to use
      */
-    public String getMaxWallTime()
-    {
+    public String getMaxWallTime() {
         return maxWallTime;
     }
     
@@ -334,8 +320,7 @@ public class GridJob implements Serializable
      * 
      * @param maxWallTime The amount of time to use
      */
-    public void setMaxWallTime(String maxWallTime)
-    {
+    public void setMaxWallTime(String maxWallTime) {
         assert (maxWallTime != null);
         this.maxWallTime = maxWallTime;
     }
@@ -345,8 +330,7 @@ public class GridJob implements Serializable
      * 
      * @return The amount of memory to use
      */
-    public String getMaxMemory()
-    {
+    public String getMaxMemory() {
         return maxMemory;
     }
     
@@ -355,8 +339,7 @@ public class GridJob implements Serializable
      * 
      * @param maxMemory The amount of memory to use
      */
-    public void setMaxMemory(String maxMemory)
-    {
+    public void setMaxMemory(String maxMemory) {
         assert (maxMemory != null);
         this.maxMemory = maxMemory;
     }
@@ -366,8 +349,7 @@ public class GridJob implements Serializable
      * 
      * @return The type of job
      */
-    public String getJobType()
-    {
+    public String getJobType() {
         return jobType;
     }
     
@@ -376,8 +358,7 @@ public class GridJob implements Serializable
      * 
      * @param jobType The type of job
      */
-    public void setJobType(String jobType)
-    {
+    public void setJobType(String jobType) {
         assert (jobType != null);
         this.jobType = jobType;
     }
@@ -387,8 +368,7 @@ public class GridJob implements Serializable
      * 
      * @return The number of CPUs to use
      */
-    public Integer getCpuCount()
-    {
+    public Integer getCpuCount() {
         return cpuCount;
     }
     
@@ -397,8 +377,7 @@ public class GridJob implements Serializable
      * 
      * @param cpuCount The number of CPUs to use
      */ 
-    public void setCpuCount(Integer cpuCount)
-    {
+    public void setCpuCount(Integer cpuCount) {
         assert (cpuCount != null);
         this.cpuCount = cpuCount;
     }
@@ -408,8 +387,7 @@ public class GridJob implements Serializable
      * 
      * @return The file(s) to stage in
      */
-    public String[] getInTransfers()
-    {
+    public String[] getInTransfers() {
         return inTransfers;
     }
     
@@ -418,8 +396,7 @@ public class GridJob implements Serializable
      * 
      * @param inTransfers The file(s) to stage in
      */
-    public void setInTransfers(String[] inTransfers)
-    {
+    public void setInTransfers(String[] inTransfers) {
         assert (inTransfers != null);
         this.inTransfers = inTransfers;
     }
@@ -430,8 +407,7 @@ public class GridJob implements Serializable
      * 
      * @return The file(s) to be staged out
      */
-    public String[] getOutTransfers()
-    {
+    public String[] getOutTransfers() {
         return outTransfers;
     }
 
@@ -441,8 +417,7 @@ public class GridJob implements Serializable
      * 
      * @param outTransfers The file(s) to be staged out
      */
-    public void setOutTransfers(String[] outTransfers)
-    {
+    public void setOutTransfers(String[] outTransfers) {
         assert (outTransfers != null);
         this.outTransfers = outTransfers;
     }
@@ -452,8 +427,7 @@ public class GridJob implements Serializable
      * 
      * @return The list of modules required
      */
-    public String[] getModules()
-    {
+    public String[] getModules() {
         return modules;
     }
     
@@ -462,19 +436,36 @@ public class GridJob implements Serializable
      * 
      * @param modules The list of modules required
      */
-    public void setModules(String[] modules)
-    {
+    public void setModules(String[] modules) {
         assert (modules != null);
         this.modules = modules;
     }
     
     /**
+     * Gets the notification email address.
+     * 
+     * @return The notification email address
+     */
+    public String getEmailAddress() {
+        return emailAddress;
+    }
+
+    /**
+     * Sets the notification email address.
+     * 
+     * @param emailAddress The notification email address
+     */
+    public void setEmailAddress(String emailAddress) {
+        assert (emailAddress != null);
+        this.emailAddress = emailAddress;
+    }
+
+    /**
      * Gets the standard input for the job.
      * 
      * @return The standard input for the job
      */
-    public String getStdInput()
-    {
+    public String getStdInput() {
         return stdInput;
     }
 
@@ -483,8 +474,7 @@ public class GridJob implements Serializable
      * 
      * @param stdInput The standard input for the job
      */
-    public void setStdInput(String stdInput)
-    {
+    public void setStdInput(String stdInput) {
         assert (stdInput != null);
         this.stdInput = stdInput;
     }
@@ -494,8 +484,7 @@ public class GridJob implements Serializable
      * 
      * @return The standard output for the job
      */
-    public String getStdOutput()
-    {
+    public String getStdOutput() {
         return stdOutput;
     }
 
@@ -504,8 +493,7 @@ public class GridJob implements Serializable
      * 
      * @param stdOutput The standard output for the job
      */
-    public void setStdOutput(String stdOutput)
-    {
+    public void setStdOutput(String stdOutput) {
         assert (stdOutput != null);
         this.stdOutput = stdOutput;
     }
@@ -515,8 +503,7 @@ public class GridJob implements Serializable
      * 
      * @return The standard error for the job
      */
-    public String getStdError()
-    {
+    public String getStdError() {
         return stdError;
     }
 
@@ -525,8 +512,7 @@ public class GridJob implements Serializable
      * 
      * @param stdError The standard error for the job
      */
-    public void setStdError(String stdError)
-    {
+    public void setStdError(String stdError) {
         assert (stdError != null);
         this.stdError = stdError;
     }
@@ -538,17 +524,16 @@ public class GridJob implements Serializable
      * 
      * @return A summary of the values of this object's fields
      */
-    public String toString()
-    {
-        String sgftps=(siteGridFTPServer==null) ? "null" :
+    public String toString() {
+        String ftpserver = (siteGridFTPServer==null) ? "null" :
             "\""+siteGridFTPServer+"\"";
-        String en=(exeName==null) ? "null" : "\""+exeName+"\"";
+        String exe = (exeName==null) ? "null" : "\""+exeName+"\"";
         
         return "site=\"" + site + "\"" +
-               ", siteGridFTPServer=" + sgftps +
+               ", siteGridFTPServer=" + ftpserver +
                ", name=\"" + name + "\"" +
                ", code=\"" + code + "\"" +
-               ", exeName=" + en +
+               ", exeName=" + exe +
                ", version=\"" + version + "\"" +
                ", arguments=" + arrayToString(arguments) +
                ", queue=\"" + queue + "\"" +
@@ -559,6 +544,7 @@ public class GridJob implements Serializable
                ", inTransfers=" + arrayToString(inTransfers) +
                ", outTransfers=" + arrayToString(outTransfers) +
                ", modules=" + arrayToString(modules) +
+               ", emailAddress=\"" + emailAddress + "\"" +
                ", stdInput=\"" + stdInput + "\"" +
                ", stdOutput=\"" + stdOutput + "\"" +
                ", stdError=\"" + stdError + "\"";
