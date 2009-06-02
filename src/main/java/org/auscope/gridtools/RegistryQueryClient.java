@@ -509,12 +509,8 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
          
         NodeList contactStrNodeList = turboMDSquery(xpathQuery);
 
-        if (contactStrNodeList != null) {
-            logger.info(contactStrNodeList.getLength());
-
-            for (int i = 0; i < contactStrNodeList.getLength(); i++) {
-                hostAddress = contactStrNodeList.item(i).getNodeValue();
-            }
+        if (contactStrNodeList != null && contactStrNodeList.getLength() > 0) {
+            hostAddress = contactStrNodeList.item(0).getNodeValue();
         }
         return hostAddress;
     }
