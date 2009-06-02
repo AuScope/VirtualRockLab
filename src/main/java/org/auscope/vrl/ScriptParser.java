@@ -115,8 +115,11 @@ public class ScriptParser
         if (!geoFiles.isEmpty()) {
             geometryFile = geoFiles.get(0);
         }
-        checkPointPrefix = extractStrings(
-            "CheckPointPrms\\s*\\(\\s*fileNamePrefix\\s*=\\s*\"(.+)\"").get(0);
+        List<String> checkPointers =
+            extractStrings("CheckPointPrms\\s*\\(\\s*fileNamePrefix\\s*=\\s*\"(.+)\"");
+        if (!checkPointers.isEmpty()) {
+            checkPointPrefix = checkPointers.get(0);
+        }
         //fieldSavers = extractStrings("FieldSaverPrms\\s*\\("); //FIXME
     }
 
