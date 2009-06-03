@@ -11,27 +11,6 @@ Ext.namespace('GridSubmit');
 
 GridSubmit.ControllerURL = "gridsubmit.html";
 
-// shows an error dialog with given message
-GridSubmit.errorDlg = function(message) {
-    Ext.Msg.show({
-        title: 'Error',
-        msg: message,
-        buttons: Ext.Msg.OK,
-        icon: Ext.Msg.ERROR
-    });
-}
-
-// shows a success dialog with given message
-GridSubmit.successDlg = function(message) {
-    Ext.Msg.show({
-        title: 'Success',
-        msg: message,
-        buttons: Ext.Msg.OK,
-        icon: Ext.Msg.INFO
-    });
-}
-
-
 ////////////////////////
 ////// Callbacks ///////
 ////////////////////////
@@ -39,11 +18,11 @@ GridSubmit.successDlg = function(message) {
 // called when a JsonStore fails retrieving data from the server
 GridSubmit.onLoadException = function(proxy, options, response, e) {
     if (response.status != 0) {
-        GridSubmit.errorDlg("Could not interpret server response "+
+        GridSubmit.showError("Could not interpret server response "+
             "(most likely your session has expired). "+
             "Please try reloading the page.");
     } else {
-        GridSubmit.errorDlg("Could not retrieve data from the server ("+
+        GridSubmit.showError("Could not retrieve data from the server ("+
             response.statusText+").");
     }
 }
@@ -57,7 +36,7 @@ GridSubmit.onWindowUnloading = function(e) {
 
 // called when the job submit request fails
 GridSubmit.onSubmitFailure = function(form, action) {
-    GridSubmit.errorDlg('Could not execute submit request.');
+    GridSubmit.showError('Could not execute submit request.');
 }
 
 // callback for a successful job submit request
@@ -75,7 +54,7 @@ GridSubmit.onCancelResponse = function(response, request) {
 
 // called when the file upload request fails
 GridSubmit.onUploadFailure = function(form, action) {
-    GridSubmit.errorDlg('Could not upload file. '+action.result.error);
+    GridSubmit.showError('Could not upload file. '+action.result.error);
 }
 
 // callback for a successful file upload request
@@ -89,7 +68,7 @@ GridSubmit.onUploadFile = function(form, action) {
         });
         fileStore.add(newFile);
     } else {
-        GridSubmit.errorDlg('Error uploading file. '+action.result.error);
+        GridSubmit.showError('Error uploading file. '+action.result.error);
     }
     Ext.getCmp('filesForm').getForm().reset();
 }
@@ -125,12 +104,33 @@ GridSubmit.onLoadJobObject = function(response, request) {
 
 // called when the job object request fails
 GridSubmit.onLoadJobFailure = function(response, request) {
-    GridSubmit.errorDlg('Could not load job details from the server!');
+    GridSubmit.showError('Could not load job details from the server!');
 }
 
 ////////////////////////
 ////// Functions ///////
 ////////////////////////
+
+// shows an error dialog with given message
+GridSubmit.showError = function(message) {
+    Ext.Msg.show({
+        title: 'Error',
+        msg: message,
+        buttons: Ext.Msg.OK,
+        icon: Ext.Msg.ERROR
+    });
+}
+
+// shows a success dialog with given message
+GridSubmit.successDlg = function(message) {
+    Ext.Msg.show({
+        title: 'Success',
+        msg: message,
+        buttons: Ext.Msg.OK,
+        icon: Ext.Msg.INFO
+    });
+}
+
 
 // retrieves filelist of selected job and updates the Details panel
 GridSubmit.updateJobDetails = function() {

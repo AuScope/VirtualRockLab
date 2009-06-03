@@ -19,18 +19,18 @@ JobList.ControllerURL = "joblist.html";
 JobList.onLoadException = function(proxy, options, response, e) {
     JobList.hideProgressDlg();
     if (response.status != 0) {
-        JobList.errorDlg("Could not interpret server response "+
+        JobList.showError("Could not interpret server response "+
             "(most likely your session has expired). "+
             "Please try reloading the page.");
     } else {
-        JobList.errorDlg("Could not retrieve data from the server ("+
+        JobList.showError("Could not retrieve data from the server ("+
             response.statusText+").");
     }
 }
 
 // called when an Ajax request fails
 JobList.onRequestFailure = function(response, request) {
-    JobList.errorDlg('Could not execute last request. Status: '+
+    JobList.showError('Could not execute last request. Status: '+
         response.status+' ('+response.statusText+')');
 }
 
@@ -38,7 +38,7 @@ JobList.onRequestFailure = function(response, request) {
 JobList.onKillJobResponse = function(response, request) {
     var resp = Ext.decode(response.responseText);
     if (resp.error != null) {
-        JobList.errorDlg(resp.error);
+        JobList.showError(resp.error);
     }
     JobList.jobStore.reload();
 }
@@ -47,7 +47,7 @@ JobList.onKillJobResponse = function(response, request) {
 JobList.onRetrieveFilesResponse = function(response, request) {
     var resp = Ext.decode(response.responseText);
     if (resp.error != null) {
-        JobList.errorDlg(resp.error);
+        JobList.showError(resp.error);
     } else {
         Ext.Msg.alert("Success", "The output files of the selected job will be transferred as soon as possible. Please note that it may take a while though.");
     }
@@ -58,7 +58,7 @@ JobList.onRetrieveFilesResponse = function(response, request) {
 ////////////////////////
 
 // shows an error dialog with given message
-JobList.errorDlg = function(message) {
+JobList.showError = function(message) {
     JobList.errorDlg = Ext.Msg.show({
         title: 'Error',
         msg: message,
@@ -663,7 +663,7 @@ JobList.initialize = function() {
     });
 
     if (JobList.error != null) {
-        JobList.errorDlg(JobList.error);
+        JobList.showError(JobList.error);
         JobList.error = null;
     }
 }
