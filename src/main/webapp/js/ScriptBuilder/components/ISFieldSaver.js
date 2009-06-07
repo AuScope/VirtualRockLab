@@ -9,6 +9,16 @@ ISFieldSaverNode = Ext.extend(ScriptBuilder.BaseComponent, {
     );
   },
 
+  fillFormValues: function(form) {
+    form.setValues(this.values);
+    var intList = this.container.getInteractions();
+    var store = form.findField('intName').getStore();
+    store.removeAll();
+    for (var i=0; i<intList.length; i++) {
+        store.add(new store.recordType({'text': intList[i].getUniqueName()}));
+    }
+  },
+
   getScript: function() {
     var ret = this.values.uniqueName+" = InteractionScalarFieldSaverPrms (\n";
     ret+="   interactionName = \""+this.values.intName+"\",\n";

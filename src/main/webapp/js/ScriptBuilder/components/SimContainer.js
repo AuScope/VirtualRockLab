@@ -77,6 +77,10 @@ from esys.lsm.geometry import *\n\n";
     return this.findChildBy(nameMatch);
   },
 
+  getInteractions: function() {
+    return this.intList;
+  },
+
   getWalls: function() {
     return this.wallList;
   },

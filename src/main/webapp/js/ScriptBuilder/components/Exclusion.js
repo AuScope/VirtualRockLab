@@ -9,6 +9,19 @@ ExclusionNode = Ext.extend(ScriptBuilder.BaseComponent, {
     );
   },
 
+  fillFormValues: function(form) {
+    form.setValues(this.values);
+    var intList = this.container.getInteractions();
+    var store1 = form.findField('intName1').getStore();
+    var store2 = form.findField('intName2').getStore();
+    store1.removeAll();
+    store2.removeAll();
+    for (var i=0; i<intList.length; i++) {
+        store1.add(new store1.recordType({'text': intList[i].getUniqueName()}));
+        store2.add(new store1.recordType({'text': intList[i].getUniqueName()}));
+    }
+  },
+
   getUniqueName: function() {
     return "pp_exclusion";
   },

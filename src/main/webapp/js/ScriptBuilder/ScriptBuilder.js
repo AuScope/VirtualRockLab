@@ -79,18 +79,23 @@ ScriptBuilder.onGetScriptTextResponse = function(response, request) {
 
 // opens the configuration dialog for given component type and ensures
 // that values are stored and restored accordingly
-ScriptBuilder.showDialog = function(compId, compTitle, existingNode) {
+// If 'node' is given its values are edited otherwise a new node is
+// created.
+ScriptBuilder.showDialog = function(compId, compTitle, node) {
     var dlgContents = Ext.getCmp(compId+'Form');
     var rootNode = Ext.getCmp('usedcomps-panel').getRootNode();
+    var isNewNode;
 
     // Fill the form elements with correct values if editing component
-    if (existingNode) {
-        if (compId == "SimContainer") {
-            rootNode.fillFormValues(dlgContents.getForm());
-        } else {
-            existingNode.fillFormValues(dlgContents.getForm());
-        }
+    if (node) {
+        //node.fillFormValues(dlgContents.getForm());
+        isNewNode = false;
+    } else {
+        node = new dlgContents.nclass(rootNode);
+        //node.fillFormValues(dlgContents.getForm());
+        isNewNode = true;
     }
+
     var dlg = new Ext.Window({
         title: compTitle+' Settings',
         plain: true,
@@ -111,22 +116,11 @@ ScriptBuilder.showDialog = function(compId, compTitle, existingNode) {
                         'Please provide values for all fields!');
                     return;
                 }
-                if (!existingNode) {
-                    var newnode = new dlgContents.nclass(rootNode);
-                    if (!newnode.setValues(dlgContents.getForm())) {
-                        return;
-                    }
-                    rootNode.addComponent(newnode);
-                } else {
-                    var res;
-                    if (compId == "SimContainer") {
-                        res = rootNode.setValues(dlgContents.getForm());
-                    } else {
-                        res = existingNode.setValues(dlgContents.getForm());
-                    }
-                    if (res != true) {
-                        return;
-                    }
+                if (!node.setValues(dlgContents.getForm())) {
+                    return;
+                }
+                if (isNewNode) {
+                    rootNode.addComponent(node);
                 }
                 ScriptBuilder.updateSource();
                 if (compId == "SimContainer") {
@@ -142,6 +136,9 @@ ScriptBuilder.showDialog = function(compId, compTitle, existingNode) {
     });
     // Prevent destruction of dlgContents (IE needs this)
     dlg.on('beforedestroy', function() { return false; });
+    dlg.on('beforeshow', function() {
+        node.fillFormValues(dlgContents.getForm());
+    });
     dlg.show();
 }
 

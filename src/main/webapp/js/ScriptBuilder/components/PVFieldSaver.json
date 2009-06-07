@@ -16,12 +16,12 @@
     name: "fieldName",
     editable: false,
     forceSelection: true,
-    mode: 'local',
-    triggerAction: 'all',
+    mode: "local",
+    triggerAction: "all",
     anchor: "100%",
     fieldLabel: "Field Name",
-    store: ['displacement', 'velocity', 'position', 'force'],
-    value: 'displacement'
+    store: ["displacement", "velocity", "position", "force"],
+    value: "displacement"
   }, {
     xtype: "textfield",
     name: "fileName",
@@ -34,12 +34,12 @@
     name: "fileFormat",
     editable: false,
     forceSelection: true,
-    mode: 'local',
-    triggerAction: 'all',
+    mode: "local",
+    triggerAction: "all",
     anchor: "100%",
     fieldLabel: "File Format",
-    store: ['SUM', 'MAX', 'RAW_SERIES', 'POV', 'DX'],
-    value: 'SUM'
+    store: ["SUM", "MAX", "RAW_SERIES", "POV", "DX"],
+    value: "SUM"
   }, {
     xtype: "numberfield",
     name: "beginTS",

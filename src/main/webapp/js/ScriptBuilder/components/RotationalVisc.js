@@ -7,6 +7,8 @@ RotationalViscNode = Ext.extend(ScriptBuilder.BaseComponent, {
     RotationalViscNode.superclass.constructor.apply(this,
         [container, "Rotational Viscosity", "RotationalVisc", "i"]
     );
+    var numInts = container.getInteractions().length;
+    this.values.uniqueName = "interaction"+numInts;
   },
 
   getScript: function() {

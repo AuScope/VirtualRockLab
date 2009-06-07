@@ -24,12 +24,12 @@
       xtype: "combo",
       editable: false,
       forceSelection: true,
-      mode: 'local',
-      triggerAction: 'all',
+      mode: "local",
+      triggerAction: "all",
       fieldLabel: "Particle Type",
       name: "particleType",
-      store: ['NRotSphere', 'RotSphere'],
-      value: 'NRotSphere'
+      store: ["NRotSphere", "RotSphere"],
+      value: "NRotSphere"
     }, {
       xtype: "numberfield",
       name: "numTimesteps",
@@ -50,8 +50,8 @@
       xtype: "radiogroup",
       fieldLabel: "Constrain to 2D",
       items: [
-        { boxLabel: 'No', name: 'constrain2D', inputValue: 0, checked: true },
-        { boxLabel: 'Yes', name: 'constrain2D', inputValue: 1 }
+        { boxLabel: "No", name: "constrain2D", inputValue: 0, checked: true },
+        { boxLabel: "Yes", name: "constrain2D", inputValue: 1 }
       ]
     }]
   }, {
@@ -71,8 +71,8 @@
         inputValue: "0",
         checked: true
       }, { name: "periodic", boxLabel: "X", inputValue: "1" },
-         { name: "periodic", boxLabel: 'Y', inputValue: "2" },
-         { name: "periodic", boxLabel: 'Z', inputValue: "3" }
+         { name: "periodic", boxLabel: "Y", inputValue: "2" },
+         { name: "periodic", boxLabel: "Z", inputValue: "3" }
       ]
     }]
   }, {

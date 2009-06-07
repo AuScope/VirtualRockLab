@@ -7,6 +7,8 @@ RotFrictionNode = Ext.extend(ScriptBuilder.BaseComponent, {
     RotFrictionNode.superclass.constructor.apply(this,
         [container, "Rotational Frictional Contact", "RotFriction", "i"]
     );
+    var numInts = container.getInteractions().length;
+    this.values.uniqueName = "interaction"+numInts;
   },
 
   getScript: function() {

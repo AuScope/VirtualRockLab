@@ -78,11 +78,11 @@
       allowBlank: false
     }]
   }, {
-    layout: 'column',
+    layout: "column",
     border: false,
     items: [{
       columnWidth: .33,
-      layout: 'form',
+      layout: "form",
       border: false,
       items: [{
         xtype: "fieldset",
@@ -119,9 +119,9 @@
       }]
     }, {
       columnWidth: .34,
-      layout: 'form',
+      layout: "form",
       border: false,
-      bodyStyle: 'padding:0px 5px;',
+      bodyStyle: "padding:0px 5px;",
       items: [{
         xtype: "fieldset",
         collapsible: false,
@@ -157,7 +157,7 @@
       }]
     }, {
       columnWidth: .33,
-      layout: 'form',
+      layout: "form",
       border: false,
       items: [{
         xtype: "fieldset",

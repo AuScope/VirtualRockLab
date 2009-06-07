@@ -12,23 +12,28 @@
     fieldLabel: "Unique Saver Name",
     allowBlank: false
   }, {
-    xtype: "textfield",
+    xtype: "combo",
     name: "wallName",
     value: "",
     anchor: "100%",
     fieldLabel: "Wall Name",
+    editable: false,
+    forceSelection: true,
+    mode: "local",
+    triggerAction: "all",
+    store: [],
     allowBlank: false
   }, {
     xtype: "combo",
     name: "fieldName",
     editable: false,
     forceSelection: true,
-    mode: 'local',
-    triggerAction: 'all',
+    mode: "local",
+    triggerAction: "all",
     anchor: "100%",
     fieldLabel: "Field Name",
-    store: ['Position', 'Force'],
-    value: 'Position'
+    store: ["Position", "Force"],
+    value: "Position"
   }, {
     xtype: "textfield",
     name: "fileName",
@@ -41,12 +46,12 @@
     name: "fileFormat",
     editable: false,
     forceSelection: true,
-    mode: 'local',
-    triggerAction: 'all',
+    mode: "local",
+    triggerAction: "all",
     anchor: "100%",
     fieldLabel: "File Format",
-    store: ['RAW_SERIES'],
-    value: 'RAW_SERIES'
+    store: ["RAW_SERIES"],
+    value: "RAW_SERIES"
   }, {
     xtype: "numberfield",
     name: "beginTS",

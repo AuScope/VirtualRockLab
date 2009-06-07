@@ -7,6 +7,8 @@ ElasticRepulsionNode = Ext.extend(ScriptBuilder.BaseComponent, {
     ElasticRepulsionNode.superclass.constructor.apply(this,
         [container, "Elastic Repulsion", "ElasticRepulsion", "i"]
     );
+    var numInts = container.getInteractions().length;
+    this.values.uniqueName = "interaction"+numInts;
   },
 
   getScript: function() {

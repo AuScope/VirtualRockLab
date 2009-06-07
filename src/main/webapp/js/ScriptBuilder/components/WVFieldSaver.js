@@ -9,6 +9,16 @@ WVFieldSaverNode = Ext.extend(ScriptBuilder.BaseComponent, {
     );
   },
 
+  fillFormValues: function(form) {
+    form.setValues(this.values);
+    var wallList = this.container.getWalls();
+    var store = form.findField('wallName').getStore();
+    store.removeAll();
+    for (var i=0; i<wallList.length; i++) {
+        store.add(new store.recordType({'text': wallList[i].getUniqueName()}));
+    }
+  },
+
   getScript: function() {
     var ret = this.values.uniqueName+" = WallVectorFieldSaverPrms (\n";
     ret+="   wallName = \""+this.values.wallName+"\",\n";

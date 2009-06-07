@@ -18,10 +18,15 @@
     fieldLabel: "Normal Stiffness",
     allowBlank: false
   }, {
-    xtype: "textfield",
+    xtype: "combo",
     name: "wallName",
     value: "",
     fieldLabel: "Name of Wall to Bond",
+    editable: false,
+    forceSelection: true,
+    mode: "local",
+    triggerAction: "all",
+    store: [],
     allowBlank: false
   }, {
     xtype: "numberfield",

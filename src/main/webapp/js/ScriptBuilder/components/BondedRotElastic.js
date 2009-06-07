@@ -7,6 +7,8 @@ BondedRotElasticNode = Ext.extend(ScriptBuilder.BaseComponent, {
     BondedRotElasticNode.superclass.constructor.apply(this,
         [container, "Rotational Bonded Elastic-Brittle", "BondedRotElastic", "i"]
     );
+    var numInts = container.getInteractions().length;
+    this.values.uniqueName = "interaction"+numInts;
   },
 
   getScript: function() {

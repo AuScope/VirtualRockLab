@@ -7,6 +7,8 @@ SimpleWallNode = Ext.extend(ScriptBuilder.BaseComponent, {
     SimpleWallNode.superclass.constructor.apply(this,
         [container, "Simple Wall", "SimpleWall", "w"]
     );
+    var numWalls = container.getWalls().length;
+    this.values.uniqueName = "wall"+numWalls;
   },
 
   getScript: function() {

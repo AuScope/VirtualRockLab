@@ -6,17 +6,29 @@
   labelWidth: 200,
   defaults: { anchor: "100%" },
   items: [{
-    xtype: "textfield",
+    xtype: "combo",
     name: "intName1",
-    value: "",
+    id: "intName1",
+    editable: false,
+    allowBlank: false,
+    forceSelection: true,
+    mode: "local",
+    triggerAction: "all",
     fieldLabel: "Name of First Interaction Group",
-    allowBlank: false
+    store: [],
+    value: ""
   }, {
-    xtype: "textfield",
+    xtype: "combo",
     name: "intName2",
-    value: "",
+    id: "intName2",
+    editable: false,
+    allowBlank: false,
+    forceSelection: true,
+    mode: "local",
+    triggerAction: "all",
     fieldLabel: "Name of Second Interaction Group",
-    allowBlank: false
+    store: [],
+    value: ""
   }]
 }
 

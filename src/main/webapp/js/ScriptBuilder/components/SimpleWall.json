@@ -11,11 +11,11 @@
     fieldLabel: "Wall Name",
     allowBlank: false
   }, {
-    layout: 'column',
+    layout: "column",
     border: false,
     items: [{
       columnWidth: .5,
-      layout: 'form',
+      layout: "form",
       border: false,
       items: [{
         xtype: "fieldset",
@@ -48,7 +48,7 @@
       }]
     }, {
       columnWidth: .5,
-      layout: 'form',
+      layout: "form",
       border: false,
       items: [{
         xtype: "fieldset",

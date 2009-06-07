@@ -12,10 +12,15 @@
     fieldLabel: "Unique Interaction Name",
     allowBlank: false
   }, {
-    xtype: "textfield",
+    xtype: "combo",
     name: "wallName",
     value: "",
     fieldLabel: "Wall Name",
+    editable: false,
+    forceSelection: true,
+    mode: "local",
+    triggerAction: "all",
+    store: [],
     allowBlank: false
   }, {
     xtype: "numberfield",

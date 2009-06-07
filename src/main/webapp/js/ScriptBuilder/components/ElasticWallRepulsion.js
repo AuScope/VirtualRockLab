@@ -7,6 +7,18 @@ ElasticWallRepulsionNode = Ext.extend(ScriptBuilder.BaseComponent, {
     ElasticWallRepulsionNode.superclass.constructor.apply(this,
         [container, "Elastic Repulsion", "ElasticWallRepulsion", "i"]
     );
+    var numInts = container.getInteractions().length;
+    this.values.uniqueName = "interaction"+numInts;
+  },
+
+  fillFormValues: function(form) {
+    form.setValues(this.values);
+    var wallList = this.container.getWalls();
+    var store = form.findField('wallName').getStore();
+    store.removeAll();
+    for (var i=0; i<wallList.length; i++) {
+        store.add(new store.recordType({'text': wallList[i].getUniqueName()}));
+    }
   },
 
   getScript: function() {

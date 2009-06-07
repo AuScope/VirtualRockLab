@@ -7,6 +7,8 @@ LinearViscNode = Ext.extend(ScriptBuilder.BaseComponent, {
     LinearViscNode.superclass.constructor.apply(this,
         [container, "Linear Viscosity", "LinearVisc", "i"]
     );
+    var numInts = container.getInteractions().length;
+    this.values.uniqueName = "interaction"+numInts;
   },
 
   getScript: function() {

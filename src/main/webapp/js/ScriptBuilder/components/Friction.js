@@ -7,6 +7,8 @@ FrictionNode = Ext.extend(ScriptBuilder.BaseComponent, {
     FrictionNode.superclass.constructor.apply(this,
         [container, "Frictional Contact", "Friction", "i"]
     );
+    var numInts = container.getInteractions().length;
+    this.values.uniqueName = "interaction"+numInts;
   },
 
   getScript: function() {

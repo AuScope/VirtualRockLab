@@ -23,8 +23,8 @@
     xtype: "radiogroup",
     fieldLabel: "IV Snapshot Timing",
     items: [
-      { boxLabel: 'Before Timestep', name: 'snapTiming', inputValue: 0, checked: true },
-      { boxLabel: 'After Timestep', name: 'snapTiming', inputValue: 1 }
+      { boxLabel: "Before Timestep", name: "snapTiming", inputValue: 0, checked: true },
+      { boxLabel: "After Timestep", name: "snapTiming", inputValue: 1 }
     ]
   }, {
     xtype: "numberfield",
@@ -35,11 +35,11 @@
     allowNegative: false,
     allowBlank: false
   }, {
-    layout: 'column',
+    layout: "column",
     border: false,
     items: [{
       columnWidth: .5,
-      layout: 'form',
+      layout: "form",
       border: false,
       items: [{
         xtype: "fieldset",
@@ -71,7 +71,7 @@
       }]
     }, {
       columnWidth: .5,
-      layout: 'form',
+      layout: "form",
       border: false,
       items: [{
         xtype: "fieldset",

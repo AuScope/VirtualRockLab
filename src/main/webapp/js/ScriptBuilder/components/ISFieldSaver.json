@@ -12,23 +12,28 @@
     fieldLabel: "Unique Saver Name",
     allowBlank: false
   }, {
-    xtype: "textfield",
+    xtype: "combo",
     name: "intName",
-    value: "",
+    editable: false,
+    allowBlank: false,
+    forceSelection: true,
+    mode: "local",
+    triggerAction: "all",
     anchor: "100%",
     fieldLabel: "Interaction Name",
-    allowBlank: false
+    store: [],
+    value: ""
   }, {
     xtype: "combo",
     name: "fieldName",
     editable: false,
     forceSelection: true,
-    mode: 'local',
-    triggerAction: 'all',
+    mode: "local",
+    triggerAction: "all",
     anchor: "100%",
     fieldLabel: "Field Name",
-    store: ['potential_energy', 'count'],
-    value: 'potential_energy'
+    store: ["potential_energy", "count"],
+    value: "potential_energy"
   }, {
     xtype: "textfield",
     name: "fileName",
@@ -41,12 +46,12 @@
     name: "fileFormat",
     editable: false,
     forceSelection: true,
-    mode: 'local',
-    triggerAction: 'all',
+    mode: "local",
+    triggerAction: "all",
     anchor: "100%",
     fieldLabel: "File Format",
-    store: ['SUM', 'MAX', 'RAW_SERIES', 'RAW2', 'DX'],
-    value: 'SUM'
+    store: ["SUM", "MAX", "RAW_SERIES", "RAW2", "DX"],
+    value: "SUM"
   }, {
     xtype: "numberfield",
     name: "beginTS",

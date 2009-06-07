@@ -7,6 +7,8 @@ GravityNode = Ext.extend(ScriptBuilder.BaseComponent, {
     GravityNode.superclass.constructor.apply(this,
         [container, "Gravity", "Gravity", "i"]
     );
+    var numInts = container.getInteractions().length;
+    this.values.uniqueName = "interaction"+numInts;
   },
 
   getScript: function() {
