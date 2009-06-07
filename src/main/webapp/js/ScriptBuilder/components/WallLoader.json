@@ -12,10 +12,15 @@
     fieldLabel: "Unique Name",
     allowBlank: false
   }, {
-    xtype: "textfield",
+    xtype: "combo",
     name: "wallName",
     value: "",
     fieldLabel: "Name of Wall to load",
+    editable: false,
+    forceSelection: true,
+    mode: "local",
+    triggerAction: "all",
+    store: [],
     allowBlank: false
   }, {
     xtype: "radiogroup",
