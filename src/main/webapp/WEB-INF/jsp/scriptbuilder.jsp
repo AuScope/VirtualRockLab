@@ -4,7 +4,7 @@
 <html>
 
 <head>
-    <title>ESyS-Particle Script Builder</title>
+    <title>AuScope Virtual Rock Laboratory - Scriptbuilder</title>
 
     <link rel="stylesheet" type="text/css" href="css/virtualrocklab.css">
     <style type="text/css">

@@ -4,7 +4,7 @@
 <html>
 
 <head>
-    <title><fmt:message key="title"/></title>
+    <title>AuScope Virtual Rock Laboratory - Submit a job</title>
     <link rel="stylesheet" type="text/css" href="css/virtualrocklab.css">
     <style type="text/css">
       #sitenav-03 a {

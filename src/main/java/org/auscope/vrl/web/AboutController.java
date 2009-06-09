@@ -45,7 +45,7 @@ public class AboutController implements Controller {
                 mav.addObject("builtBy", atts.getValue("Built-By"));
                 mav.addObject("osName", atts.getValue("osName"));
                 mav.addObject("osVersion", atts.getValue("osVersion"));
-                            
+ 
                 mav.addObject("serverName", request.getServerName());
                 mav.addObject("serverInfo", request.getSession().getServletContext().getServerInfo());
                 mav.addObject("serverJavaVersion", System.getProperty("java.version"));

@@ -59,7 +59,7 @@ public class LoginController implements Controller {
     protected final Log logger = LogFactory.getLog(getClass());
 
     private static final String SLCS_URL = "https://slcs1.arcs.org.au/SLCS/";
-    private static final String HOST_KEY_FILE = "/home/caltinay/hostkey.pem";
+    private static final String HOST_KEY_FILE = "/etc/shibboleth/hostkey.pem";
     private GridAccessController gridAccess;
     private String authToken;
 
@@ -188,12 +188,10 @@ public class LoginController implements Controller {
 
         if (request.getMethod().equalsIgnoreCase("GET")) {
             //logger.error(request.getHeader("Shib-AuEduPerson-SharedToken"));
-            /*
-            if (gridAccess.initProxy("vrluser", "password")) {
+            if (gridAccess.initProxy("vrluser", "pwd0815!")) {
                 return new ModelAndView(new RedirectView(
                             "joblist.html", true, false, false));
             }
-            */
 
             try {
                 String serviceUrl = "https://" +

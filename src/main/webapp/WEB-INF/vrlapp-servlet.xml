@@ -5,10 +5,6 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans
        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
 
-    <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
-        <property name="basename" value="messages"/>
-    </bean>
-
     <bean name="xmlViewResolver" class="org.springframework.web.servlet.view.XmlViewResolver">
         <property name="order" value="1"/>
     </bean>
@@ -29,6 +25,10 @@
     <bean name="/about.html" class="org.auscope.vrl.web.AboutController"/>
 
     <bean name="/login.html" class="org.auscope.vrl.web.LoginController">
+        <property name="gridAccess" ref="gridAccess"/>
+    </bean>
+
+    <bean name="/myproxylogin.html" class="org.auscope.vrl.web.MyProxyLoginController">
         <property name="gridAccess" ref="gridAccess"/>
     </bean>
 
