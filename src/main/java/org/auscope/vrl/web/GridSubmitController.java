@@ -58,7 +58,7 @@ public class GridSubmitController extends MultiActionController {
 
     /**
      * Returns a JSON object containing a list of the current user's series.
-     * 
+     *
      * @param request The servlet request
      * @param response The servlet response
      *
@@ -88,7 +88,7 @@ public class GridSubmitController extends MultiActionController {
 
     /**
      * Returns a JSON object containing an array of ESyS-particle sites.
-     * 
+     *
      * @param request The servlet request
      * @param response The servlet response
      *
@@ -114,7 +114,7 @@ public class GridSubmitController extends MultiActionController {
     /**
      * Returns a JSON object containing an array of job manager queues at
      * the specified site.
-     * 
+     *
      * @param request The servlet request including a site parameter
      * @param response The servlet response
      *
@@ -147,7 +147,7 @@ public class GridSubmitController extends MultiActionController {
     /**
      * Returns a JSON object containing an array of ESyS-particle versions at
      * the specified site.
-     * 
+     *
      * @param request The servlet request including a site parameter
      * @param response The servlet response
      *
@@ -179,7 +179,7 @@ public class GridSubmitController extends MultiActionController {
 
     /**
      * Returns a JSON object containing a populated VRLJob object.
-     * 
+     *
      * @param request The servlet request
      * @param response The servlet response
      *
@@ -202,7 +202,7 @@ public class GridSubmitController extends MultiActionController {
     /**
      * Returns a JSON object containing an array of filenames and sizes which
      * are currently in the job's stage in directory.
-     * 
+     *
      * @param request The servlet request
      * @param response The servlet response
      *
@@ -234,7 +234,7 @@ public class GridSubmitController extends MultiActionController {
      * Processes a file upload request returning a JSON object which indicates
      * whether the upload was successful and contains the filename and file
      * size.
-     * 
+     *
      * @param request The servlet request
      * @param response The servlet response containing the JSON data
      *
@@ -309,7 +309,7 @@ public class GridSubmitController extends MultiActionController {
 
     /**
      * Processes a job submission request.
-     * 
+     *
      * @param request The servlet request
      * @param response The servlet response
      *
@@ -420,7 +420,7 @@ public class GridSubmitController extends MultiActionController {
      * If the ScriptBuilder was used the file is moved to the job input
      * directory whereas a resubmission request is handled by using the
      * attributes of the job to be resubmitted.
-     * 
+     *
      * @param request The servlet request containing a session object
      *
      * @return The new job object.
@@ -452,7 +452,7 @@ public class GridSubmitController extends MultiActionController {
                 site, VRLJob.CODE_NAME);
         if (allVersions.length > 0)
             version = allVersions[0];
-        
+
         String[] allQueues = gridAccess.retrieveQueueNamesAtSite(site);
         if (allQueues.length > 0)
             queue = allQueues[0];

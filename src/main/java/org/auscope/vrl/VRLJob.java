@@ -10,8 +10,8 @@ import org.auscope.gridtools.GridJob;
  * <p>
  * Assertions should be enabled when using this class to prevent others from
  * setting values to <code>null</code>.
- * 
- * 
+ *
+ *
  * @author Cihan Altinay
  */
 public class VRLJob extends GridJob {
@@ -43,12 +43,12 @@ public class VRLJob extends GridJob {
     private String    status;
     /** The submission date and time */
     private String    submitDate;
-    
+
 
     /**
      * Does some basic setting up of the class variables to prevent errors.
      * Strings are initialized to the empty String, and integers are
-     * initialized with zero. 
+     * initialized with zero.
      */
     public VRLJob() {
         super();
@@ -90,11 +90,11 @@ public class VRLJob extends GridJob {
             submitDate = "";
         id = numBonds = numParticles = numTimesteps = seriesId = 0;
     }
-    
+
 
     /**
      * Returns the unique identifier of this job.
-     * 
+     *
      * @return The ID of this job.
      */
     public Integer getId() {
@@ -103,7 +103,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the unique identifier of this job.
-     * 
+     *
      * @param id The unique ID of this job.
      */
     private void setId(Integer id) {
@@ -113,7 +113,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Returns the checkpoint file prefix of this job.
-     * 
+     *
      * @return The checkpoint file prefix of this job.
      */
     public String getCheckpointPrefix() {
@@ -122,7 +122,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the checkpoint file prefix of this job.
-     * 
+     *
      * @param checkpointPrefix The checkpoint file prefix of this job.
      */
     public void setCheckpointPrefix(String checkpointPrefix) {
@@ -132,7 +132,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Returns the description of this job.
-     * 
+     *
      * @return The description of this job.
      */
     public String getDescription() {
@@ -141,7 +141,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the description of this job.
-     * 
+     *
      * @param description The description of this job.
      */
     public void setDescription(String description) {
@@ -151,7 +151,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Returns the number of bonds in this simulation job.
-     * 
+     *
      * @return The number of bonds in this simulation job.
      */
     public Integer getNumBonds() {
@@ -160,7 +160,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the number of bonds in this simulation job.
-     * 
+     *
      * @param name The number of bonds in this simulation job.
      */
     public void setNumBonds(Integer numBonds) {
@@ -170,7 +170,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Returns the number of particles in this simulation job.
-     * 
+     *
      * @return The number of particles in this simulation job.
      */
     public Integer getNumParticles() {
@@ -179,7 +179,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the number of particles in this simulation job.
-     * 
+     *
      * @param name The number of particles in this simulation job.
      */
     public void setNumParticles(Integer numParticles) {
@@ -189,7 +189,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Returns the number of timesteps in this simulation job.
-     * 
+     *
      * @return The number of timesteps in this simulation job.
      */
     public Integer getNumTimesteps() {
@@ -198,7 +198,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the number of timesteps in this simulation job.
-     * 
+     *
      * @param name The number of timesteps in this simulation job.
      */
     public void setNumTimesteps(Integer numTimesteps) {
@@ -208,7 +208,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Returns the output directory of this job.
-     * 
+     *
      * @return The output directory of this job.
      */
     public String getOutputDir() {
@@ -217,7 +217,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the output directory of this job.
-     * 
+     *
      * @param name The output directory of this job.
      */
     public void setOutputDir(String outputDir) {
@@ -227,7 +227,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Returns the unique reference of this job.
-     * 
+     *
      * @return The reference of this job.
      */
     public String getReference() {
@@ -236,7 +236,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the unique reference of this job.
-     * 
+     *
      * @param reference The unique reference of this job.
      */
     public void setReference(String reference) {
@@ -246,7 +246,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Returns the script filename of this job.
-     * 
+     *
      * @return The script filename of this job.
      */
     public String getScriptFile() {
@@ -255,7 +255,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the script filename of this job.
-     * 
+     *
      * @param scriptFile The script filename.
      */
     public void setScriptFile(String scriptFile) {
@@ -265,7 +265,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Returns the series ID this job belongs to.
-     * 
+     *
      * @return The series ID of this job.
      */
     public Integer getSeriesId() {
@@ -274,7 +274,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the ID of the series this job belongs to.
-     * 
+     *
      * @param seriesId The series ID of this job.
      */
     public void setSeriesId(Integer seriesId) {
@@ -284,7 +284,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Returns the submit date of this job.
-     * 
+     *
      * @return The submit date of this job.
      */
     public String getSubmitDate() {
@@ -293,7 +293,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the submit date of this job.
-     * 
+     *
      * @param submitDate The submit date of this job.
      */
     public void setSubmitDate(String submitDate) {
@@ -303,7 +303,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Returns the status of this job.
-     * 
+     *
      * @return The status of this job.
      */
     public String getStatus() {
@@ -312,7 +312,7 @@ public class VRLJob extends GridJob {
 
     /**
      * Sets the status of this job.
-     * 
+     *
      * @param status The status of this job.
      */
     public void setStatus(String status) {
@@ -323,7 +323,7 @@ public class VRLJob extends GridJob {
     /**
      * Returns a String representing the state of this <code>VRLJob</code>
      * object.
-     * 
+     *
      * @return A summary of the values of this object's fields
      */
     public String toString() {

@@ -16,7 +16,7 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Class that provides methods to extract information from an ESyS-Particle
  * python script file.
- * 
+ *
  * @author Cihan Altinay
  */
 public class ScriptParser
@@ -82,7 +82,7 @@ public class ScriptParser
 
     /**
      * Parses given script file.
-     * 
+     *
      * @param scriptFile The File to parse
      */
     public void parse(File scriptFile) throws IOException {
@@ -104,7 +104,7 @@ public class ScriptParser
         input.close();
 
         scriptText = buffer.toString();
-        
+
         // Now try to extract relevant data from the script
         numWorkerProcesses = extractInt(
                 "LsmMpi\\s*\\(\\s*numWorkerProcesses\\s*=\\s*(\\d+)");

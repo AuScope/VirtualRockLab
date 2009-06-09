@@ -28,7 +28,7 @@ import org.ietf.jgss.GSSManager;
 /**
  * Following the MVC pattern, this class acts on events received by the GUI,
  * and calls the methods in the Models (which actually do the work).
- * 
+ *
  * @author Ryan Fraser
  * @author Terry Rankine
  * @author Darren Kidd
@@ -80,7 +80,7 @@ public class GridAccessController {
     }
 
     /**
-     * Submits a job with certain properties. The View packages the job 
+     * Submits a job with certain properties. The View packages the job
      * properties into a <code>GridJob</code> object, which we use to get the
      * information we need to submit the job properly.
      * <p>
@@ -89,16 +89,16 @@ public class GridAccessController {
      * <ul>
      *   <li>the <em>executable name</em> of the code - this may not be the
      *       same as the name (i.e. 'List' is '<code>ls</code>'),</li>
-     *   <li>the name of any modules that need to be loaded for the code 
+     *   <li>the name of any modules that need to be loaded for the code
      *       to work,</li>
-     *   <li>and the site's GridFTP server (where the data will be staged to, 
+     *   <li>and the site's GridFTP server (where the data will be staged to,
      *       worked on, then staged from).</li>
      * </ul>
      * This method grabs this information, updates the <code>GridJob</code>
      * object, then uses <code>GramJobControl</code> to construct a job script
      * and submit the job.
-     * 
-     * @param  job A <code>GridJob</code> object which contains all the 
+     *
+     * @param  job A <code>GridJob</code> object which contains all the
      *             information required to run a job
      * @return The submitted job's endpoint reference (EPR)
      */
@@ -117,14 +117,14 @@ public class GridAccessController {
         GramJobControl gjc = new GramJobControl(credential);
         String EPR = gjc.submitJob(job, siteAddr);
 
-        if (EPR == null) {                   
+        if (EPR == null) {
             logger.error("Job did not submit (EPR was null).");
         } else {
             logger.info("Successfully submitted job. EPR = " + EPR);
         }
         return EPR;
     }
- 
+
     public GridJob getJobByReference(String reference) {
         GramJobControl ggj = new GramJobControl(credential);
         return ggj.getJobByReference(reference);
@@ -132,21 +132,21 @@ public class GridAccessController {
 
     /**
      * Kill a grid job.
-     * 
+     *
      * @param reference The reference of the job to kill
-     * 
+     *
      * @return The status of the job (a <code>StateEnumeration</code> String)
      */
     public String killJob(String reference) {
         GramJobControl ggj = new GramJobControl(credential);
         return ggj.killJob(reference);
     }
- 
+
     /**
      * Check the status of a job.
-     * 
+     *
      * @param reference The reference of the job to check the status of
-     * 
+     *
      * @return The status of the job (a <code>StateEnumeration</code> String)
      */
     public String retrieveJobStatus(String reference) {
@@ -157,9 +157,9 @@ public class GridAccessController {
     /**
      * Starts a new job that transfers current results from given job
      * to the stage out location.
-     * 
+     *
      * @param reference The reference of the job to get results from
-     * 
+     *
      * @return true if successful, false otherwise
      */
     public boolean retrieveJobResults(String reference) {
@@ -169,7 +169,7 @@ public class GridAccessController {
 
     /**
      * Get a list of available sites.
-     * 
+     *
      * @return The list of available sites
      */
     public String[] retrieveAllSitesOnGrid() {
@@ -183,9 +183,9 @@ public class GridAccessController {
 
     /**
      * Get a list of the codes available at a particular site.
-     * 
+     *
      * @param site The site to check
-     * 
+     *
      * @return The list of codes available
      */
     public String[] retrieveAllCodesAtSite(String site) {
@@ -194,7 +194,7 @@ public class GridAccessController {
 
     /**
      * Get the module name for a particular code.
-     * 
+     *
      * @param code The code to determine the module name for
      * @param site The site that code is being selected from
      * @return The module name
@@ -205,7 +205,7 @@ public class GridAccessController {
 
     /**
      * Get a list of sites that have a particular version of a code.
-     * 
+     *
      * @param code    The code to look for
      * @param version The particular version
      * @return A list of sites that have the version of the code
@@ -214,12 +214,11 @@ public class GridAccessController {
             String version) {
         return RQC.getAllSitesWithAVersionOfACode(code, version);
     }
-    
-    
+
     /**
-     * Return subcluster with matching requirements. CPUs, Mem, and Version can 
+     * Return subcluster with matching requirements. CPUs, Mem, and Version can
      * be <code>null</code> string.
-     * 
+     *
      * @param code    The code to use
      * @param version The version of the code required
      * @param cpus    The number of CPUs required
@@ -230,11 +229,10 @@ public class GridAccessController {
             String code, String version, String cpus, String mem) {
         return RQC.getSubClusterWithSoftwareAndVersionWithMemAndCPUs(code, version, cpus, mem);
     }
-    
-    
+
     /**
      * Get the queues that will honour the walltime and subcluster.
-     * 
+     *
      * @param currSubCluster
      * @param wallTime
      * @return A list of queues
@@ -243,7 +241,7 @@ public class GridAccessController {
             String currSubCluster, String wallTime) {
         return RQC.getComputingElementForWalltimeAndSubcluster(currSubCluster, wallTime);
     }
-    
+
     public String retrieveStorageElementFromComputingElementWithDiskAvailable(
             String queue, String diskSpace) {
         String defaultSE = "";
@@ -251,19 +249,18 @@ public class GridAccessController {
 
         defaultSE = RQC.getStorageElementFromComputingElement(queue);
         storagePath = RQC.getStoragePathWithSpaceAvailFromDefaultStorageElement(defaultSE, diskSpace);
-    
+
         return storagePath;
     }
-        
 
     public String[] retrieveSubClusterWithMemAndCPUsAtSite(String site,
             String cluster, String cpus, String mem) {
         return RQC.getSubClusterWithMemAndCPUsFromClusterFromSite(site, cluster, cpus, mem);
     }
-    
+
     /**
      * Get a list of the versions of a code that is available at a site.
-     * 
+     *
      * @param site The site to check
      * @param code The code that will be used
      * @return An array of the different versions of 'code' available at 'site'
@@ -274,7 +271,7 @@ public class GridAccessController {
 
     /**
      * Get the list of queues available at a given site.
-     * 
+     *
      * @param site The site that is being checked for queues
      * @return A list of the different queues available
      */
@@ -284,28 +281,28 @@ public class GridAccessController {
 
     /**
      * Get all the different codes available on the Grid.
-     * 
+     *
      * @return A list of all the codes available
      */
     public String[] retrieveAllSiteCodes() {
         return RQC.getAllCodesOnGrid();
     }
-    
+
     /**
      * Get a list of all the versions of this code that are available on
      * the grid.
-     * 
+     *
      * @param code The code to check for versions of
      * @return A list of all the version avalailable
      */
     public String[] retrieveAllVersionsOfCodeOnGrid(String code) {
         return RQC.getAllVersionsOfCodeOnGrid(code);
     }
-    
+
     public SiteInfo[] retrieveSiteStatus() {
         return RQC.getAllSitesStatus();
     }
-    
+
     /**
      * Get a list of all the GridFTP servers available on the Grid. These are
      * used for data transfer.
@@ -318,14 +315,14 @@ public class GridAccessController {
 
     /**
      * Get a site contact email address for site
-     * 
-     * @param site The site in question 
-     * @return the email address 
+     *
+     * @param site The site in question
+     * @return the email address
      */
-    
+
     public String getSiteContactEmailAtSite(String site) {
         return RQC.getSiteContactEmailAtSite(site);
-    }   
+    }
 
     /**
      * Initializes proxy which will be used to authenticate the user for the
@@ -348,7 +345,7 @@ public class GridAccessController {
                 retval = true;
             }
         } catch (GSSException e) {
-            logger.error(FaultHelper.getMessage(e)); 
+            logger.error(FaultHelper.getMessage(e));
         } catch (Exception e) {
             logger.error(e.toString());
         }
@@ -385,7 +382,7 @@ public class GridAccessController {
     /**
      * Initializes proxy which will be used to authenticate the user for the
      * grid. This method requires an existing proxy file of the current user.
-     * 
+     *
      * @return true if credentials were successfully created, false otherwise
      */
     public boolean initProxy() {
@@ -400,7 +397,7 @@ public class GridAccessController {
                 retval = true;
             }
         } catch (GSSException e) {
-            logger.error(FaultHelper.getMessage(e)); 
+            logger.error(FaultHelper.getMessage(e));
         }
         return retval;
     }
@@ -409,7 +406,7 @@ public class GridAccessController {
      * Checks the validity of currently set grid credentials. To be considered
      * valid, the grid proxy must have a minimum remaining lifetime (5 minutes
      * by default).
-     * 
+     *
      * @return true if and only if the current credentials are valid
      */
     public boolean isProxyValid() {
@@ -422,7 +419,7 @@ public class GridAccessController {
                     return true;
                 }
             } catch (GSSException e) {
-                logger.error(FaultHelper.getMessage(e)); 
+                logger.error(FaultHelper.getMessage(e));
             }
         }
         return false;

@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * Simple class that stores information about a job series consisting of
  * one or more jobs.
- * 
+ *
  * @author Cihan Altinay
  */
 public class VRLSeries implements Serializable {
@@ -27,7 +27,7 @@ public class VRLSeries implements Serializable {
 
     /**
      * Returns the unique identifier of this series.
-     * 
+     *
      * @return The unique ID of this series.
      */
     public Integer getId() {
@@ -36,7 +36,7 @@ public class VRLSeries implements Serializable {
 
     /**
      * Sets the unique identifier of this series.
-     * 
+     *
      * @param id The new ID for this series.
      */
     private void setId(Integer id) {
@@ -46,7 +46,7 @@ public class VRLSeries implements Serializable {
 
     /**
      * Returns the description of this series.
-     * 
+     *
      * @return The description of this series.
      */
     public String getDescription() {
@@ -55,7 +55,7 @@ public class VRLSeries implements Serializable {
 
     /**
      * Sets the description of this series.
-     * 
+     *
      * @param description The description of this series.
      */
     public void setDescription(String description) {
@@ -65,7 +65,7 @@ public class VRLSeries implements Serializable {
 
     /**
      * Returns the user owning this series.
-     * 
+     *
      * @return The user owning this series.
      */
     public String getUser() {
@@ -74,7 +74,7 @@ public class VRLSeries implements Serializable {
 
     /**
      * Sets the user owning this series.
-     * 
+     *
      * @param user The user owning this series.
      */
     public void setUser(String user) {
@@ -84,7 +84,7 @@ public class VRLSeries implements Serializable {
 
     /**
      * Returns the name of this series.
-     * 
+     *
      * @return The name of this series.
      */
     public String getName() {
@@ -93,7 +93,7 @@ public class VRLSeries implements Serializable {
 
     /**
      * Sets the name of this series.
-     * 
+     *
      * @param name The name of this series.
      */
     public void setName(String name) {
@@ -104,7 +104,7 @@ public class VRLSeries implements Serializable {
     /**
      * Returns a String representing the state of this <code>VRLSeries</code>
      * object.
-     * 
+     *
      * @return A summary of the values of this object's fields
      */
     public String toString() {

@@ -5,15 +5,15 @@ import java.text.NumberFormat;
 
 /**
  * Simple bean class that stores information about a file.
- * 
+ *
  * @author Cihan Altinay
  */
 public class FileInformation implements Serializable {
-    /** The filename */    
+    /** The filename */
     private String name;
-    /** The file size formatted to be readable */    
+    /** The file size formatted to be readable */
     private String readableSize;
-    /** The file size in bytes */    
+    /** The file size in bytes */
     private long size;
 
     /**

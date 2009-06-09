@@ -11,7 +11,7 @@ import org.apache.commons.logging.LogFactory;
 
 /**
  * Singleton class that provides utility methods like copying files.
- * 
+ *
  * @author Cihan Altinay
  */
 public class Util
@@ -26,7 +26,7 @@ public class Util
 
     /**
      * Copies a file from source to destination.
-     * 
+     *
      * @return true if file was successfully copied, false otherwise
      */
     public static boolean copyFile(File source, File destination) {
@@ -60,13 +60,13 @@ public class Util
                 } catch (IOException e) {}
             }
         }
-        
+
         return success;
     }
 
     /**
      * Moves a file from source to destination.
-     * 
+     *
      * @return true if file was successfully moved, false otherwise
      */
     public static boolean moveFile(File source, File destination) {
@@ -80,7 +80,7 @@ public class Util
     /**
      * Recursively copies the contents of a directory into the destination
      * directory.
-     * 
+     *
      * @return true if contents were successfully copied, false otherwise
      */
     public static boolean copyFilesRecursive(File source, File destination) {

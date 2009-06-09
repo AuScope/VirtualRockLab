@@ -57,7 +57,7 @@ public class JobListController extends MultiActionController {
 
     /**
      * Triggers the retrieval of latest job files
-     * 
+     *
      * @param request The servlet request including a jobId parameter
      * @param response The servlet response
      *
@@ -106,7 +106,7 @@ public class JobListController extends MultiActionController {
 
     /**
      * Kills the job given by its reference.
-     * 
+     *
      * @param request The servlet request including a jobId parameter
      * @param response The servlet response
      *
@@ -163,7 +163,7 @@ public class JobListController extends MultiActionController {
 
     /**
      * Kills all jobs of given series.
-     * 
+     *
      * @param request The servlet request including a seriesId parameter
      * @param response The servlet response
      *
@@ -232,7 +232,7 @@ public class JobListController extends MultiActionController {
     /**
      * Returns a JSON object containing an array of files belonging to a
      * given job.
-     * 
+     *
      * @param request The servlet request including a jobId parameter
      * @param response The servlet response
      *
@@ -292,7 +292,7 @@ public class JobListController extends MultiActionController {
 
     /**
      * Sends the contents of a job file to the client.
-     * 
+     *
      * @param request The servlet request including a jobId parameter and a
      *                filename parameter
      * @param response The servlet response receiving the data
@@ -367,7 +367,7 @@ public class JobListController extends MultiActionController {
     /**
      * Sends the contents of one or more job files as a ZIP archive to the
      * client.
-     * 
+     *
      * @param request The servlet request including a jobId parameter and a
      *                files parameter with the filenames separated by comma
      * @param response The servlet response receiving the data
@@ -462,7 +462,7 @@ public class JobListController extends MultiActionController {
     /**
      * Returns a JSON object containing an array of series that match the query
      * parameters.
-     * 
+     *
      * @param request The servlet request with query parameters
      * @param response The servlet response
      *
@@ -490,7 +490,7 @@ public class JobListController extends MultiActionController {
 
     /**
      * Returns a JSON object containing an array of jobs for the given series.
-     * 
+     *
      * @param request The servlet request including a seriesId parameter
      * @param response The servlet response
      *
@@ -541,7 +541,7 @@ public class JobListController extends MultiActionController {
 
     /**
      * Re-submits a single job.
-     * 
+     *
      * @param request The servlet request including a jobId parameter
      * @param response The servlet response
      *
@@ -578,7 +578,7 @@ public class JobListController extends MultiActionController {
 
     /**
      * Re-submits a job series.
-     * 
+     *
      * @param request The servlet request including a seriesId parameter
      * @param response The servlet response
      *
@@ -621,7 +621,7 @@ public class JobListController extends MultiActionController {
     /**
      * Allows the user to edit a copy of an input script from a previous job
      * and use it for a new job.
-     * 
+     *
      * @param request The servlet request including a jobId parameter
      * @param response The servlet response
      *

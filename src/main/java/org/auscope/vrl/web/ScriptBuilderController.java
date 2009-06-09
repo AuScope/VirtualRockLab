@@ -23,7 +23,7 @@ import org.springframework.web.servlet.view.RedirectView;
 public class ScriptBuilderController extends MultiActionController {
 
     private final Log logger = LogFactory.getLog(getClass());
-    
+
     protected ModelAndView handleNoSuchRequestHandlingMethod(
             NoSuchRequestHandlingMethodException ex,
             HttpServletRequest request,
@@ -35,7 +35,7 @@ public class ScriptBuilderController extends MultiActionController {
 
     /**
      * Processes a script download request.
-     * 
+     *
      * @param request The servlet request including a sourcetext parameter
      * @param response The servlet response receiving the file
      *
@@ -72,7 +72,7 @@ public class ScriptBuilderController extends MultiActionController {
     /**
      * Writes provided script text to a file and redirects to the grid
      * submission interface.
-     * 
+     *
      * @param request The servlet request including a sourcetext parameter
      * @param response The servlet response
      *
@@ -112,7 +112,7 @@ public class ScriptBuilderController extends MultiActionController {
 
     /**
      * Returns the contents of a script file to be edited.
-     * 
+     *
      * @param request The servlet request
      * @param response The servlet response
      *
