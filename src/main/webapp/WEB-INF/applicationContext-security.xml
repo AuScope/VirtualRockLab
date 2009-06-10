@@ -6,15 +6,40 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans
        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
        http://www.springframework.org/schema/security
-       http://www.springframework.org/schema/security/spring-security-2.5.xsd">
+       http://www.springframework.org/schema/security/spring-security-2.0.4.xsd">
 
-    <http auto-config='true'>
+    <beans:bean id="entryPoint"
+        class="org.springframework.security.ui.preauth.PreAuthenticatedProcessingFilterEntryPoint" />
+    
+    <http auto-config="false" entry-point-ref="entryPoint" session-fixation-protection="none" access-denied-page="/access_error.html">
         <intercept-url pattern="/**" access="ROLE_USER"/>
         <concurrent-session-control max-sessions="1" exception-if-maximum-exceeded="true"/>
     </http>
-    <authentication-provider>
-        <password-encoder hash="md5"/>
-        <jdbc-user-service data-source-ref="vrlDataSource"/>
-    </authentication-provider>
+
+    <authentication-manager alias="authenticationManager" />
+   
+    <beans:bean id="preAuthenticatedProcessingFilter" 
+            class="org.auscope.vrl.web.security.ShibPreAuthenticatedProcessingFilter">
+        <custom-filter position="PRE_AUTH_FILTER"/>
+        <beans:property name="authenticationManager" ref="authenticationManager" />
+    </beans:bean>
+
+    <beans:bean id="vrlUserDetailsService" class="org.springframework.security.userdetails.jdbc.JdbcDaoImpl">
+        <beans:property name="dataSource" ref="vrlDataSource"/>
+    </beans:bean>
+
+    <beans:bean id="preAuthenticatedAuthenticationProvider"
+            class="org.springframework.security.providers.preauth.PreAuthenticatedAuthenticationProvider">
+        <custom-authentication-provider />
+        <beans:property name="preAuthenticatedUserDetailsService">
+            <beans:bean id="userDetailsServiceWrapper"   
+                    class="org.springframework.security.userdetails.UserDetailsByNameServiceWrapper">
+                <beans:property name="userDetailsService" ref="vrlUserDetailsService"/>
+            </beans:bean>
+        </beans:property>
+    </beans:bean>   
+
+    <authentication-provider user-service-ref="vrlUserDetailsService"/>
+
 </beans:beans>
 

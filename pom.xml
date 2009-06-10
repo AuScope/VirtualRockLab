@@ -153,13 +153,11 @@
          <artifactId>spring-test</artifactId>
          <version>2.5.6</version>
       </dependency>
-      <!--
       <dependency>
          <groupId>org.springframework.security</groupId>
-         <artifactId>spring-security-core</artifactId>
+         <artifactId>spring-security-core-tiger</artifactId>
          <version>2.0.4</version>
      </dependency>
-     -->
       <dependency>
          <groupId>commons-dbcp</groupId>
          <artifactId>commons-dbcp</artifactId>
