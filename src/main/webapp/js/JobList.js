@@ -89,6 +89,15 @@ JobList.updateJobDetails = function() {
     var descEl = Ext.getCmp('description-panel').body;
     var detailsPanel = Ext.getCmp('details-panel');
 
+    if (JobList.prevJobId) {
+        var idx = JobList.jobStore.find("id", JobList.prevJobId);
+        JobList.prevJobId = undefined;
+        if (idx >= 0) {
+            jobGrid.getSelectionModel().selectRow(idx);
+            return;
+        }
+    }
+
     if (jobGrid.getSelectionModel().getSelected()) {
         var jobData = jobGrid.getSelectionModel().getSelected().data;
         JobList.jobFileStore.baseParams.jobId = jobData.id;
@@ -112,6 +121,15 @@ JobList.updateJobList = function() {
 
     JobList.hideProgressDlg();
 
+    if (JobList.prevSeriesId) {
+        var idx = JobList.seriesStore.find("id", JobList.prevSeriesId);
+        JobList.prevSeriesId = undefined;
+        if (idx >=0) {
+            seriesGrid.getSelectionModel().selectRow(idx);
+            return;
+        }
+    }
+
     if (seriesGrid.getSelectionModel().getSelected()) {
         jobGrid.enable();
         var seriesData = seriesGrid.getSelectionModel().getSelected().data;
@@ -131,6 +149,14 @@ JobList.updateJobList = function() {
 
 // (re-)retrieves job details from the server
 JobList.refreshAll = function() {
+    var jobGrid = Ext.getCmp('job-grid');
+    var seriesGrid = Ext.getCmp('series-grid');
+    if (seriesGrid.getSelectionModel().getSelected()) {
+        JobList.prevSeriesId = seriesGrid.getSelectionModel().getSelected().data.id;
+    }
+    if (jobGrid.getSelectionModel().getSelected()) {
+        JobList.prevJobId = jobGrid.getSelectionModel().getSelected().data.id;
+    }
     JobList.seriesStore.reload();
 }
 
