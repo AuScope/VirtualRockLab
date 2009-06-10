@@ -386,7 +386,6 @@ JobList.initialize = function() {
     seriesGrid.on({
         'rowcontextmenu': function(grid, rowIndex, e) {
             grid.getSelectionModel().selectRow(rowIndex);
-            var seriesData = grid.getStore().getAt(rowIndex).data;
             if (!this.contextMenu) {
                 this.contextMenu = new Ext.menu.Menu({
                     items: [ cancelSeriesAction ]
@@ -410,6 +409,23 @@ JobList.initialize = function() {
         }
         return value;
     }
+
+    var cancelJobAction = new Ext.Action({
+        text: 'Cancel Job',
+        iconCls: 'cross-icon',
+        handler: function() {
+            var jobId = jobGrid.getSelectionModel().getSelected().data.id;
+            JobList.killJob(jobId);
+        }
+    });
+
+    var resubmitJobAction = new Ext.Action({
+        text: 'Re-submit Job',
+        handler: function() {
+            var jobId = jobGrid.getSelectionModel().getSelected().data.id;
+            JobList.resubmitJob(jobId);
+        }
+    });
 
     var jobGrid = new Ext.grid.GridPanel({
         id: 'job-grid',
@@ -436,36 +452,17 @@ JobList.initialize = function() {
     jobGrid.on({
         'rowcontextmenu': function(grid, rowIndex, e) {
             grid.getSelectionModel().selectRow(rowIndex);
-            var jobData = grid.getStore().getAt(rowIndex).data;
             if (!this.contextMenu) {
                 this.contextMenu = new Ext.menu.Menu({
-                    items: [{
-                        id: 'resubmit-job',
-                        text: 'Re-submit Job'
-                    }, {
-                        id: 'kill-job',
-                        iconCls: 'cross-icon',
-                        text: 'Cancel Job'
-                    }],
-                    listeners: {
-                        itemclick: function(item) {
-                            switch (item.id) {
-                                case 'resubmit-job':
-                                    JobList.resubmitJob(jobData.id);
-                                    break;
-                                case 'kill-job':
-                                    JobList.killJob(jobData.id);
-                                    break;
-                            }
-                        }
-                    }
+                    items: [ resubmitJobAction, cancelJobAction ]
                 });
             }
             e.stopEvent();
+            var jobData = grid.getStore().getAt(rowIndex).data;
             if (jobData.status == 'Active' || jobData.status == 'StageIn') {
-                Ext.getCmp('kill-job').enable();
+                cancelJobAction.setDisabled(false);
             } else {
-                Ext.getCmp('kill-job').disable();
+                cancelJobAction.setDisabled(true);
             }
             this.contextMenu.showAt(e.getXY());
         }

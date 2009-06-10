@@ -7,12 +7,12 @@
     <title>AuScope Virtual Rock Laboratory - Scriptbuilder</title>
 
     <link rel="stylesheet" type="text/css" href="css/virtualrocklab.css">
+    <link rel="stylesheet" type="text/css" href="js/ext/resources/css/ext-all.css">
     <style type="text/css">
       #sitenav-02 a {
         background: url( "img/navigation.gif" ) -100px -38px no-repeat;
       }
     </style>
-    <link rel="stylesheet" type="text/css" href="js/ext/resources/css/ext-all.css">
     <script type="text/javascript" src="js/ext/adapter/ext/ext-base.js"></script>
     <script type="text/javascript" src="js/ext/ext-all.js"></script>
     <script type="text/javascript" src="js/ScriptBuilder/ComponentLoader.js"></script>
