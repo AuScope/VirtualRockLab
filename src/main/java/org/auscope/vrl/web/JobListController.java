@@ -51,7 +51,7 @@ public class JobListController extends MultiActionController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        logger.info("No/invalid action parameter; returning default view");
+        logger.debug("No/invalid action parameter; returning default view");
         return new ModelAndView("joblist");
     }
 
@@ -89,7 +89,7 @@ public class JobListController extends MultiActionController {
             mav.addObject("success", false);
 
         } else {
-            logger.info("jobID = " + jobIdStr);
+            logger.debug("jobID = " + jobIdStr);
             boolean success = false;
             String jobState = gridAccess.retrieveJobStatus(job.getReference());
             if (jobState != null && jobState.equals("Active")) {
@@ -97,7 +97,7 @@ public class JobListController extends MultiActionController {
             } else {
                 mav.addObject("error", "Cannot retrieve files of a job that is not running!");
             }
-            logger.info("Success = "+success);
+            logger.debug("Success = "+success);
             mav.addObject("success", success);
         }
 
@@ -145,7 +145,7 @@ public class JobListController extends MultiActionController {
                 String newState = gridAccess.killJob(job.getReference());
                 if (newState == null)
                     newState = "Cancelled";
-                logger.info("New job state: "+newState);
+                logger.debug("New job state: "+newState);
 
                 job.setStatus(newState);
                 jobManager.saveJob(job);
@@ -205,14 +205,14 @@ public class JobListController extends MultiActionController {
                     String oldStatus = job.getStatus();
                     if (oldStatus.equals("Failed") || oldStatus.equals("Done") ||
                             oldStatus.equals("Cancelled")) {
-                        logger.info("Skipping finished job "+job.getId());
+                        logger.debug("Skipping finished job "+job.getId());
                         continue;
                     }
                     logger.info("Killing job with ID "+job.getId());
                     String newState = gridAccess.killJob(job.getReference());
                     if (newState == null)
                         newState = "Cancelled";
-                    logger.info("New job state: "+newState);
+                    logger.debug("New job state: "+newState);
 
                     job.setStatus(newState);
                     jobManager.saveJob(job);
@@ -265,7 +265,7 @@ public class JobListController extends MultiActionController {
             mav.addObject("error", errorString);
 
         } else {
-            logger.info("Generating file list for job with ID "+jobIdStr+".");
+            logger.debug("Generating file list for job with ID "+jobIdStr+".");
             FileInformation[] fileDetails = null;
 
             File dir = new File(job.getOutputDir());
@@ -318,7 +318,7 @@ public class JobListController extends MultiActionController {
         }
 
         if (job != null && fileName != null) {
-            logger.info("Download "+fileName+" of job with ID "+jobIdStr+".");
+            logger.debug("Download "+fileName+" of job with ID "+jobIdStr+".");
             File f = new File(job.getOutputDir()+File.separator+fileName);
             if (!f.canRead()) {
                 logger.error("File "+f.getPath()+" not readable!");
@@ -394,7 +394,7 @@ public class JobListController extends MultiActionController {
 
         if (job != null && filesParam != null) {
             String[] fileNames = filesParam.split(",");
-            logger.info("Archiving " + fileNames.length + " file(s) of job " +
+            logger.debug("Archiving " + fileNames.length + " file(s) of job " +
                     jobIdStr);
 
             response.setContentType("application/zip");
@@ -478,13 +478,13 @@ public class JobListController extends MultiActionController {
 
         if (qUser == null && qName == null && qDesc == null) {
             qUser = request.getRemoteUser();
-            logger.info("No query parameters provided. Will return "+qUser+"'s series.");
+            logger.debug("No query parameters provided. Will return "+qUser+"'s series.");
         }
 
-        logger.info("qUser="+qUser+", qName="+qName+", qDesc="+qDesc);
+        logger.debug("qUser="+qUser+", qName="+qName+", qDesc="+qDesc);
         List<VRLSeries> series = jobManager.querySeries(qUser, qName, qDesc);
 
-        logger.info("Returning list of "+series.size()+" series.");
+        logger.debug("Returning list of "+series.size()+" series.");
         return new ModelAndView("jsonView", "series", series);
     }
 
@@ -516,7 +516,7 @@ public class JobListController extends MultiActionController {
         }
 
         if (seriesJobs != null) {
-            logger.info("Updating status of jobs attached to series " +
+            logger.debug("Updating status of jobs attached to series " +
                     seriesIdStr + ".");
             for (VRLJob j : seriesJobs) {
                 String state = j.getStatus();
@@ -535,7 +535,7 @@ public class JobListController extends MultiActionController {
             mav.addObject("jobs", seriesJobs);
         }
 
-        logger.info("Returning series job list");
+        logger.debug("Returning series job list");
         return mav;
     }
 
@@ -664,7 +664,7 @@ public class JobListController extends MultiActionController {
         }
 
         if (errorString == null) {
-            logger.info("Copying script file of job " + jobIdStr + " to temp.");
+            logger.debug("Copying script file of job " + jobIdStr + " to temp.");
             String tempDir = System.getProperty("java.io.tmpdir");
             File tempScript = new File(tempDir+File.separator+scriptFileName);
             boolean success = Util.copyFile(sourceFile, tempScript);

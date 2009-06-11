@@ -36,6 +36,7 @@ public class ShibPreAuthenticatedProcessingFilter
             }
             logger.debug("Shibboleth attributes:\n"+buf.toString());
         }
+        logger.info("Returning "+request.getHeader("Shib-Mail"));
         return request.getHeader("Shib-Mail");
     }
     

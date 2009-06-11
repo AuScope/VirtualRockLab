@@ -103,11 +103,11 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
         File mdsCache = new File(MDS_CACHE_FILE);
         if (mdsCache.exists()) {
             if ((currentTime.getTime() - mdsCache.lastModified()) > 500000) {
-                logger.info("MDS cache file too old -> creating new one...");
+                logger.debug("MDS cache file too old -> creating new one...");
                 updateCacheFile();
             }
         } else {
-            logger.info("No MDS cache file -> creating one...");
+            logger.debug("No MDS cache file -> creating one...");
             updateCacheFile();
         }
     }
@@ -234,7 +234,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
         String returnStr = "";
  
         try {
-            logger.info("Querying MDS server at " + url); 
+            logger.debug("Querying MDS server at " + url); 
             Util.registerTransport(); // For secure transport
             Address servicePath = new Address(url);
             EndpointReferenceType serviceEPR = new EndpointReferenceType(

@@ -86,7 +86,7 @@ public class ScriptParser
      * @param scriptFile The File to parse
      */
     public void parse(File scriptFile) throws IOException {
-        logger.info("Parsing "+scriptFile.getPath());
+        logger.debug("Parsing "+scriptFile.getPath());
         StringBuffer buffer = new StringBuffer();
         // pattern for line comments and empty lines
         Pattern p = Pattern.compile("^\\s*#.*$|^\\s*$");
@@ -166,7 +166,7 @@ public class ScriptParser
         }
 
         if (result.isEmpty()) {
-            logger.info("No match for '"+regex+"'.");
+            logger.debug("No match for '"+regex+"'.");
         }
         return result;
     }

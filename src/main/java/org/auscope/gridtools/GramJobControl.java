@@ -71,9 +71,9 @@ public class GramJobControl implements JobControlInterface {
         GSSCredential cred = this.credential;
         if (cred == null) {
             // if credential was not set try importing default
+            logger.warn("Credential is null. Trying to create new proxy.");
             ExtendedGSSManager manager =
                 (ExtendedGSSManager)ExtendedGSSManager.getInstance();
-            logger.info("Credential was not set. Creating new one.");
             cred = manager.createCredential(GSSCredential.INITIATE_AND_ACCEPT);
         }
         return cred;
@@ -273,7 +273,7 @@ public class GramJobControl implements JobControlInterface {
 
         JobDescriptionType[] jobs = new JobDescriptionType[job.getArguments().length];
 
-        for(int i=0; i<job.getArguments().length; i++) {
+        for (int i=0; i<job.getArguments().length; i++) {
             String localInputDir;
             String localOutputDir;
             localInputDir = localOutputDir = "${GLOBUS_SCRATCH_DIR}/" +
@@ -385,7 +385,7 @@ public class GramJobControl implements JobControlInterface {
                 e.printStackTrace();
                 logger.error(e.getMessage());
             }
-            logger.info("finished creating job description.");
+            logger.debug("Finished creating job description "+i);
 
             writeJobStr += finalJobString;
         }
@@ -526,10 +526,10 @@ public class GramJobControl implements JobControlInterface {
             URL factoryUrl = ManagedJobFactoryClientHelper.getServiceURL(host).getURL();
             EndpointReferenceType gramEndpoint = ManagedJobFactoryClientHelper.getFactoryEndpoint(factoryUrl, factoryType);
 
-            logger.info("creating MultiJobDescriptionType");
+            logger.debug("creating MultiJobDescriptionType");
             MultiJobDescriptionType multiJobDescription =  new MultiJobDescriptionType();
             multiJobDescription.setJob(jobs);
-            logger.info("creating GramJob");
+            logger.debug("creating GramJob");
             // Create new GRAM job. Get GRAM end point reference.
             GramJob job = new GramJob(multiJobDescription);
 
@@ -655,13 +655,18 @@ public class GramJobControl implements JobControlInterface {
                 condition = jobState.getValue();
 
                 // Checking for faults...
-                FaultType myFaultType = job.getFault();
-                if (myFaultType != null) {
-                    logger.info("Fault array:");
-                    BaseFaultTypeDescription[] myFaultArray = job.getFault().getDescription();
-                    for (BaseFaultTypeDescription currFault : myFaultArray) {
-                        logger.info(currFault.get_value());
+                FaultType jobFaults = job.getFault();
+                if (jobFaults != null) {
+                    BaseFaultTypeDescription[] faultArray =
+                        jobFaults.getDescription();
+                    StringBuffer buf = new StringBuffer();
+                    buf.append("Fault array:\n");
+                    for (BaseFaultTypeDescription currFault : faultArray) {
+                        buf.append('\t');
+                        buf.append(currFault.get_value());
+                        buf.append('\n');
                     }
+                    logger.info(buf.toString());
                 }
             } catch (Exception e) {
                 logger.error(e.getMessage());
@@ -736,7 +741,7 @@ public class GramJobControl implements JobControlInterface {
             // ManagedJobExecutableService, need ManagedJobFactoryService to
             // submit to!
             String submissionHost = reference.split("\\:8443")[0];
-            logger.info("host = " + submissionHost);
+            logger.debug("host = " + submissionHost);
 
             System.setProperty("axis.configFile", "client-config.wsdd");
             Util.registerTransport();
@@ -766,7 +771,7 @@ public class GramJobControl implements JobControlInterface {
             job.setDelegationEnabled(true);
             job.setCredentials(getCredential());
             job.submit(gramEndpoint, false); // SUBMIT THE JOB!
-            logger.info("Job handle: "+job.getHandle());
+            logger.debug("Job handle: "+job.getHandle());
 
         } catch (Exception e) {
             logger.error(getGlobusErrorDescription(e));

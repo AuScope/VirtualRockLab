@@ -31,7 +31,7 @@ public class Util
      */
     public static boolean copyFile(File source, File destination) {
         boolean success = false;
-        logger.info(source.getPath()+" -> "+destination.getPath());
+        logger.debug(source.getPath()+" -> "+destination.getPath());
         FileInputStream input = null;
         FileOutputStream output = null;
         byte[] buffer = new byte[8192];

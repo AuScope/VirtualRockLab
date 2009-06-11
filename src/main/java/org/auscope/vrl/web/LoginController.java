@@ -211,7 +211,7 @@ public class LoginController implements Controller {
                 CertificateKeys certKeys =
                     new CertificateKeys(2048, new char[0]);
 
-                logger.info("Parsing CertRequestData...");
+                logger.debug("Parsing CertRequestData...");
                 CertificateRequest req = createRequest(certKeys, slcsResponse);
 
                 logger.info("Requesting signed certificate...");

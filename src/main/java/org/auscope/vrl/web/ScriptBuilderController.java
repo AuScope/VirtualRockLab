@@ -29,7 +29,7 @@ public class ScriptBuilderController extends MultiActionController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        logger.info("No/invalid action parameter; returning scriptbuilder view.");
+        logger.debug("No/invalid action parameter; returning scriptbuilder view.");
         return new ModelAndView("scriptbuilder");
     }
 
@@ -44,7 +44,7 @@ public class ScriptBuilderController extends MultiActionController {
     public ModelAndView downloadScript(HttpServletRequest request,
                                        HttpServletResponse response) {
 
-        logger.info("User requested script download");
+        logger.debug("User requested script download");
         String script = request.getParameter("sourcetext");
         if (script != null) {
             String scriptName = request.getParameter("scriptname");
@@ -65,7 +65,7 @@ public class ScriptBuilderController extends MultiActionController {
                 logger.error("Could not open output stream!");
             }
         }
-        logger.info("No source text provided. Returning scriptbuilder view.");
+        logger.debug("No source text provided. Returning scriptbuilder view.");
         return new ModelAndView("scriptbuilder");
     }
 
@@ -82,7 +82,7 @@ public class ScriptBuilderController extends MultiActionController {
     public ModelAndView useScript(HttpServletRequest request,
                                   HttpServletResponse response) {
 
-        logger.info("User requested script use");
+        logger.debug("User requested script use");
         String script = request.getParameter("sourcetext");
         if (script != null) {
             String scriptName = request.getParameter("scriptname");
@@ -106,7 +106,7 @@ public class ScriptBuilderController extends MultiActionController {
             request.getSession().setAttribute("scriptFile", scriptName);
             return new ModelAndView(new RedirectView("gridsubmit.html"));
         }
-        logger.info("No source text provided. Returning scriptbuilder view.");
+        logger.debug("No source text provided. Returning scriptbuilder view.");
         return new ModelAndView("scriptbuilder");
     }
 
@@ -130,7 +130,7 @@ public class ScriptBuilderController extends MultiActionController {
         String scriptText = null;
 
         if (scriptFile != null) {
-            logger.info("Reading script source.");
+            logger.debug("Reading script source.");
             String tempDir = System.getProperty("java.io.tmpdir");
             try {
                 BufferedReader input = new BufferedReader(

@@ -42,7 +42,7 @@ public class MyProxyManager {
         MyProxy myproxy = new MyProxy(server, port);
         GSSCredential proxyCredential = null;
         try {
-            logger.info("username is " + username);
+            logger.debug("username is " + username);
             proxyCredential = myproxy.get(credential, username,
                     new String(passphrase), lifetimeInSeconds);
         } catch (MyProxyException e) {

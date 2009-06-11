@@ -52,7 +52,7 @@ public class GridSubmitController extends MultiActionController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        logger.info("No/invalid action parameter; returning gridsubmit view.");
+        logger.debug("No/invalid action parameter; returning gridsubmit view.");
         return new ModelAndView("gridsubmit");
     }
 
@@ -70,10 +70,10 @@ public class GridSubmitController extends MultiActionController {
 
         String user = request.getRemoteUser();
 
-        logger.info("Querying series of "+user);
+        logger.debug("Querying series of "+user);
         List<VRLSeries> series = jobManager.querySeries(user, null, null);
 
-        logger.info("Returning list of "+series.size()+" series.");
+        logger.debug("Returning list of "+series.size()+" series.");
         return new ModelAndView("jsonView", "series", series);
     }
 
@@ -98,7 +98,7 @@ public class GridSubmitController extends MultiActionController {
     public ModelAndView listSites(HttpServletRequest request,
                                   HttpServletResponse response) {
 
-        logger.info("Retrieving sites with ESyS-Particle installations.");
+        logger.debug("Retrieving sites with ESyS-Particle installations.");
         String[] particleSites = gridAccess.
                 retrieveSitesWithSoftwareAndVersion(VRLJob.CODE_NAME, "");
 
@@ -107,7 +107,7 @@ public class GridSubmitController extends MultiActionController {
             sites.add(new SimpleBean(particleSites[i]));
         }
 
-        logger.info("Returning list of "+particleSites.length+" sites.");
+        logger.debug("Returning list of "+particleSites.length+" sites.");
         return new ModelAndView("jsonView", "sites", sites);
     }
 
@@ -128,7 +128,7 @@ public class GridSubmitController extends MultiActionController {
         List<SimpleBean> queues = new ArrayList<SimpleBean>();
 
         if (site != null) {
-            logger.info("Retrieving queue names at "+site);
+            logger.debug("Retrieving queue names at "+site);
 
             String[] siteQueues = gridAccess.
                     retrieveQueueNamesAtSite(site);
@@ -140,7 +140,7 @@ public class GridSubmitController extends MultiActionController {
             logger.warn("No site specified!");
         }
 
-        logger.info("Returning list of "+queues.size()+" queue names.");
+        logger.debug("Returning list of "+queues.size()+" queue names.");
         return new ModelAndView("jsonView", "queues", queues);
     }
 
@@ -161,7 +161,7 @@ public class GridSubmitController extends MultiActionController {
         List<SimpleBean> versions = new ArrayList<SimpleBean>();
 
         if (site != null) {
-            logger.info("Retrieving ESyS-Particle versions at "+site);
+            logger.debug("Retrieving ESyS-Particle versions at "+site);
 
             String[] siteVersions = gridAccess.
                     retrieveCodeVersionsAtSite(site, VRLJob.CODE_NAME);
@@ -173,7 +173,7 @@ public class GridSubmitController extends MultiActionController {
             logger.warn("No site specified!");
         }
 
-        logger.info("Returning list of "+versions.size()+" versions.");
+        logger.debug("Returning list of "+versions.size()+" versions.");
         return new ModelAndView("jsonView", "versions", versions);
     }
 
@@ -191,7 +191,7 @@ public class GridSubmitController extends MultiActionController {
 
         VRLJob job = prepareModel(request);
 
-        logger.info("Returning job.");
+        logger.debug("Returning job.");
         ModelAndView result = new ModelAndView("jsonView");
         result.addObject("data", job);
         result.addObject("success", true);
@@ -226,7 +226,7 @@ public class GridSubmitController extends MultiActionController {
             }
         }
 
-        logger.info("Returning list of "+files.size()+" files.");
+        logger.debug("Returning list of "+files.size()+" files.");
         return new ModelAndView("jsonView", "files", files);
     }
 
@@ -342,7 +342,7 @@ public class GridSubmitController extends MultiActionController {
         if (newSeriesName != null && newSeriesName != "") {
             String newSeriesDesc = request.getParameter("seriesDesc");
 
-            logger.info("Creating new series '"+newSeriesName+"'.");
+            logger.debug("Creating new series '"+newSeriesName+"'.");
             series = new VRLSeries();
             series.setUser(user);
             series.setName(newSeriesName);
@@ -480,7 +480,7 @@ public class GridSubmitController extends MultiActionController {
         VRLJob existingJob = null;
         if (jobIdStr != null) {
             request.getSession().removeAttribute("resubmitJob");
-            logger.info("Request to re-submit a job.");
+            logger.debug("Request to re-submit a job.");
             try {
                 int jobId = Integer.parseInt(jobIdStr);
                 existingJob = jobManager.getJobById(jobId);
@@ -490,7 +490,7 @@ public class GridSubmitController extends MultiActionController {
         }
 
         if (existingJob != null) {
-            logger.info("Using attributes of "+existingJob.getName());
+            logger.debug("Using attributes of "+existingJob.getName());
             site = existingJob.getSite();
             version = existingJob.getVersion();
             name = existingJob.getName()+"_resubmit";
@@ -505,7 +505,7 @@ public class GridSubmitController extends MultiActionController {
             if (allQueues.length > 0)
                 queue = allQueues[0];
 
-            logger.info("Copying files from old job to stage-in directory");
+            logger.debug("Copying files from old job to stage-in directory");
             File srcDir = new File(existingJob.getOutputDir());
             File destDir = new File(jobInputDir);
             success = Util.copyFilesRecursive(srcDir, destDir);
@@ -521,7 +521,7 @@ public class GridSubmitController extends MultiActionController {
             getAttribute("scriptFile");
         if (newScript != null) {
             request.getSession().removeAttribute("scriptFile");
-            logger.info("Adding "+newScript+" to stageIn directory");
+            logger.debug("Adding "+newScript+" to stage-in directory");
             File tmpScriptFile = new File(System.getProperty("java.io.tmpdir") +
                     File.separator+newScript+".py");
             File newScriptFile = new File(jobInputDir, tmpScriptFile.getName());
@@ -540,11 +540,11 @@ public class GridSubmitController extends MultiActionController {
                     logger.warn("Error parsing file: "+e.getMessage());
                 }
             } else {
-                logger.warn("Could not move "+newScript+" to stageIn!");
+                logger.warn("Could not move "+newScript+" to stage-in!");
             }
         }
 
-        logger.info("Creating new VRLJob instance");
+        logger.debug("Creating new VRLJob instance");
         VRLJob job = new VRLJob(site, name, version, arguments, queue,
                 maxWallTime, maxMemory, cpuCount, inTransfers, outTransfers,
                 user, stdInput, stdOutput, stdError);

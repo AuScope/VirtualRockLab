@@ -48,5 +48,8 @@
         <property name="methodNameResolver" ref="methodNameResolver"/>
     </bean>
 
+    <bean name="/access_error.html" class="org.auscope.vrl.web.AccessErrorController">
+    </bean>
+
 </beans>
 
