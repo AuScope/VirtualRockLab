@@ -12,6 +12,7 @@
         class="org.springframework.security.ui.preauth.PreAuthenticatedProcessingFilterEntryPoint" />
     
     <http auto-config="false" entry-point-ref="entryPoint" access-denied-page="/access_error.html">
+        <intercept-url pattern="/css/**" filters="none"/>
         <intercept-url pattern="/**" access="ROLE_USER"/>
         <concurrent-session-control max-sessions="1" exception-if-maximum-exceeded="true"/>
     </http>
