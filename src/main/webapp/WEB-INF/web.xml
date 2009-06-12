@@ -12,13 +12,11 @@
         </listener-class>
     </listener>             
 
-    <!--
     <listener>
         <listener-class>
             org.springframework.security.ui.session.HttpSessionEventPublisher
         </listener-class>
     </listener>
-    -->
 
     <servlet>
         <servlet-name>vrlapp</servlet-name>

@@ -62,6 +62,8 @@ public class LoginController implements Controller {
     private static final String HOST_KEY_FILE = "/etc/shibboleth/hostkey.pem";
     private GridAccessController gridAccess;
     private String authToken;
+    private String certDN;
+    private List certExtensions;
 
     public void setGridAccess(GridAccessController gridAccess) {
         this.gridAccess = gridAccess;
@@ -73,13 +75,10 @@ public class LoginController implements Controller {
      *
      * @return A <code>CertificateRequest</code> object.
      */
-    private CertificateRequest createRequest(CertificateKeys keys,
-                                             final String requestData) {
+    private void parseRequestData(final String requestData) {
         InputSource is = new InputSource();
         is.setCharacterStream(new StringReader(
                     URLDecoder.decode(requestData).trim()));
-
-        CertificateRequest req = null;
 
         try {
             DocumentBuilder builder =
@@ -87,20 +86,19 @@ public class LoginController implements Controller {
             Document doc = builder.parse(is);
             authToken = doc.getElementsByTagName("AuthorizationToken")
                 .item(0).getFirstChild().getNodeValue();
-            String dn = doc.getElementsByTagName("Subject")
+            certDN = doc.getElementsByTagName("Subject")
                 .item(0).getFirstChild().getNodeValue();
 
             // parse and add extensions
-            List extensions = new ArrayList<CertificateExtension>();
+            certExtensions = new ArrayList<CertificateExtension>();
             NodeList certExt = doc.getElementsByTagName("CertificateExtension");
             for (int i=0; i < certExt.getLength(); i++) {
                 String name = ((Element) certExt.item(i)).getAttribute("name");
                 String value = certExt.item(i).getFirstChild().getNodeValue();
                 CertificateExtension ext = CertificateExtensionFactory
                     .createCertificateExtension(name, value);
-                extensions.add(ext);
+                certExtensions.add(ext);
             }
-            req = new CertificateRequest(keys, dn, extensions);
 
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -110,8 +108,6 @@ public class LoginController implements Controller {
         //byte[] certReq = BouncyCastleCertProcessingFactory.getDefault()
         //    .createCertificateRequest(dn, key);
         //Principal principal = new X509NameUtil().createX509Name(dn);
-
-        return req;
     }
 
     /**
@@ -182,80 +178,103 @@ public class LoginController implements Controller {
         }
         return responseXML;
     }
-    
+ 
+    private ModelAndView redirectToSlcs() {
+        try {
+            String serviceUrl = "https://" +
+                InetAddress.getLocalHost().getCanonicalHostName() +
+                "/vrl/login.html";
+            logger.info("Redirecting to SLCS. ServiceUrl= "+serviceUrl);
+            return new ModelAndView(
+                    new RedirectView(SLCS_URL+"token?service="+serviceUrl));
+        } catch (UnknownHostException e) {
+            logger.error(e);
+        }
+        
+        // :-( could not determine our own host?! That's bad!
+        return new ModelAndView(new RedirectView(
+                    "/Shibboleth.sso/Logout", true, false, false));
+    }
+
+    private void processSlcsResponse(HttpServletRequest request)
+            throws GeneralSecurityException, Exception {
+            
+        String slcsResponse = extractSlcsResponse(request);
+        logger.debug("SLCSResponse:\n"+slcsResponse);
+        parseRequestData(slcsResponse);
+
+        String certCN = certDN.split("CN=")[1];
+        String shibCN = request.getHeader("Shib-Person-commonName") + " "
+                + request.getHeader("Shib-AuEduPerson-SharedToken");
+        if (!certCN.equals(shibCN)) {
+            logger.error(certCN+" != "+shibCN);
+            throw new GeneralSecurityException(
+                    "Certificate is not for current user!");
+        }
+ 
+        CertificateKeys certKeys = new CertificateKeys(2048, new char[0]);
+        CertificateRequest req = new CertificateRequest(
+                certKeys, certDN, certExtensions);
+
+        logger.info("Requesting signed certificate...");
+        URL certRespURL = new URL(SLCS_URL +
+                "certificate?AuthorizationToken=" + authToken +
+                "&CertificateSigningRequest=" +
+                URLEncoder.encode(req.getPEMEncoded(), "UTF-8"));
+        BufferedReader certRespReader = new BufferedReader(
+                new InputStreamReader(certRespURL.openStream()));
+        StringBuffer certResp = new StringBuffer();
+
+        String inputLine;
+        while ((inputLine = certRespReader.readLine()) != null) {
+            certResp.append(inputLine);
+            certResp.append('\n');
+        }
+        certRespReader.close();
+
+        InputSource is = new InputSource();
+        is.setCharacterStream(new StringReader(certResp.toString().trim()));
+        DocumentBuilder builder = DocumentBuilderFactory.newInstance()
+                .newDocumentBuilder();
+        Document doc = builder.parse(is);
+        String status = doc.getElementsByTagName("Status")
+            .item(0).getFirstChild().getNodeValue();
+
+        logger.info("Response status: "+status);
+        if (!status.equals("Error")) {
+            String certStr = doc.getElementsByTagName("Certificate")
+                .item(0).getFirstChild().getNodeValue();
+            InputStream in = new ByteArrayInputStream(certStr.getBytes());
+            X509Certificate certificate = CertUtil.loadCertificate(in);
+
+            if (!gridAccess.initProxy(certKeys.getPrivate(), certificate)) {
+                throw new Exception("Proxy generation failed");
+            }
+        }
+    }
+
     public ModelAndView handleRequest(HttpServletRequest request,
                                       HttpServletResponse response) {
 
         if (request.getMethod().equalsIgnoreCase("GET")) {
-            //logger.error(request.getHeader("Shib-AuEduPerson-SharedToken"));
             if (gridAccess.initProxy("vrluser", "pwd0815!")) {
                 return new ModelAndView(new RedirectView(
                             "joblist.html", true, false, false));
             }
+            return redirectToSlcs();
 
-            try {
-                String serviceUrl = "https://" +
-                    InetAddress.getLocalHost().getCanonicalHostName() +
-                    "/vrl/login.html";
-                logger.info("Redirecting to SLCS. ServiceUrl= "+serviceUrl);
-                return new ModelAndView(
-                        new RedirectView(SLCS_URL+"token?service="+serviceUrl));
-            } catch (UnknownHostException e) {
-                logger.error(e);
-            }
         } else if (request.getMethod().equalsIgnoreCase("POST")) {
             try {
-                String slcsResponse = extractSlcsResponse(request);
-                logger.debug("SLCSResponse:\n"+slcsResponse);
-
-                CertificateKeys certKeys =
-                    new CertificateKeys(2048, new char[0]);
-
-                logger.debug("Parsing CertRequestData...");
-                CertificateRequest req = createRequest(certKeys, slcsResponse);
-
-                logger.info("Requesting signed certificate...");
-                URL certRespURL = new URL(SLCS_URL +
-                        "certificate?AuthorizationToken=" + authToken +
-                        "&CertificateSigningRequest=" +
-                        URLEncoder.encode(req.getPEMEncoded(), "UTF-8"));
-                BufferedReader certRespReader = new BufferedReader(
-                        new InputStreamReader(certRespURL.openStream()));
-                StringBuffer certResp = new StringBuffer();
-
-                String inputLine;
-                while ((inputLine = certRespReader.readLine()) != null) {
-                    certResp.append(inputLine);
-                    certResp.append('\n');
-                }
-                certRespReader.close();
-
-                InputSource is = new InputSource();
-                is.setCharacterStream(new StringReader(
-                            certResp.toString().trim()));
-                DocumentBuilder builder =
-                    DocumentBuilderFactory.newInstance().newDocumentBuilder();
-                Document doc = builder.parse(is);
-                String status = doc.getElementsByTagName("Status")
-                    .item(0).getFirstChild().getNodeValue();
-
-                logger.info("Response status: "+status);
-                if (!status.equals("Error")) {
-                    String certStr = doc.getElementsByTagName("Certificate")
-                        .item(0).getFirstChild().getNodeValue();
-                    InputStream in = new ByteArrayInputStream(
-                            certStr.getBytes());
-                    X509Certificate certificate = CertUtil.loadCertificate(in);
-
-                    if (gridAccess.initProxy(
-                                certKeys.getPrivate(), certificate)) {
-                        return new ModelAndView(new RedirectView(
-                                    "joblist.html", true, false, false));
-                    }
-                }
+                processSlcsResponse(request);
+                return new ModelAndView(new RedirectView(
+                            "joblist.html", true, false, false));
+            } catch (GeneralSecurityException e) {
+                logger.error(e.getMessage());
+                logger.info("Trying to get a new certificate.");
+                return redirectToSlcs();
             } catch (Exception e) {
                 e.printStackTrace();
-                logger.error("Could not acquire SLCS certificate: "+e.getMessage());
+                logger.error(e.getMessage());
             }
         }
 

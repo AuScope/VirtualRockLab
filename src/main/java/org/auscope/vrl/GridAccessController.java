@@ -414,7 +414,7 @@ public class GridAccessController {
             try {
                 int lifetime = credential.getRemainingLifetime();
                 logger.debug("Name: " + credential.getName().toString() +
-                        ", Lifetime: " + lifetime + "seconds");
+                        ", Lifetime: " + lifetime + " seconds");
                 if (lifetime > MIN_LIFETIME) {
                     return true;
                 }
