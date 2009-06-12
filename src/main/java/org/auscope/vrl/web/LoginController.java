@@ -8,8 +8,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.StringReader;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -179,21 +177,10 @@ public class LoginController implements Controller {
         return responseXML;
     }
  
-    private ModelAndView redirectToSlcs() {
-        try {
-            String serviceUrl = "https://" +
-                InetAddress.getLocalHost().getCanonicalHostName() +
-                "/vrl/login.html";
-            logger.info("Redirecting to SLCS. ServiceUrl= "+serviceUrl);
-            return new ModelAndView(
-                    new RedirectView(SLCS_URL+"token?service="+serviceUrl));
-        } catch (UnknownHostException e) {
-            logger.error(e);
-        }
-        
-        // :-( could not determine our own host?! That's bad!
-        return new ModelAndView(new RedirectView(
-                    "/Shibboleth.sso/Logout", true, false, false));
+    private ModelAndView redirectToSlcs(final String serviceUrl) {
+        logger.info("Redirecting to SLCS. ServiceUrl= "+serviceUrl);
+        return new ModelAndView(
+                new RedirectView(SLCS_URL+"token?service="+serviceUrl));
     }
 
     private void processSlcsResponse(HttpServletRequest request)
@@ -256,14 +243,19 @@ public class LoginController implements Controller {
     public ModelAndView handleRequest(HttpServletRequest request,
                                       HttpServletResponse response) {
 
+        final String serviceUrl = "https://" + request.getServerName() +
+            "/vrl/login.html";
+
         if (request.getMethod().equalsIgnoreCase("GET")) {
+            logger.debug("Handling GET request.");
             if (gridAccess.initProxy("vrluser", "pwd0815!")) {
                 return new ModelAndView(new RedirectView(
                             "joblist.html", true, false, false));
             }
-            return redirectToSlcs();
+            return redirectToSlcs(serviceUrl);
 
         } else if (request.getMethod().equalsIgnoreCase("POST")) {
+            logger.debug("Handling POST request.");
             try {
                 processSlcsResponse(request);
                 return new ModelAndView(new RedirectView(
@@ -271,7 +263,7 @@ public class LoginController implements Controller {
             } catch (GeneralSecurityException e) {
                 logger.error(e.getMessage());
                 logger.info("Trying to get a new certificate.");
-                return redirectToSlcs();
+                return redirectToSlcs(serviceUrl);
             } catch (Exception e) {
                 e.printStackTrace();
                 logger.error(e.getMessage());
