@@ -382,8 +382,7 @@ public class GramJobControl implements JobControlInterface {
                 jobs[i]= RSLHelper.readRSL(finalJobString);
             } catch (Throwable e) {
                 logger.error("Could not translate job string into JobDescriptionType");
-                e.printStackTrace();
-                logger.error(e.getMessage());
+                logger.error(e.getMessage(), e);
             }
             logger.debug("Finished creating job description "+i);
 
@@ -492,7 +491,7 @@ public class GramJobControl implements JobControlInterface {
             job.refreshStatus();
             gramJobHandle = job.getHandle(); // Get the handle to the job.
         } catch (Exception e) {
-            logger.error(getGlobusErrorDescription(e));
+            logger.error(getGlobusErrorDescription(e), e);
         }
         return gramJobHandle; // Return the handle...
     }
@@ -549,7 +548,7 @@ public class GramJobControl implements JobControlInterface {
             job.getState();
             gramJobHandle = job.getHandle(); // Get the handle to the job.
         } catch (Exception e) {
-            logger.error(getGlobusErrorDescription(e));
+            logger.error(getGlobusErrorDescription(e), e);
         }
         return gramJobHandle; // Return the handle...
     }
@@ -580,10 +579,10 @@ public class GramJobControl implements JobControlInterface {
                 StateEnumeration jobState = job.getState();
                 condition = jobState.getValue();
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
         } catch (Exception e) {
-            logger.error(getGlobusErrorDescription(e));
+            logger.error(getGlobusErrorDescription(e), e);
         }
 
         return condition;
@@ -624,7 +623,7 @@ public class GramJobControl implements JobControlInterface {
             //logger.info(jobDesc.getFileStageIn().getTransfer(0).getSourceUrl());
 
         } catch (Exception e) {
-            logger.error(getGlobusErrorDescription(e));
+            logger.error(getGlobusErrorDescription(e), e);
         }
 
         return gridJob;
@@ -672,7 +671,7 @@ public class GramJobControl implements JobControlInterface {
                 logger.error(e.getMessage());
             }
         } catch (Exception e) {
-            logger.error(getGlobusErrorDescription(e));
+            logger.error(getGlobusErrorDescription(e), e);
         }
         return condition;
     }
@@ -686,7 +685,6 @@ public class GramJobControl implements JobControlInterface {
      */
     private String getGlobusErrorDescription(Exception e) {
         if (e.getMessage() == null) {
-            e.printStackTrace();
             return FaultHelper.getMessage(e);
         } else if (e.getMessage().indexOf("Expired credentials detected") != -1) {
             StringBuffer myBuffer = new StringBuffer();
@@ -714,7 +712,6 @@ public class GramJobControl implements JobControlInterface {
                 return myBuffer.toString();
             }
         }
-        e.printStackTrace();
         return e.getMessage();
     }
 
@@ -774,7 +771,7 @@ public class GramJobControl implements JobControlInterface {
             logger.debug("Job handle: "+job.getHandle());
 
         } catch (Exception e) {
-            logger.error(getGlobusErrorDescription(e));
+            logger.error(getGlobusErrorDescription(e), e);
             outputDirectory = null;
         }
 

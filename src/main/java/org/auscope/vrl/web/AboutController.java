@@ -59,7 +59,7 @@ public class AboutController implements Controller {
             }
         } catch (IOException e) {
             /* ignore, since we'll just leave an empty form */
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
         return mav;
     }

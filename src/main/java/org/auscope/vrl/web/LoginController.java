@@ -37,7 +37,6 @@ import org.glite.slcs.pki.CertificateKeys;
 import org.glite.slcs.pki.CertificateRequest;
 
 import org.globus.gsi.CertUtil;
-//import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
 
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.Controller;
@@ -101,11 +100,6 @@ public class LoginController implements Controller {
         } catch (Exception e) {
             logger.error(e.getMessage());
         }
-
-        //KeyPair certKeys = CertUtil.generateKeyPair("RSA", 2048);
-        //byte[] certReq = BouncyCastleCertProcessingFactory.getDefault()
-        //    .createCertificateRequest(dn, key);
-        //Principal principal = new X509NameUtil().createX509Name(dn);
     }
 
     /**
@@ -248,10 +242,10 @@ public class LoginController implements Controller {
 
         if (request.getMethod().equalsIgnoreCase("GET")) {
             logger.debug("Handling GET request.");
-            if (gridAccess.initProxy("vrluser", "pwd0815!")) {
-                return new ModelAndView(new RedirectView(
-                            "joblist.html", true, false, false));
-            }
+            //if (gridAccess.initProxy("vrluser", "pwd0815!")) {
+            //    return new ModelAndView(new RedirectView(
+            //                "joblist.html", true, false, false));
+            //}
             return redirectToSlcs(serviceUrl);
 
         } else if (request.getMethod().equalsIgnoreCase("POST")) {
@@ -261,19 +255,18 @@ public class LoginController implements Controller {
                 return new ModelAndView(new RedirectView(
                             "joblist.html", true, false, false));
             } catch (GeneralSecurityException e) {
-                logger.error(e.getMessage());
+                logger.error(e.getMessage(), e);
                 logger.info("Trying to get a new certificate.");
                 return redirectToSlcs(serviceUrl);
             } catch (Exception e) {
-                e.printStackTrace();
-                logger.error(e.getMessage());
+                logger.error(e.getMessage(), e);
             }
         }
 
         //FIXME: grid access did not work so redirect to a page showing what
         //happened, maybe giving option of MyProxy details entry
         return new ModelAndView(new RedirectView(
-                    "/Shibboleth.sso/Logout", true, false, false));
+                    "/Shibboleth.sso/Logout", false, false, false));
     }
 }
 
