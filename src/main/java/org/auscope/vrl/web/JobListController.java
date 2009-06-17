@@ -51,8 +51,16 @@ public class JobListController extends MultiActionController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        logger.debug("No/invalid action parameter; returning default view");
-        return new ModelAndView("joblist");
+        if (gridAccess.isProxyValid()) {
+            logger.debug("No/invalid action parameter; returning joblist view.");
+            return new ModelAndView("joblist");
+        } else {
+            request.getSession().setAttribute(
+                    "redirectAfterLogin", "/joblist.html");
+            logger.debug("Proxy not initialized. Redirecting to login.");
+            return new ModelAndView(
+                    new RedirectView("/login.html", true, false, false));
+        }
     }
 
     /**
@@ -681,7 +689,8 @@ public class JobListController extends MultiActionController {
         }
 
         request.getSession().setAttribute("scriptFile", scriptFileName);
-        return new ModelAndView(new RedirectView("scriptbuilder.html"));
+        return new ModelAndView(
+                new RedirectView("/scriptbuilder.html", true, false, false));
     }
 }
 

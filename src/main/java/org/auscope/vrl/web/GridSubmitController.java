@@ -27,6 +27,7 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
 import org.springframework.web.servlet.mvc.multiaction.NoSuchRequestHandlingMethodException;
+import org.springframework.web.servlet.view.RedirectView;
 
 /**
  * Controller for the job submission view.
@@ -52,8 +53,16 @@ public class GridSubmitController extends MultiActionController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        logger.debug("No/invalid action parameter; returning gridsubmit view.");
-        return new ModelAndView("gridsubmit");
+        if (gridAccess.isProxyValid()) {
+            logger.debug("No/invalid action parameter; returning gridsubmit view.");
+            return new ModelAndView("gridsubmit");
+        } else {
+            request.getSession().setAttribute(
+                    "redirectAfterLogin", "/gridsubmit.html");
+            logger.debug("Proxy not initialized. Redirecting to login.");
+            return new ModelAndView(
+                    new RedirectView("/login.html", true, false, false));
+        }
     }
 
     /**

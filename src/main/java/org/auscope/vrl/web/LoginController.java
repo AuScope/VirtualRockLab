@@ -66,11 +66,76 @@ public class LoginController implements Controller {
         this.gridAccess = gridAccess;
     }
 
+    public ModelAndView handleRequest(HttpServletRequest request,
+                                      HttpServletResponse response) {
+
+        final String serviceUrl = "https://" + request.getServerName() +
+            "/vrl/login.html";
+
+        if (request.getMethod().equalsIgnoreCase("GET")) {
+            logger.debug("Handling GET request.");
+            if (gridAccess.isProxyValid()) {
+                logger.debug("Valid proxy found.");
+                return redirectToTarget(request);
+            }
+            return redirectToSlcs(serviceUrl);
+
+        } else if (request.getMethod().equalsIgnoreCase("POST")) {
+            logger.debug("Handling POST request.");
+            try {
+                processSlcsResponse(request);
+                return redirectToTarget(request);
+
+            } catch (GeneralSecurityException e) {
+                logger.error(e.getMessage(), e);
+                logger.info("Trying to get a new certificate.");
+                return redirectToSlcs(serviceUrl);
+            } catch (Exception e) {
+                logger.error(e.getMessage(), e);
+            }
+        }
+
+        //FIXME: proxy is not valid so redirect to a page showing what
+        //happened, maybe giving option of MyProxy details entry
+        return new ModelAndView(new RedirectView(
+                    "/Shibboleth.sso/Logout", false, false, false));
+    }
+
     /**
-     * Parses the request data and uses the information to create a certificate
-     * request.
+     * Returns a <code>ModelAndView</code> object for a redirect to the
+     * SLCS server.
      *
-     * @return A <code>CertificateRequest</code> object.
+     * @return A prepared <code>ModelAndView</code> to redirect to SLCS.
+     */
+    private ModelAndView redirectToSlcs(final String serviceUrl) {
+        logger.info("Redirecting to SLCS. ServiceUrl= "+serviceUrl);
+        return new ModelAndView(
+                new RedirectView(SLCS_URL+"token?service="+serviceUrl));
+    }
+
+    /**
+     * Returns a <code>ModelAndView</code> object which is a redirect either
+     * to a page requested prior to login or the JobList view by default.
+     * 
+     * @return The <code>ModelAndView</code> of the proper destination page.
+     */
+    private ModelAndView redirectToTarget(HttpServletRequest request) {
+        String target = request.getSession()
+            .getAttribute("redirectAfterLogin").toString();
+        if (target != null) {
+            logger.debug("Redirecting to "+target);
+            request.getSession().removeAttribute("redirectAfterLogin");
+            return new ModelAndView(new RedirectView(
+                        target, true, false, false));
+        }
+        logger.debug("Redirecting to joblist.");
+        return new ModelAndView(new RedirectView(
+                    "/joblist.html", true, false, false));
+    }
+
+    /**
+     * Parses the request data and sets attributes accordingly.
+     *
      */
     private void parseRequestData(final String requestData) {
         InputSource is = new InputSource();
@@ -171,12 +236,6 @@ public class LoginController implements Controller {
         return responseXML;
     }
  
-    private ModelAndView redirectToSlcs(final String serviceUrl) {
-        logger.info("Redirecting to SLCS. ServiceUrl= "+serviceUrl);
-        return new ModelAndView(
-                new RedirectView(SLCS_URL+"token?service="+serviceUrl));
-    }
-
     private void processSlcsResponse(HttpServletRequest request)
             throws GeneralSecurityException, Exception {
             
@@ -232,41 +291,6 @@ public class LoginController implements Controller {
                 throw new Exception("Proxy generation failed");
             }
         }
-    }
-
-    public ModelAndView handleRequest(HttpServletRequest request,
-                                      HttpServletResponse response) {
-
-        final String serviceUrl = "https://" + request.getServerName() +
-            "/vrl/login.html";
-
-        if (request.getMethod().equalsIgnoreCase("GET")) {
-            logger.debug("Handling GET request.");
-            //if (gridAccess.initProxy("vrluser", "pwd0815!")) {
-            //    return new ModelAndView(new RedirectView(
-            //                "joblist.html", true, false, false));
-            //}
-            return redirectToSlcs(serviceUrl);
-
-        } else if (request.getMethod().equalsIgnoreCase("POST")) {
-            logger.debug("Handling POST request.");
-            try {
-                processSlcsResponse(request);
-                return new ModelAndView(new RedirectView(
-                            "joblist.html", true, false, false));
-            } catch (GeneralSecurityException e) {
-                logger.error(e.getMessage(), e);
-                logger.info("Trying to get a new certificate.");
-                return redirectToSlcs(serviceUrl);
-            } catch (Exception e) {
-                logger.error(e.getMessage(), e);
-            }
-        }
-
-        //FIXME: grid access did not work so redirect to a page showing what
-        //happened, maybe giving option of MyProxy details entry
-        return new ModelAndView(new RedirectView(
-                    "/Shibboleth.sso/Logout", false, false, false));
     }
 }
 
