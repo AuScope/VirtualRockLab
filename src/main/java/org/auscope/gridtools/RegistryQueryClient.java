@@ -272,10 +272,10 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
             }
         }
         catch (AxisFault e) {
-            logger.error(FaultHelper.getMessage(e));
+            logger.error(FaultHelper.getMessage(e), e);
         }
         catch (Exception e) {
-            logger.error(FaultHelper.getMessage(e));
+            logger.error(FaultHelper.getMessage(e), e);
         }
 
         return returnStr;
