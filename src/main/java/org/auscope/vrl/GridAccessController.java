@@ -341,7 +341,6 @@ public class GridAccessController {
                     GSSCredential.INITIATE_AND_ACCEPT);
             if (isProxyValid()) {
                 logger.info("Acquired valid credentials.");
-                RQC.setCredential(credential);
                 retval = true;
             }
         } catch (GSSException e) {
@@ -369,7 +368,6 @@ public class GridAccessController {
 
             if (isProxyValid()) {
                 logger.info("Got credential from "+myProxyServer);
-                RQC.setCredential(credential);
                 retval = true;
             }
         } catch (Exception e) {
@@ -393,7 +391,6 @@ public class GridAccessController {
                     GSSCredential.INITIATE_AND_ACCEPT);
 
             if (isProxyValid()) {
-                RQC.setCredential(credential);
                 retval = true;
             }
         } catch (GSSException e) {

@@ -16,14 +16,14 @@ import org.apache.axis.message.MessageElement;
 import org.apache.axis.message.addressing.Address;
 import org.apache.axis.message.addressing.EndpointReferenceType;
 import org.apache.axis.types.URI;
+import org.apache.axis.types.URI.MalformedURIException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.globus.axis.util.Util;
 import org.globus.wsrf.WSRFConstants;
-import org.globus.wsrf.impl.security.authentication.Constants;
-import org.globus.wsrf.impl.security.descriptor.ClientSecurityDescriptor;
+import org.globus.wsrf.client.BaseClient;
+import org.globus.wsrf.impl.security.authorization.NoAuthorization;
 import org.globus.wsrf.utils.FaultHelper;
-import org.ietf.jgss.GSSCredential;
 import org.oasis.wsrf.properties.QueryExpressionType;
 import org.oasis.wsrf.properties.QueryResourcePropertiesResponse;
 import org.oasis.wsrf.properties.QueryResourceProperties_Element;
@@ -49,7 +49,7 @@ import org.xml.sax.helpers.DefaultHandler;
  * @author Terry Rankine
  * @author Darren Kidd
  */
-public class RegistryQueryClient extends DefaultHandler implements GridInfoInterface
+public class RegistryQueryClient extends BaseClient implements GridInfoInterface
 {
     private static final String TEMP_DIR =
         System.getProperty("java.io.tmpdir") + File.separator;
@@ -60,15 +60,13 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
     /** location of the backup MDS Cache */
     private static final String MDS_CACHE_BACKUP = TEMP_DIR + "backupMDSCache.xml";
 
-    private static final String SAPAC_MDS_SERVER = 
+    private static final String MDS_SERVER = 
         "https://mds.sapac.edu.au:8443/wsrf/services/DefaultIndexService";
     private static final WSResourcePropertiesServiceAddressingLocator locator = 
         new WSResourcePropertiesServiceAddressingLocator();
 
     /** Reference to the Log4J logger. */
     private Log logger = LogFactory.getLog(getClass());
-
-    private GSSCredential credential = null;
 
     /**
      * Initialize the Registry Query Client. Should make sure that the MDS
@@ -77,18 +75,17 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * <b>TODO: Make sure MDS server is alive or fail!</b>
      */
     public RegistryQueryClient() {
+        super();
+        Util.registerTransport(); // For secure transport
+        this.endpoint = new EndpointReferenceType();
+        try {
+            this.endpoint.setAddress(new Address(MDS_SERVER));
+        } catch (MalformedURIException e) {
+            logger.error(e.toString(), e);
+        }
+        this.authorization = NoAuthorization.getInstance();
+        this.anonymous = Boolean.TRUE;
         //TODO: Test that the MDS server is alive.
-    }
-
-    /**
-     * Initialize the Registry Query Client with existing credentials.
-     */
-    public RegistryQueryClient(GSSCredential credential) {
-        this.credential = credential;
-    }
-
-    public void setCredential(GSSCredential credential) {
-        this.credential = credential;
     }
 
     /* LOCAL HELPER METHODS */
@@ -121,7 +118,7 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
         boolean success = false;
         // Get site based info only! No MDS service info collected.
         String xPathqueryString = "//*[local-name()='Site']"; 
-        String mdsStr = masterQueryMDS(SAPAC_MDS_SERVER, xPathqueryString);
+        String mdsStr = masterQueryMDS(xPathqueryString);
 
         // If bad data - restore mds backup
         if (mdsStr == null || mdsStr.length() == 0) {
@@ -230,25 +227,15 @@ public class RegistryQueryClient extends DefaultHandler implements GridInfoInter
      * @param xPathqueryString The XPath query to run
      * @return A String containing the result of the query
      */
-    private String masterQueryMDS(String url, String xPathQuery) {
+    private String masterQueryMDS(String xPathQuery) {
         String returnStr = "";
  
         try {
-            logger.debug("Querying MDS server at " + url); 
-            Util.registerTransport(); // For secure transport
-            Address servicePath = new Address(url);
-            EndpointReferenceType serviceEPR = new EndpointReferenceType(
-                    servicePath);
-    
+            logger.debug("Querying MDS server at " + MDS_SERVER); 
             QueryResourceProperties_PortType queryPort = locator
-                    .getQueryResourcePropertiesPort(serviceEPR);
+                    .getQueryResourcePropertiesPort(getEPR());
 
-            if (credential != null) {
-                ClientSecurityDescriptor secDesc =
-                    new ClientSecurityDescriptor();
-                secDesc.setGSSCredential(credential);
-                ((Stub) queryPort)._setProperty(Constants.CLIENT_DESCRIPTOR, secDesc);
-            }
+            setOptions((Stub) queryPort);
 
             // This is the XPath query that we will use.
             // It requests all entries that contain the string
