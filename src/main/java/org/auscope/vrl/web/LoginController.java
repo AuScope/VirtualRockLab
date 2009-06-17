@@ -120,13 +120,12 @@ public class LoginController implements Controller {
      * @return The <code>ModelAndView</code> of the proper destination page.
      */
     private ModelAndView redirectToTarget(HttpServletRequest request) {
-        String target = request.getSession()
-            .getAttribute("redirectAfterLogin").toString();
+        Object target = request.getSession().getAttribute("redirectAfterLogin");
         if (target != null) {
-            logger.debug("Redirecting to "+target);
+            logger.debug("Redirecting to "+target.toString());
             request.getSession().removeAttribute("redirectAfterLogin");
             return new ModelAndView(new RedirectView(
-                        target, true, false, false));
+                        target.toString(), true, false, false));
         }
         logger.debug("Redirecting to joblist.");
         return new ModelAndView(new RedirectView(
