@@ -29,7 +29,6 @@ RandomBlockNode = Ext.extend(ScriptBuilder.BaseComponent, {
     ret+="   tolerance = "+this.values.tolerance+"\n)\n";
     ret+="geoRandomBlock.generate ()\n";
     ret+="geometry = geoRandomBlock.getSimpleSphereCollection ()\n";
-    ret+="\nsim.setSpatialDomain ( geometry.getBBox() )\n";
     ret+="sim.createParticles ( geometry )\n\n";
     return ret;
   }

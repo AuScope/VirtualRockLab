@@ -29,6 +29,7 @@
           value: "0.0",
           anchor: "95%",
           fieldLabel: "X",
+          decimalPrecision: 4,
           allowBlank: false
         }, {
           xtype: "numberfield",
@@ -36,6 +37,7 @@
           value: "0.0",
           anchor: "95%",
           fieldLabel: "Y",
+          decimalPrecision: 4,
           allowBlank: false
         }, {
           xtype: "numberfield",
@@ -43,6 +45,7 @@
           value: "0.0",
           anchor: "95%",
           fieldLabel: "Z",
+          decimalPrecision: 4,
           allowBlank: false
         }]
       }]
@@ -62,6 +65,7 @@
           value: "0.0",
           anchor: "95%",
           fieldLabel: "X",
+          decimalPrecision: 4,
           allowBlank: false
         }, {
           xtype: "numberfield",
@@ -69,6 +73,7 @@
           value: "1.0",
           anchor: "95%",
           fieldLabel: "Y",
+          decimalPrecision: 4,
           allowBlank: false
         }, {
           xtype: "numberfield",
@@ -76,6 +81,7 @@
           value: "0.0",
           anchor: "95%",
           fieldLabel: "Z",
+          decimalPrecision: 4,
           allowBlank: false
         }]
       }]

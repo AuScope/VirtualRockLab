@@ -16,24 +16,32 @@
     name: "normalK",
     value: "1.0",
     fieldLabel: "Normal Stiffness",
-    allowBlank: false
+    decimalPrecision: 6,
+    allowNegative: false,
+    allowBlank: false,
   }, {
     xtype: "numberfield",
     name: "shearK",
     value: "0.1",
     fieldLabel: "Shear Stiffness",
+    decimalPrecision: 6,
+    allowNegative: false,
     allowBlank: false
   }, {
     xtype: "numberfield",
     name: "staticMu",
     value: "0.6",
     fieldLabel: "Static Friction Coefficient",
+    decimalPrecision: 6,
+    allowNegative: false,
     allowBlank: false
   }, {
     xtype: "numberfield",
     name: "dynamicMu",
     value: "0.4",
     fieldLabel: "Dynamic Friction Coefficient",
+    decimalPrecision: 6,
+    allowNegative: false,
     allowBlank: false
   }]
 }

@@ -17,6 +17,7 @@
     anchor: "100%",
     fieldLabel: "Viscosity",
     decimalPrecision: 5,
+    allowNegative: false,
     allowBlank: false
   }, {
     xtype: "numberfield",

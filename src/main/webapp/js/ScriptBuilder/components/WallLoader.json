@@ -41,22 +41,22 @@
       xtype: "numberfield",
       name: "plateX",
       value: "0.0",
-      decimalPrecision: 4,
       fieldLabel: "X",
+      decimalPrecision: 4,
       allowBlank: false
     }, {
       xtype: "numberfield",
       name: "plateY",
       value: "-0.001",
-      decimalPrecision: 4,
       fieldLabel: "Y",
+      decimalPrecision: 4,
       allowBlank: false
     }, {
       xtype: "numberfield",
       name: "plateZ",
       value: "0.0",
-      decimalPrecision: 4,
       fieldLabel: "Z",
+      decimalPrecision: 4,
       allowBlank: false
     }]
   }]

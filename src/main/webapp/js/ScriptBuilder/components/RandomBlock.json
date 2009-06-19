@@ -16,16 +16,18 @@
       value: "0.2",
       anchor: "100%",
       fieldLabel: "Min Particle Radius",
+      decimalPrecision: 4,
+      allowNegative: false,
       allowBlank: false,
-      allowNegative: false
     }, {
       xtype: "numberfield",
       name: "maxRadius",
       value: "1.0",
       anchor: "100%",
       fieldLabel: "Max Particle Radius",
+      decimalPrecision: 4,
+      allowNegative: false,
       allowBlank: false,
-      allowNegative: false
     }]
   }, {
     layout: "column",
@@ -116,17 +118,18 @@
       value: "2.2",
       anchor: "100%",
       fieldLabel: "Cubic Pack Radius",
+      decimalPrecision: 4,
+      allowNegative: false,
       allowBlank: false,
-      allowNegative: false
     }, {
       xtype: "numberfield",
       name: "tolerance",
       value: "0.00001",
       anchor: "100%",
       fieldLabel: "Tolerance",
-      decimalPrecision: 5,
+      decimalPrecision: 6,
+      allowNegative: false,
       allowBlank: false,
-      allowNegative: false
     }, {
       xtype: "numberfield",
       name: "maxFailures",

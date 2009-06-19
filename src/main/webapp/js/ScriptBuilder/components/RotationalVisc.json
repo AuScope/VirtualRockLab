@@ -16,8 +16,9 @@
     value: "0.01",
     anchor: "100%",
     fieldLabel: "Viscosity",
-    decimalPrecision: 5,
-    allowBlank: false
+    decimalPrecision: 6,
+    allowNegative: false,
+    allowBlank: false,
   }, {
     xtype: "numberfield",
     name: "maxIter",

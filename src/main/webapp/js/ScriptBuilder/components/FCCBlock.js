@@ -23,7 +23,6 @@ FCCBlockNode = Ext.extend(ScriptBuilder.BaseComponent, {
     ret+=this.values.rotPointX+", "+this.values.rotPointY+", "+this.values.rotPointZ+")\n)\n";
     ret+="geometry.translate ( translation = Vec3(";
     ret+=this.values.transX+", "+this.values.transY+", "+this.values.transZ+") )\n";
-    ret+="\nsim.setSpatialDomain ( geometry.getBBox() )\n";
     ret+="sim.createParticles ( geometry )\n\n";
 
     return ret;

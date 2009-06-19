@@ -23,6 +23,8 @@
       value: "1.0",
       anchor: "100%",
       fieldLabel: "Normal",
+      decimalPrecision: 4,
+      allowNegative: false,
       allowBlank: false
     }, {
       xtype: "numberfield",
@@ -30,6 +32,8 @@
       value: "0.1",
       anchor: "100%",
       fieldLabel: "Shear",
+      decimalPrecision: 4,
+      allowNegative: false,
       allowBlank: false
     }, {
       xtype: "numberfield",
@@ -37,6 +41,8 @@
       value: "0.0125",
       anchor: "100%",
       fieldLabel: "Torsion",
+      decimalPrecision: 4,
+      allowNegative: false,
       allowBlank: false
     }, {
       xtype: "numberfield",
@@ -44,6 +50,8 @@
       value: "0.0125",
       anchor: "100%",
       fieldLabel: "Bending",
+      decimalPrecision: 4,
+      allowNegative: false,
       allowBlank: false
     }]
   }, {
@@ -58,6 +66,8 @@
       value: "10.0",
       anchor: "100%",
       fieldLabel: "Normal",
+      decimalPrecision: 4,
+      allowNegative: false,
       allowBlank: false
     }, {
       xtype: "numberfield",
@@ -65,6 +75,8 @@
       value: "1.0",
       anchor: "100%",
       fieldLabel: "Shear",
+      decimalPrecision: 4,
+      allowNegative: false,
       allowBlank: false
     }, {
       xtype: "numberfield",
@@ -72,6 +84,8 @@
       value: "0.125",
       anchor: "100%",
       fieldLabel: "Torsion",
+      decimalPrecision: 4,
+      allowNegative: false,
       allowBlank: false
     }, {
       xtype: "numberfield",
@@ -79,6 +93,8 @@
       value: "0.125",
       anchor: "100%",
       fieldLabel: "Bending",
+      decimalPrecision: 4,
+      allowNegative: false,
       allowBlank: false
     }]
   }, {
@@ -93,6 +109,8 @@
     name: "maxDist",
     value: "0.2",
     fieldLabel: "Max Distance between Particles to Bond",
+    decimalPrecision: 4,
+    allowNegative: false,
     allowBlank: false
   }]
 }

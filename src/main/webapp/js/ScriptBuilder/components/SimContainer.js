@@ -53,6 +53,9 @@ from esys.lsm.geometry import *\n\n";
     ret+=this.values.verletDist+"\n)\n";
     ret+="sim.setNumTimeSteps ( "+this.values.numTimesteps+" )\n";
     ret+="sim.setTimeStepSize ( "+this.values.timeIncrement+" )\n";
+    ret+="sim.setSpatialDomain ( BoundingBox( Vec3(";
+    ret+=this.values.llfX+", "+this.values.llfY+", "+this.values.llfZ+"), Vec3(";
+    ret+=this.values.urbX+", "+this.values.urbY+", "+this.values.urbZ+") ) )\n";
     if (this.values.constrain2D=="1") {
       ret+="sim.force2dComputations ( True )\n";
     }
