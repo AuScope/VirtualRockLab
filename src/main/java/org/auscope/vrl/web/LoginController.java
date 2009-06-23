@@ -57,6 +57,7 @@ public class LoginController implements Controller {
 
     private static final String SLCS_URL = "https://slcs1.arcs.org.au/SLCS/";
     private static final String HOST_KEY_FILE = "/etc/shibboleth/hostkey.pem";
+    private static final int PROXY_LIFETIME = 6*60*60;
     private GridAccessController gridAccess;
     private String authToken;
     private String certDN;
@@ -286,7 +287,8 @@ public class LoginController implements Controller {
             InputStream in = new ByteArrayInputStream(certStr.getBytes());
             X509Certificate certificate = CertUtil.loadCertificate(in);
 
-            if (!gridAccess.initProxy(certKeys.getPrivate(), certificate)) {
+            if (!gridAccess.initProxy(certKeys.getPrivate(), certificate,
+                        PROXY_LIFETIME)) {
                 throw new Exception("Proxy generation failed");
             }
         }

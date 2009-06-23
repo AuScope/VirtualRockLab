@@ -14,8 +14,10 @@ import org.auscope.gridtools.RegistryQueryClient;
 import org.auscope.gridtools.SiteInfo;
 
 import org.globus.exec.generated.JobDescriptionType;
-// The following are for proxy initialization
 import org.globus.gsi.GlobusCredential;
+import org.globus.gsi.GSIConstants;
+import org.globus.gsi.X509ExtensionSet;
+import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
 import org.globus.gsi.gssapi.GlobusGSSCredentialImpl;
 import org.globus.myproxy.MyProxyException;
 import org.globus.wsrf.utils.FaultHelper;
@@ -26,7 +28,7 @@ import org.ietf.jgss.GSSManager;
 
 
 /**
- * Following the MVC pattern, this class acts on events received by the GUI,
+ * Following the MVC pattern, this class acts on events received by the UI,
  * and calls the methods in the Models (which actually do the work).
  *
  * @author Ryan Fraser
@@ -47,7 +49,6 @@ public class GridAccessController {
     // MyProxy settings
     private String myProxyServer = "myproxy.arcs.org.au";
     private int myProxyPort = 7512;
-    private int myProxyLifetime = 12*60*60;
 
     /** Minimum lifetime for a proxy to be valid */
     private final int MIN_LIFETIME = 5*60;
@@ -299,6 +300,12 @@ public class GridAccessController {
         return RQC.getAllVersionsOfCodeOnGrid(code);
     }
 
+    /**
+     * Returns a list of <code>SiteInfo</code> objects for all sites on the
+     * grid.
+     *
+     * @return An array of <code>SiteInfo</code> objects for all sites
+     */
     public SiteInfo[] retrieveSiteStatus() {
         return RQC.getAllSitesStatus();
     }
@@ -314,41 +321,48 @@ public class GridAccessController {
     }
 
     /**
-     * Get a site contact email address for site
+     * Get a site contact email address for site.
      *
      * @param site The site in question
      * @return the email address
      */
-
     public String getSiteContactEmailAtSite(String site) {
         return RQC.getSiteContactEmailAtSite(site);
     }
 
     /**
      * Initializes proxy which will be used to authenticate the user for the
-     * grid. Uses private key and certificate to generate a proxy.
+     * grid. Uses private key and certificate to generate a proxy. These might
+     * have been obtained through a SLCS server.
+     *
+     * @param key The private key
+     * @param certificate The certificate
+     * @param lifetime Desired lifetime in seconds of the new proxy
      *
      * @return true if credentials were successfully created, false otherwise
      */
-    public boolean initProxy(PrivateKey key, X509Certificate certificate) {
+    public boolean initProxy(PrivateKey key, X509Certificate certificate,
+                             int lifetime) {
         boolean retval = false;
+        GlobusCredential proxy = null;
+        int bits = 512;
+        int proxyType = GSIConstants.DELEGATION_FULL;
+        X509ExtensionSet extSet = null;
+        BouncyCastleCertProcessingFactory factory =
+            BouncyCastleCertProcessingFactory.getDefault();
         try {
-            X509Certificate[] certs = new X509Certificate[] { certificate };
-
-            GlobusCredential gc = new GlobusCredential(key, certs);
-            gc.verify();
-            credential = new GlobusGSSCredentialImpl(gc,
-                    GSSCredential.INITIATE_AND_ACCEPT);
+            proxy = factory.createCredential(
+                    new X509Certificate[] { certificate },
+                    key, bits, lifetime, proxyType, extSet);
+            credential = new GlobusGSSCredentialImpl(
+                    proxy, GSSCredential.INITIATE_AND_ACCEPT);
             if (isProxyValid()) {
                 logger.info("Acquired valid credentials.");
                 retval = true;
             }
-        } catch (GSSException e) {
-            logger.error(FaultHelper.getMessage(e));
         } catch (Exception e) {
-            logger.error(e.toString());
+            logger.error("create user proxy error: "+e.toString(), e);
         }
-
         return retval;
     }
 
@@ -356,15 +370,19 @@ public class GridAccessController {
      * Initializes proxy which will be used to authenticate the user for the
      * grid. Uses a username and password for MyProxy authentication.
      *
+     * @param proxyUser MyProxy username
+     * @param proxyPass MyProxy password
+     * @param lifetime  Desired lifetime in seconds of the new proxy
+     * 
      * @return true if credentials were successfully created, false otherwise
      */
-    public boolean initProxy(String proxyUser, String proxyPass) {
+    public boolean initProxy(String proxyUser, String proxyPass, int lifetime) {
         boolean retval = false;
         try {
             credential = MyProxyManager.getDelegation(
                     myProxyServer, myProxyPort,
                     proxyUser, proxyPass.toCharArray(),
-                    myProxyLifetime);
+                    lifetime);
 
             if (isProxyValid()) {
                 logger.info("Got credential from "+myProxyServer);
