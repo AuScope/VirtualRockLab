@@ -388,23 +388,17 @@ public class GridSubmitController extends MultiActionController {
             String jobID = user + "-" + job.getName() + "-" + dateFmt +
                 File.separator;
             String jobOutputDir = gridAccess.getLocalGridFtpStageOutDir()+jobID;
-            success = (new File(jobOutputDir)).mkdir();
-
             String submitEPR = null;
 
-            if (success) {
-                job.setEmailAddress(user);
-                job.setOutputDir(jobOutputDir);
-                job.setOutTransfers(new String[]
-                        { gridAccess.getLocalGridFtpServer() + jobOutputDir });
+            job.setEmailAddress(user);
+            job.setOutputDir(jobOutputDir);
+            job.setOutTransfers(new String[]
+                    { gridAccess.getLocalGridFtpServer() + jobOutputDir });
 
-                logger.info("Submitting job with name " + job.getName() +
-                        " to " + job.getSite());
-                // ACTION!
-                submitEPR = gridAccess.submitJob(job);
-            } else {
-                logger.error("Could not create directory "+jobOutputDir);
-            }
+            logger.info("Submitting job with name " + job.getName() +
+                    " to " + job.getSite());
+            // ACTION!
+            submitEPR = gridAccess.submitJob(job);
 
             if (submitEPR == null) {
                 success = false;

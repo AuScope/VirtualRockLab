@@ -287,9 +287,8 @@ public class JobListController extends MultiActionController {
                             files[i].getName(), files[i].length());
                 }
             } else {
-                final String errorString = "Could not access job files.";
-                logger.error(errorString);
-                mav.addObject("error", errorString);
+                // Files not staged out (yet)
+                fileDetails = new FileInformation[0];
             }
 
             mav.addObject("files", fileDetails);

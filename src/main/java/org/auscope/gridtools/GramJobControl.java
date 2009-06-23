@@ -671,7 +671,7 @@ public class GramJobControl implements JobControlInterface {
                 logger.error(e.getMessage());
             }
         } catch (Exception e) {
-            logger.error(getGlobusErrorDescription(e), e);
+            logger.error(getGlobusErrorDescription(e));
         }
         return condition;
     }
