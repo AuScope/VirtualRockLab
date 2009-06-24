@@ -40,10 +40,22 @@ public class GridSubmitController extends MultiActionController {
     private GridAccessController gridAccess;
     private VRLJobManager jobManager;
 
+    /**
+     * Sets the <code>GridAccessController</code> to be used for grid
+     * activities.
+     *
+     * @param gridAccess the GridAccessController to use
+     */
     public void setGridAccess(GridAccessController gridAccess) {
         this.gridAccess = gridAccess;
     }
 
+    /**
+     * Sets the <code>VRLJobManager</code> to be used to retrieve and store
+     * series and job details.
+     *
+     * @param jobManager the JobManager to use
+     */
     public void setJobManager(VRLJobManager jobManager) {
         this.jobManager = jobManager;
     }
@@ -330,13 +342,6 @@ public class GridSubmitController extends MultiActionController {
                                   VRLJob job) {
 
         logger.debug("Job details:\n"+job.toString());
-        /*
-        java.util.Enumeration eParams = request.getParameterNames();
-        while (eParams.hasMoreElements()) {
-            String name = (String) eParams.nextElement();
-            String value = (String) request.getParameter(name).toString();
-            logger.error(name+"  =  "+value);
-        }*/
 
         VRLSeries series = null;
         boolean success = true;

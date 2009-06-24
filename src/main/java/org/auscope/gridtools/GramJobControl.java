@@ -47,7 +47,7 @@ public class GramJobControl implements JobControlInterface {
     private GSSCredential credential = null;
 
     /**
-     * Default constructor. Does nothing. (There's nothing to do!)
+     * Default constructor. Currently empty.
      */
     public GramJobControl() {
     }
@@ -59,14 +59,30 @@ public class GramJobControl implements JobControlInterface {
         this.credential = credential;
     }
 
-    public void setListener(GramJobListener newlistener) {
-        listener = newlistener;
+    /**
+     * Sets the listener object that will be notified of status changes.
+     *
+     * @param listener The new listener object
+     */
+    public void setListener(GramJobListener listener) {
+        this.listener = listener;
     }
-    
+
+    /**
+     * Sets the credentials to use for grid operations.
+     *
+     * @param credential The credentials object
+     */
     public void setCredential(GSSCredential credential) {
         this.credential = credential;
     }
 
+    /**
+     * Returns the current credential object. If none was set the method tries
+     * to create a new grid proxy using the user certificate on the host.
+     *
+     * @return The grid credentials being used
+     */
     private GSSCredential getCredential() throws GSSException {
         GSSCredential cred = this.credential;
         if (cred == null) {
@@ -228,17 +244,6 @@ public class GramJobControl implements JobControlInterface {
         finalJobString = finalJobString.replaceAll("> <", ">\n <");
         finalJobString = finalJobString.replaceAll(">  <", ">\n  <");
         finalJobString = finalJobString.replaceAll(">   <", ">\n   <");
-        /*
-        try {
-            logger.info("Writing RSL to " + JOBFILE + "...");
-            FileWriter fw = new FileWriter(JOBFILE);
-            fw.write(finalJobString);
-            fw.close();
-        } catch (Throwable e) {
-            logger.error("Could not write Job string to file.");
-            logger.error(e.getMessage());
-        }
-        */
 
         // set the resource Date object
         setResourceDate(Integer.valueOf(job.getMaxWallTime()));
@@ -247,9 +252,9 @@ public class GramJobControl implements JobControlInterface {
     }
 
     /**
-     * Constructs an array of job descriptions for a multijob.
+     * Constructs an array of job descriptions for a multi-job.
      * Given a <code>GridJob</code> object (which holds all the necessary
-     * properties of a particular multijob), this method will construct
+     * properties of a particular multi-job), this method will construct
      * <code>JobDescriptionType</code> objects which can later be submitted.
      * 
      * @param job The <code>GridJob</code> object
@@ -427,6 +432,9 @@ public class GramJobControl implements JobControlInterface {
      * 
      * @return The endpoint reference (EPR) of the job, or <code>null</code>
      *         if the submission was not successful.
+     *
+     * @see #submitJob(String, String)
+     * @see #submitMultiJob
      */
     public String submitJob(GridJob job, String host) {
         String jobSubmitEPR = null;
@@ -454,7 +462,7 @@ public class GramJobControl implements JobControlInterface {
      * will happily return <code>null</code>.
      * 
      * @param jobString The RSL of the job to be submitted
-     * @param host      The host site this job is being sent to
+     * @param host      The host site to send the job to
      * 
      * @return The EPR to the job, or <code>null</code> if something went wrong
      */
@@ -498,12 +506,13 @@ public class GramJobControl implements JobControlInterface {
 
  
     /**
-     * Submit the job using WS-GRAM. Sends the job string to the specified host.
-     * Returns the EPR of the job, unless an error occurred, in which case it
-     * will happily return <code>null</code>.
+     * Submits a multi-job using WS-GRAM. Creates a multi-job description
+     * containing all provided jobs and sends it to the specified host.
+     * Returns the EPR of the multi-job, unless an error occurred, in which
+     * case <code>null</code> is returned.
      * 
      * @param jobs An array of job descriptions to be submitted
-     * @param host The host site the jobs are being sent to
+     * @param host The host site the multi-job is to be sent to
      * 
      * @return The EPR to the job, or <code>null</code> if something went wrong
      */
@@ -554,12 +563,12 @@ public class GramJobControl implements JobControlInterface {
     }
  
     /**
-     * Kills the job given its EPR. Returns a String indicating the status of
-     * the job after being killed.
+     * Kills a job given its EPR. Returns a <code>String</code> indicating the
+     * status of the job after being killed.
      * 
      * @param reference The EPR to the job to kill
      * 
-     * @return A String indicating the state of the killed job
+     * @return The new state of the killed job
      */
     public String killJob(String reference) {
 
@@ -588,54 +597,14 @@ public class GramJobControl implements JobControlInterface {
         return condition;
     }
 
-    public GridJob getJobByReference(String reference) {
-        GridJob gridJob = new GridJob();
-
-        try {
-            // Find the job
-            GramJob job = new GramJob();
-            job.setHandle(reference);
-            job.setCredentials(getCredential());
-
-            JobDescriptionType jobDesc = job.getDescription();
-            gridJob.setExeName(jobDesc.getExecutable());
-            gridJob.setJobType(jobDesc.getJobType().toString());
-            gridJob.setQueue(jobDesc.getQueue());
-            gridJob.setMaxWallTime(jobDesc.getMaxWallTime().toString());
-            gridJob.setMaxMemory(jobDesc.getMaxMemory().toString());
-            gridJob.setCpuCount(jobDesc.getCount().intValue());
-            gridJob.setStdInput(jobDesc.getStdin());
-            gridJob.setStdOutput(jobDesc.getStdout());
-            gridJob.setStdError(jobDesc.getStderr());
-            //gridJob.setCode(jobDesc.getXXX());
-            List<String> transfers = new ArrayList<String>();
-            for (int i=0; i<jobDesc.getFileStageIn().getTransfer().length; i++) {
-                transfers.add(jobDesc.getFileStageIn().getTransfer(i).getSourceUrl());
-            }
-            gridJob.setInTransfers(transfers.toArray(new String[transfers.size()]));
-
-            transfers.clear();
-            for (int i=0; i<jobDesc.getFileStageOut().getTransfer().length; i++) {
-                transfers.add(jobDesc.getFileStageOut().getTransfer(i).getDestinationUrl());
-            }
-            gridJob.setOutTransfers(transfers.toArray(new String[transfers.size()]));
-
-            //logger.info(jobDesc.getFileStageIn().getTransfer(0).getSourceUrl());
-
-        } catch (Exception e) {
-            logger.error(getGlobusErrorDescription(e), e);
-        }
-
-        return gridJob;
-    }
-
     /**
-     * Get the status of a job, as well as any faults that may have occurred.
-     * Returns a String containing the status and any faults.
+     * Retrieves the status of a job, as well as any faults that may have
+     * occurred. Returns a <code>String</code> containing the status and logs
+     * any faults.
      * 
      * @param reference The EPR of the job
      * 
-     * @return String indicating the status of this job
+     * @return A <code>String</code> indicating the status of the job
      */
     public String getJobStatus(String reference) {
  
@@ -681,7 +650,7 @@ public class GramJobControl implements JobControlInterface {
      * 
      * @param e the exception
      * 
-     * @return a string describing the error
+     * @return a <code>String</code> describing the error
      */
     private String getGlobusErrorDescription(Exception e) {
         if (e.getMessage() == null) {
@@ -716,13 +685,13 @@ public class GramJobControl implements JobControlInterface {
     }
 
     /**
-     * Gets the intermittent results of a job given its EPR.
-     * Returns a String of the location the results were transported to.
+     * Retrieves the intermittent results of a job given its EPR.
+     * This method will submit a 'dummy' job that merely stages current files
+     * of the given (running) job to the designated output.
      * 
-     * @param reference The EPR to the job
+     * @param reference The EPR of the job to stage files from
      * 
-     * @return A String indicating the location of where result files were
-     *         copied to.
+     * @return the stage-out location where files will be transferred to
      */
     public String getJobResults(String reference) {
         String outputDirectory = null;

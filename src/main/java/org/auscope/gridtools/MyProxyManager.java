@@ -61,7 +61,7 @@ public class MyProxyManager {
      * Retrieves a {@link GSSCredential} from a myproxy server using username
      * and password. 
      * This method is used when you want to retrieve a proxy that has got the
-     * "allow anonymous retriever) flag enabled.
+     * "allow anonymous retriever" flag enabled.
      * 
      * @param server the hostname of the myproxy server
      * @param port the port of the myproxy server (default is 7512)

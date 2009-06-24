@@ -8,10 +8,19 @@ import org.apache.commons.logging.LogFactory;
 
 import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
 
+/**
+ * A Hibernate-backed VRLSeries data object
+ */
 public class VRLSeriesDao extends HibernateDaoSupport {
 
     protected final Log logger = LogFactory.getLog(getClass());
 
+    /**
+     * Queries for series matching the given criteria. Some but not all of
+     * the parameters may be <code>null</code>.
+     *
+     * @return a list of matching <code>VRLSeries</code> objects.
+     */
     public List<VRLSeries> query(final String user, final String name,
                                  final String desc) {
         String queryString = new String("from VRLSeries s where");
@@ -39,13 +48,26 @@ public class VRLSeriesDao extends HibernateDaoSupport {
             first = false;
         }
 
+        if (first) {
+            logger.warn("All parameters were null!");
+            return null;
+        }
+        
         return (List<VRLSeries>) getHibernateTemplate().find(queryString);
     }
 
+    /**
+     * Retrieves the series with given ID.
+     *
+     * @return <code>VRLSeries</code> object with given ID.
+     */
     public VRLSeries get(final int id) {
         return (VRLSeries) getHibernateTemplate().get(VRLSeries.class, id);
     }
 
+    /**
+     * Saves or updates the given series.
+     */
     public void save(final VRLSeries series) {
         getHibernateTemplate().saveOrUpdate(series);
     }

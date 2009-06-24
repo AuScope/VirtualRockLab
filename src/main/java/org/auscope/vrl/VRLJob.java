@@ -161,7 +161,7 @@ public class VRLJob extends GridJob {
     /**
      * Sets the number of bonds in this simulation job.
      *
-     * @param name The number of bonds in this simulation job.
+     * @param numBonds The number of bonds in this simulation job.
      */
     public void setNumBonds(Integer numBonds) {
         assert (numBonds != null);
@@ -180,7 +180,7 @@ public class VRLJob extends GridJob {
     /**
      * Sets the number of particles in this simulation job.
      *
-     * @param name The number of particles in this simulation job.
+     * @param numParticles The number of particles in this simulation job.
      */
     public void setNumParticles(Integer numParticles) {
         assert (numParticles != null);
@@ -199,7 +199,7 @@ public class VRLJob extends GridJob {
     /**
      * Sets the number of timesteps in this simulation job.
      *
-     * @param name The number of timesteps in this simulation job.
+     * @param numTimesteps The number of timesteps in this simulation job.
      */
     public void setNumTimesteps(Integer numTimesteps) {
         assert (numTimesteps != null);
@@ -218,7 +218,7 @@ public class VRLJob extends GridJob {
     /**
      * Sets the output directory of this job.
      *
-     * @param name The output directory of this job.
+     * @param outputDir The output directory of this job.
      */
     public void setOutputDir(String outputDir) {
         assert (outputDir != null);

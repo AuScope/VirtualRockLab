@@ -11,6 +11,24 @@
       <connection>scm:svn:https://svn.auscope.org/subversion/AuScopePortal/VirtualRockLab/trunk</connection>
       <developerConnection>scm:svn:https://svn.auscope.org/subversion/AuScopePortal/VirtualRockLab/trunk</developerConnection>
    </scm> 
+   <reporting>
+      <plugins>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+               <links>
+                  <link>http://www.globus.org/api/javadoc-4.0/globus_java_ws_core</link>
+                  <link>http://www.globus.org/api/javadoc-4.0/globus_wsrf_gram_client_java</link>
+                  <link>http://www.globus.org/api/javadoc-4.0/globus_wsrf_gram_common_java</link>
+                  <link>http://www.globus.org/api/javadoc-4.0/globus_wsrf_gram_utils_java</link>
+                  <link>http://java.sun.com/j2se/1.5.0/docs/api</link>
+                  <link>http://static.springframework.org/spring/docs/2.5.x/api</link>
+               </links>
+            </configuration>
+         </plugin>
+      </plugins>
+   </reporting>
    <build>
       <finalName>VirtualRockLab</finalName>
       <plugins>

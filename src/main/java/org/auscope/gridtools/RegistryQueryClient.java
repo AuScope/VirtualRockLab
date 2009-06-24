@@ -69,7 +69,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     private Log logger = LogFactory.getLog(getClass());
 
     /**
-     * Initialize the Registry Query Client. Should make sure that the MDS
+     * Initialises the Registry Query Client. Should make sure that the MDS
      * server it is connecting to is actually alive.
      * 
      * <b>TODO: Make sure MDS server is alive or fail!</b>
@@ -221,7 +221,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
      * and run this query on the MDS file. They then return the results. */
 
     /**
-     * Run an XPath query on the MDS information at a given address.
+     * Runs an XPath query on the MDS information at a given address.
      * 
      * @param url The address of the Monitoring and Discovery Service.
      * @param xPathqueryString The XPath query to run
@@ -271,7 +271,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     /* IMPLEMENTATION of GridInfoInterface */
 
     /**
-     * Retrieves the names of all the sites on the Grid.
+     * Retrieves the names of all sites on the Grid.
      * 
      * @return Array of site names
      */
@@ -300,9 +300,9 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get all the codes available on the Grid.
+     * Retrieves all codes (software packages) available on the Grid.
      * 
-     * @return String[] Names of all the codes available
+     * @return String[] Names of all codes available
      */
     public String[] getAllCodesOnGrid() {
         String names[] = new String[0];
@@ -328,7 +328,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
     
     /**
-     * Get the names of the queues (computational elements) at a site.
+     * Gets the names of the queues (computational elements) at a site.
      * 
      * @param site Name of the site 
      * @return An array of available queues
@@ -360,9 +360,9 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
     
     /**
-     * Get all the GridFTP servers available on the Grid.
+     * Gets all GridFTP servers available on the Grid.
      * 
-     * @return Array of hostnames of the GridFTP servers.
+     * @return Array of hostnames of available GridFTP servers.
      */
     public String[] getAllGridFTPServersOnGrid() {
         String[] serverNames = new String[0];
@@ -394,7 +394,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
     
     /**
-     * Get the clusters available at a site.
+     * Gets the clusters available at a site.
      * 
      * @param site The name of the site
      * @return An array of the available clusters.
@@ -428,11 +428,12 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
     
     /**
-     * Get all the distinct versions of a particular code that are available on
-     * the Grid. This method must query all the sites for their versions of this
-     * code, and then collate the information into a list of unique versions.
+     * Gets all the distinct versions of a particular code that are available
+     * on the Grid. This method must query all the sites for their versions of
+     * this code, and then collate the information into a list of unique
+     * versions.
      * 
-     * @return An array of all the versions available
+     * @return An array of all versions available
      */
     public String[] getAllVersionsOfCodeOnGrid(String code) {
         String versions[] = new String[0];
@@ -461,7 +462,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
     
     /**
-     * Get the address of the Job Manager at a particular site.
+     * Gets the address of the job manager at a particular site.
      * 
      * @param site The site to get the host address of
      * @return Address of the job manager
@@ -472,28 +473,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
                 "/child::node()[local-name()='Name'][text()='"+site+"']" +
                 "/ancestor::node()[local-name()='Site']" +
                 "/descendant::node()[local-name()='ContactString']/text()";
-        
-/*
-        if (site.equalsIgnoreCase("ivec"))
-            site = "https://ng2.ivec.org:8443";
-        else if (site.equalsIgnoreCase("vpac"))
-            site = "https://ng2.vpac.org:8443";
-        else if (site.equalsIgnoreCase("hpsc"))
-            site = "https://ng2.hpsc.csiro.au:8443";
-        else if (site.equalsIgnoreCase("apac"))
-            site = "https://ng2.apac.edu.au:8443";
-        else if (site.toLowerCase().contains("james"))
-            site = "https://nglcg.hpc.jcu.edu.au:8443";
-        else if (site.toLowerCase().contains("sapac"))
-            site = "https://ng2.sapac.edu.au:8443";
-        else if (site.toLowerCase().contains("esscc"))
-            site = "https://ng2.esscc.uq.edu.au:8443";
-        else
-            site = "https://ng2.ivec.org:8443";
-*/
-        // TODO: Get these from the registry.
-        
-         
+
         NodeList contactStrNodeList = turboMDSquery(xpathQuery);
 
         if (contactStrNodeList != null && contactStrNodeList.getLength() > 0) {
@@ -501,9 +481,9 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
         }
         return hostAddress;
     }
-    
+
     /**
-     * Get the address of the gateway server for this site.
+     * Gets the address of the gateway server for the given site.
      * 
      * @param site The site to get the server of
      * @return The address of the gateway server
@@ -527,7 +507,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get all the codes at a particular site.
+     * Retrieves all codes (software packages) at a particular site.
      * 
      * @param site The name of the site
      * @return An array of codes available at the site
@@ -546,7 +526,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
         if (siteSWPackageNodeList != null) {
             TreeSet<String> myTreeSet = new TreeSet<String>();
 
-            // Iterate through the document to get SoftwarePackage's Name.
+            // Iterate through the document to get SoftwarePackage's name.
             for (int i = 0; i < siteSWPackageNodeList.getLength(); i++) {
                 // Get SoftwarePackage name.
                 Element siteEl = (Element) siteSWPackageNodeList.item(i);
@@ -560,7 +540,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
     
     /**
-     * Get the compute elements in a particular cluster at the given site.
+     * Gets the compute elements in a particular cluster at the given site.
      * 
      * @param site The site to query
      * @param cluster The cluster at the site to query
@@ -601,7 +581,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get important information about the status of each site.
+     * Gets important information about the status of each site.
      * TODO: Not implemented.
      * 
      * @return An array of <code>SiteInfo</code> objects
@@ -612,7 +592,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get the name of the module which is required for this particular code
+     * Gets the name of the module which is required for this particular code
      * to run correctly.
      * 
      * @param site The name of the site where the code resides
@@ -644,8 +624,9 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get the job type of the code that is being run. Some codes allow 
+     * Gets the job type of the code at a site. Some codes allow 
      * parallel processing, so this method finds out what is/isn't allowed.
+     * TODO: Always returns "single" at the moment
      * 
      * @param site The name of the site where the code resides
      * @param code The name of the code
@@ -659,7 +640,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get the executable name of the chosen code at a particular site.
+     * Gets the executable name of given code at a particular site.
      * 
      * @param site The name of the site where the code resides
      * @param code The name of the code
@@ -699,8 +680,8 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get the address of the site's cluster GridFTP server. Currently hardcoded
-     * to return <code>file:///</code>.
+     * Gets the address of the site's cluster GridFTP server.
+     * FIXME: Currently hardcoded to return <code>file:///</code>.
      * 
      * @param site The site to check
      * @return The <code>file:///</code> String
@@ -710,7 +691,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get the different versions of a code available at a site.
+     * Gets a list of versions of a code available at a site.
      * 
      * @param site The name of the site     
      * @param code The name of the code
@@ -741,11 +722,11 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get a list of all the sites that have the specified version of a code.
+     * Gets a list of all the sites that have the specified version of a code.
      * 
      * @param code The name of the code
      * @param version The particular version required
-     * @return An array of sites with this exact code
+     * @return An array of sites with this exact code/version combination
      */
     public String[] getAllSitesWithAVersionOfACode(String code, String version) {
         String names[] = new String[0];
@@ -781,11 +762,11 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     /* NOT PART OF GRID INFO INTERFACE */
     
     /**
-     * Gets all sites code versions.
+     * Gets all sites' code versions.
      * 
      * @param requestedCode the requested code
      * 
-     * @return all sites code versions
+     * @return all sites' code versions
      */
     public String[] getAllSitesCodeVersions(String requestedCode) {
         String versions[] = new String[0];
@@ -816,12 +797,12 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Gets the free job slots of compute elements of cluster at site.
+     * Gets the free job slots of compute elements of a cluster at a site.
      * 
      * @param site      The site name
      * @param cluster   The cluster name
      * @param computeEl The compute element
-     * @return The free job slots of compute elements of cluster at site
+     * @return The free job slots
      */
     public String[] getFreeJobSlotsOfComputeElementsOfClusterAtSite(
             String site, String cluster, String computeEl) {
@@ -859,7 +840,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get the names of the subclusters at a site.
+     * Gets the names of the subclusters at a site.
      * 
      * @param site The site to check
      * @return An array of subcluster names
@@ -940,8 +921,8 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get the subcluster that matches the input version, cpus, and mem. CPUs,
-     * Mem and Version can be empty Strings.
+     * Gets the subcluster that matches the code, version, number of CPUs, and
+     * memory. CPUs, mem and version can be empty strings.
      * 
      * @param code    The code to find
      * @param version The version of the code
@@ -1006,7 +987,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get the queue (a.k.a. Compute Elements) that matches the walltime 
+     * Gets the queue (a.k.a. Compute Elements) that matches the walltime 
      * requested and the subcluster's hostname.
      * 
      * @param subCluster The subcluster's host name
@@ -1053,7 +1034,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get the storage element available at a site given the queue which will
+     * Gets the storage element available at a site given the queue which will
      * be used.
      * 
      * <b>TODO: Not implemented properly yet...</b>
@@ -1097,7 +1078,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get the storage path that satisfies the amount of disk space available
+     * Gets the storage path that satisfies the amount of disk space available
      * at a storage element.
      * 
      * <b>TODO: Not implemented properly yet...</b>
@@ -1141,9 +1122,9 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     }
 
     /**
-     * Get all available grid ftp servers from MDS.
+     * Retrieves all available GridFTP servers from MDS.
      * 
-     * @return String[] hostnames for grid ftp servers
+     * @return Array of GridFTP server hostnames
      */
     public String[] getAllGridFtpServers() {
         /*
@@ -1179,9 +1160,7 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
 
 
     /**
-     * Get the email address of site based help
-     * 
-     *     UserSupportContact
+     * Gets the email address of a site's support contact
      * 
      * @param site The site to check
      * @return The singular site email address string

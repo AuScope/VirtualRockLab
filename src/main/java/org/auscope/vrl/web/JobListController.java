@@ -38,10 +38,22 @@ public class JobListController extends MultiActionController {
     private GridAccessController gridAccess;
     private VRLJobManager jobManager;
 
+    /**
+     * Sets the <code>GridAccessController</code> to be used for grid
+     * activities.
+     *
+     * @param gridAccess the GridAccessController to use
+     */
     public void setGridAccess(GridAccessController gridAccess) {
         this.gridAccess = gridAccess;
     }
 
+    /**
+     * Sets the <code>VRLJobManager</code> to be used to retrieve and store
+     * series and job details.
+     *
+     * @param jobManager the JobManager to use
+     */
     public void setJobManager(VRLJobManager jobManager) {
         this.jobManager = jobManager;
     }
@@ -582,48 +594,6 @@ public class JobListController extends MultiActionController {
         request.getSession().setAttribute("resubmitJob", jobIdStr);
         return useScript(request, response);
     }
-
-    /**
-     * Re-submits a job series.
-     *
-     * @param request The servlet request including a seriesId parameter
-     * @param response The servlet response
-     *
-     * @return The gridsubmit model and view prepared to resubmit the series or
-     *         the joblist model and view with an error parameter if the series
-     *         was not found.
-     */
-    /* DISABLED until properly implemented
-    public ModelAndView resubmitSeries(HttpServletRequest request,
-                                       HttpServletResponse response) {
-
-        String seriesIdStr = request.getParameter("seriesId");
-        VRLSeries series = null;
-
-        if (seriesIdStr != null) {
-            try {
-                int seriesId = Integer.parseInt(seriesIdStr);
-                series = jobManager.getSeriesById(seriesId);
-            } catch (NumberFormatException e) {
-                logger.error("Error parsing series ID!");
-            }
-        } else {
-            logger.warn("No series ID specified!");
-        }
-
-        if (series == null) {
-            final String errorString = "Could not retrieve series details!";
-            logger.error(errorString);
-            return new ModelAndView("joblist", "error", errorString);
-        }
-
-        logger.info("Re-submitting series " + seriesIdStr + ".");
-        ModelAndView mav =  new ModelAndView(
-                new RedirectView("gridsubmit.html"));
-        mav.addObject("resubmitSeries", seriesIdStr);
-        return mav;
-    }
-    */
 
     /**
      * Allows the user to edit a copy of an input script from a previous job

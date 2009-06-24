@@ -50,43 +50,73 @@ public class GridAccessController {
     private String myProxyServer = "myproxy.arcs.org.au";
     private int myProxyPort = 7512;
 
-    /** Minimum lifetime for a proxy to be valid */
+    /** Minimum lifetime for a proxy to be considered valid */
     private final int MIN_LIFETIME = 5*60;
 
     /** Current grid credential object */
     private GSSCredential credential = null;
 
+    /**
+     * Sets the server name of the GridFTP server to be used for file staging.
+     *
+     * @param gridFtpServer GridFTP server name
+     */
     public void setLocalGridFtpServer(String gridFtpServer) {
         this.gridFtpServer = gridFtpServer;
     }
 
+    /**
+     * Returns the server name of the GridFTP server for file staging.
+     *
+     * @return The local GridFTP server name
+     */
     public String getLocalGridFtpServer() {
         return gridFtpServer;
     }
 
+    /**
+     * Sets the directory on the local server to be used for stage-ins.
+     *
+     * @param gridFtpStageInDir stage-in directory
+     */
     public void setLocalGridFtpStageInDir(String gridFtpStageInDir) {
         this.gridFtpStageInDir = gridFtpStageInDir;
     }
 
+    /**
+     * Returns the local stage-in directory.
+     *
+     * @return The stage-in directory
+     */
     public String getLocalGridFtpStageInDir() {
         return gridFtpStageInDir;
     }
 
+    /**
+     * Sets the directory on the local server to be used for stage-outs.
+     *
+     * @param gridFtpStageOutDir stage-out directory
+     */
     public void setLocalGridFtpStageOutDir(String gridFtpStageOutDir) {
         this.gridFtpStageOutDir = gridFtpStageOutDir;
     }
 
+    /**
+     * Returns the local stage-out directory.
+     *
+     * @return The stage-out directory
+     */
     public String getLocalGridFtpStageOutDir() {
         return gridFtpStageOutDir;
     }
 
     /**
-     * Submits a job with certain properties. The View packages the job
-     * properties into a <code>GridJob</code> object, which we use to get the
-     * information we need to submit the job properly.
+     * Submits a job to the Grid. The View packages the job properties into a
+     * <code>GridJob</code> object, which is used to get the information needed
+     * to submit the job properly.
      * <p>
-     * However, at this point, we still don't have all the information required
-     * to submit a job. We need to retrieve
+     * Since not all information has been stored in the <code>GridJob</code>
+     * object yet these details are retrieved first:
      * <ul>
      *   <li>the <em>executable name</em> of the code - this may not be the
      *       same as the name (i.e. 'List' is '<code>ls</code>'),</li>
@@ -126,17 +156,13 @@ public class GridAccessController {
         return EPR;
     }
 
-    public GridJob getJobByReference(String reference) {
-        GramJobControl ggj = new GramJobControl(credential);
-        return ggj.getJobByReference(reference);
-    }
-
     /**
-     * Kill a grid job.
+     * Kills a running grid job.
      *
      * @param reference The reference of the job to kill
      *
-     * @return The status of the job (a <code>StateEnumeration</code> String)
+     * @return The status of the job after killing (a
+     *         <code>StateEnumeration</code> string)
      */
     public String killJob(String reference) {
         GramJobControl ggj = new GramJobControl(credential);
@@ -144,11 +170,11 @@ public class GridAccessController {
     }
 
     /**
-     * Check the status of a job.
+     * Checks the status of a job.
      *
      * @param reference The reference of the job to check the status of
      *
-     * @return The status of the job (a <code>StateEnumeration</code> String)
+     * @return The status of the job (a <code>StateEnumeration</code> string)
      */
     public String retrieveJobStatus(String reference) {
         GramJobControl ggj = new GramJobControl(credential);
@@ -156,8 +182,8 @@ public class GridAccessController {
     }
 
     /**
-     * Starts a new job that transfers current results from given job
-     * to the stage out location.
+     * Starts a new job that transfers current files from given job
+     * to the stage-out location.
      *
      * @param reference The reference of the job to get results from
      *
@@ -169,35 +195,36 @@ public class GridAccessController {
     }
 
     /**
-     * Get a list of available sites.
+     * Retrieves a list of available sites on the grid.
      *
-     * @return The list of available sites
+     * @return a list of available sites
      */
     public String[] retrieveAllSitesOnGrid() {
         String sites[] = RQC.getAllSitesOnGrid();
 
-        // Order the sites alphabetically.
+        // Order the sites alphabetically
         Arrays.sort(sites);
 
         return sites;
     }
 
     /**
-     * Get a list of the codes available at a particular site.
+     * Gets a list of codes available at a particular site.
      *
      * @param site The site to check
      *
-     * @return The list of codes available
+     * @return a list of codes available
      */
     public String[] retrieveAllCodesAtSite(String site) {
         return RQC.getAllCodesAtSite(site);
     }
 
     /**
-     * Get the module name for a particular code.
+     * Gets the module name for a particular code.
      *
      * @param code The code to determine the module name for
      * @param site The site that code is being selected from
+     *
      * @return The module name
      */
     public String retrieveModuleNameForCode(String code, String site, String version) {
@@ -205,10 +232,10 @@ public class GridAccessController {
     }
 
     /**
-     * Get a list of sites that have a particular version of a code.
+     * Gets a list of sites that have a particular version of a code.
      *
      * @param code    The code to look for
-     * @param version The particular version
+     * @param version The version to look for
      * @return A list of sites that have the version of the code
      */
     public String[] retrieveSitesWithSoftwareAndVersion(String code,
@@ -217,8 +244,8 @@ public class GridAccessController {
     }
 
     /**
-     * Return subcluster with matching requirements. CPUs, Mem, and Version can
-     * be <code>null</code> string.
+     * Returns subcluster with matching requirements. cpus, mem, and version
+     * may be <code>null</code>.
      *
      * @param code    The code to use
      * @param version The version of the code required
@@ -232,17 +259,25 @@ public class GridAccessController {
     }
 
     /**
-     * Get the queues that will honour the walltime and subcluster.
+     * Gets the queues that will honour the walltime and subcluster.
      *
-     * @param currSubCluster
-     * @param wallTime
+     * @param currSubCluster The subcluster name
+     * @param wallTime Wall time to look for
      * @return A list of queues
      */
     public String[] retrieveComputingElementForWalltimeAndSubcluster(
             String currSubCluster, String wallTime) {
-        return RQC.getComputingElementForWalltimeAndSubcluster(currSubCluster, wallTime);
+        return RQC.getComputingElementForWalltimeAndSubcluster(
+                currSubCluster, wallTime);
     }
 
+    /**
+     * Gets the storage element for given queue with available disk space.
+     *
+     * @param queue The computing element
+     * @param diskSpace Available disk space to look for
+     * @return A storage element meeting the requirements
+     */
     public String retrieveStorageElementFromComputingElementWithDiskAvailable(
             String queue, String diskSpace) {
         String defaultSE = "";
@@ -254,34 +289,43 @@ public class GridAccessController {
         return storagePath;
     }
 
+    /**
+     * Gets a subcluster at a site with given CPUs and memory.
+     *
+     * @param site The site
+     * @param cluster The cluster
+     * @param cpus Number of CPUs to look for
+     * @param mem Available memory to look for
+     * @return A list of subclusters meeting the requirements
+     */
     public String[] retrieveSubClusterWithMemAndCPUsAtSite(String site,
             String cluster, String cpus, String mem) {
         return RQC.getSubClusterWithMemAndCPUsFromClusterFromSite(site, cluster, cpus, mem);
     }
 
     /**
-     * Get a list of the versions of a code that is available at a site.
+     * Gets a list of the versions of a code that is available at a site.
      *
      * @param site The site to check
-     * @param code The code that will be used
-     * @return An array of the different versions of 'code' available at 'site'
+     * @param code The code to check
+     * @return An array with versions of 'code' available at 'site'
      */
     public String[] retrieveCodeVersionsAtSite(String site, String code) {
         return RQC.getVersionsOfCodeAtSite(site, code);
     }
 
     /**
-     * Get the list of queues available at a given site.
+     * Gets the list of queues available at a given site.
      *
      * @param site The site that is being checked for queues
-     * @return A list of the different queues available
+     * @return A list of queues available
      */
     public String[] retrieveQueueNamesAtSite(String site) {
         return RQC.getQueueNamesAtSite(site);
     }
 
     /**
-     * Get all the different codes available on the Grid.
+     * Gets all codes available on the Grid.
      *
      * @return A list of all the codes available
      */
@@ -290,11 +334,11 @@ public class GridAccessController {
     }
 
     /**
-     * Get a list of all the versions of this code that are available on
-     * the grid.
+     * Gets a list of all the versions of specified code that are available on
+     * the Grid.
      *
      * @param code The code to check for versions of
-     * @return A list of all the version avalailable
+     * @return A list of all the version available
      */
     public String[] retrieveAllVersionsOfCodeOnGrid(String code) {
         return RQC.getAllVersionsOfCodeOnGrid(code);
@@ -302,7 +346,7 @@ public class GridAccessController {
 
     /**
      * Returns a list of <code>SiteInfo</code> objects for all sites on the
-     * grid.
+     * Grid.
      *
      * @return An array of <code>SiteInfo</code> objects for all sites
      */
@@ -311,7 +355,7 @@ public class GridAccessController {
     }
 
     /**
-     * Get a list of all the GridFTP servers available on the Grid. These are
+     * Gets a list of all GridFTP servers available on the Grid. These are
      * used for data transfer.
      *
      * @return A list of GridFTP servers
@@ -321,7 +365,7 @@ public class GridAccessController {
     }
 
     /**
-     * Get a site contact email address for site.
+     * Gets the contact email address for a given site.
      *
      * @param site The site in question
      * @return the email address
@@ -331,9 +375,9 @@ public class GridAccessController {
     }
 
     /**
-     * Initializes proxy which will be used to authenticate the user for the
-     * grid. Uses private key and certificate to generate a proxy. These might
-     * have been obtained through a SLCS server.
+     * Initializes a grid proxy which will be used to authenticate the user
+     * for all grid activities. Uses private key and certificate to generate
+     * a proxy. These might have been obtained through a SLCS server.
      *
      * @param key The private key
      * @param certificate The certificate
@@ -367,8 +411,9 @@ public class GridAccessController {
     }
 
     /**
-     * Initializes proxy which will be used to authenticate the user for the
-     * grid. Uses a username and password for MyProxy authentication.
+     * Initializes a grid proxy which will be used to authenticate the user
+     * for all grid activities. Uses a username and password for MyProxy
+     * authentication.
      *
      * @param proxyUser MyProxy username
      * @param proxyPass MyProxy password
@@ -396,8 +441,9 @@ public class GridAccessController {
     }
 
     /**
-     * Initializes proxy which will be used to authenticate the user for the
-     * grid. This method requires an existing proxy file of the current user.
+     * Initializes a grid proxy which will be used to authenticate the user
+     * for all grid activities. This method requires an existing proxy file of
+     * the current user.
      *
      * @return true if credentials were successfully created, false otherwise
      */
@@ -419,8 +465,8 @@ public class GridAccessController {
 
     /**
      * Checks the validity of currently set grid credentials. To be considered
-     * valid, the grid proxy must have a minimum remaining lifetime (5 minutes
-     * by default).
+     * valid, the grid proxy must exist and have a minimum remaining lifetime
+     * (5 minutes by default).
      *
      * @return true if and only if the current credentials are valid
      */

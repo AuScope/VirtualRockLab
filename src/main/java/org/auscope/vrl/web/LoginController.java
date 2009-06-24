@@ -63,10 +63,23 @@ public class LoginController implements Controller {
     private String certDN;
     private List certExtensions;
 
+    /**
+     * Sets the <code>GridAccessController</code> to be used for proxy checking
+     * and initialisation.
+     *
+     * @param gridAccess the GridAccessController to use
+     */
     public void setGridAccess(GridAccessController gridAccess) {
         this.gridAccess = gridAccess;
     }
 
+    /**
+     * Main entry point which decides where to redirect to.
+     * If this is a GET request and the current grid proxy is not valid then
+     * a redirect to the SLCS server is performed. A POST request is handled
+     * as being a response from the SLCS server so the certificate is extracted
+     * and a grid proxy is generated.
+     */
     public ModelAndView handleRequest(HttpServletRequest request,
                                       HttpServletResponse response) {
 
