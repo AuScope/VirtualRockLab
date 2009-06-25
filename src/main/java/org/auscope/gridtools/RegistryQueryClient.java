@@ -60,6 +60,9 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
     /** location of the backup MDS Cache */
     private static final String MDS_CACHE_BACKUP = TEMP_DIR + "backupMDSCache.xml";
 
+    /** Maximum age of cache file in seconds before it is updated. */
+    private static final long MDS_CACHE_MAX_AGE = 60*60;
+
     private static final String MDS_SERVER = 
         "https://mds.sapac.edu.au:8443/wsrf/services/DefaultIndexService";
     private static final WSResourcePropertiesServiceAddressingLocator locator = 
@@ -85,7 +88,9 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
         }
         this.authorization = NoAuthorization.getInstance();
         this.anonymous = Boolean.TRUE;
-        //TODO: Test that the MDS server is alive.
+
+        // update cache file now
+        checkCache();
     }
 
     /* LOCAL HELPER METHODS */
@@ -95,11 +100,11 @@ public class RegistryQueryClient extends BaseClient implements GridInfoInterface
      * If it is too old, or doesn't exist, it is recreated.
      */
     private void checkCache() {
-        Date currentTime = new Date(); // Get the current date and time.
-
         File mdsCache = new File(MDS_CACHE_FILE);
         if (mdsCache.exists()) {
-            if ((currentTime.getTime() - mdsCache.lastModified()) > 500000) {
+            Date now = new Date();
+            long fileAge = now.getTime() - mdsCache.lastModified();
+            if (fileAge > (MDS_CACHE_MAX_AGE * 1000)) {
                 logger.debug("MDS cache file too old -> creating new one...");
                 updateCacheFile();
             }
