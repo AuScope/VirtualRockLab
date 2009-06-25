@@ -37,13 +37,6 @@
         </welcome-file>
     </welcome-file-list>
 
-    <jsp-config>
-        <taglib>
-            <taglib-uri>/spring</taglib-uri>
-            <taglib-location>/WEB-INF/tld/spring-form.tld</taglib-location>
-        </taglib>
-    </jsp-config>
-
     <error-page>
         <error-code>403</error-code>
         <location>/access_error.html</location>
