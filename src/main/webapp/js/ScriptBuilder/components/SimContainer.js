@@ -22,6 +22,12 @@ SimContainerNode = Ext.extend(ScriptBuilder.BaseComponent, {
       "subdivX": "1",
       "subdivY": "1",
       "subdivZ": "1",
+      "llfX": "-10",
+      "llfY": "-10",
+      "llfZ": "-10",
+      "urbX": "10",
+      "urbY": "10",
+      "urbZ": "10",
       "gridSpacing": "2.5",
       "verletDist": "0.2"
     }
