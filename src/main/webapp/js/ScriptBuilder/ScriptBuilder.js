@@ -175,6 +175,26 @@ ScriptBuilder.initialize = function() {
     );
     compDescTpl.compile();
 
+    var deleteNodeAction = new Ext.Action({
+        text: 'Delete component',
+        iconCls: 'cross-icon',
+        handler: function() {
+            var node = Ext.getCmp('usedcomps-panel').getSelectionModel()
+                .getSelectedNode();
+            if (node.parentNode.canRemove(node)) {
+                Ext.Msg.confirm('Delete Node',
+                    'Are you sure you want to delete the selected component?',
+                    function(btn) {
+                        if (btn=='yes') {
+                            node.parentNode.removeComponent(node);
+                            ScriptBuilder.updateSource();
+                        }
+                    }
+                );
+            }
+        }
+    });
+
     // the tree that holds added components
     var usedCompsTree = new Ext.tree.TreePanel({
         xtype: 'treepanel',
@@ -193,29 +213,7 @@ ScriptBuilder.initialize = function() {
         //rootVisible: false,
         //root: new Ext.tree.TreeNode(),
         contextMenu: new Ext.menu.Menu({
-            items: [{
-                id: 'delete-node',
-                text: 'Delete'
-            }],
-            listeners: {
-                itemclick: function(item) {
-                    switch (item.id) {
-                        case 'delete-node':
-                            var n = item.parentMenu.contextNode;
-                            if (n.parentNode.canRemove(n)) {
-                                Ext.Msg.confirm('Delete Node', 'Are you sure you want to delete the selected component?',
-                                    function(btn) {
-                                        if (btn=='yes') {
-                                            n.parentNode.removeComponent(n);
-                                            ScriptBuilder.updateSource();
-                                        }
-                                    }
-                                );
-                            }
-                            break;
-                    }
-                }
-            }
+            items: [ deleteNodeAction ]
         })
     });
 
@@ -234,9 +232,8 @@ ScriptBuilder.initialize = function() {
             // do not show menu for root node
             if (node.parentNode) {
                 node.select();
-                var c = node.getOwnerTree().contextMenu;
-                c.contextNode = node;
-                c.showAt(e.getXY());
+                var menu = node.getOwnerTree().contextMenu;
+                menu.showAt(e.getXY());
             }
         },
 
