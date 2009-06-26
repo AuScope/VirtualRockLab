@@ -12,10 +12,18 @@
 </head>
 
 <body>
-    <%@ include file="page_header.jsp" %>
+<%@ include file="page_header.jsp" %>
     <div id="body" style="padding:10px;">
-    <p style="font-size:medium;padding-bottom:5px;">
-        Please enter your MyProxy username and password.<br>
+        <p style="font-size:medium;padding-bottom:5px;">
+<% if (request.getHeader("Shib-AuEduPerson-SharedToken") == null) { %>
+        Your institution (IdP) does not support the &quot;shared token&quot;
+        attribute. This means that you will need your own certificate to access
+        the grid. If you have a valid grid certificate please upload it to the
+        ARCS MyProxy server (e.g. using the
+        <a href="http://www.arcs.org.au/products-services/authorisation-services/grix">grix</a> tool).
+        <br/>
+<% } %>
+        Please enter your MyProxy username and password.<br/>
         These details will be used to authenticate yourself to the grid.
     </p>
 

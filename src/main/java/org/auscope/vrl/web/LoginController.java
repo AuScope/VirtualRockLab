@@ -86,6 +86,13 @@ public class LoginController implements Controller {
         final String serviceUrl = "https://" + request.getServerName() +
             "/vrl/login.html";
 
+        String sharedToken = request.getHeader("Shib-AuEduPerson-SharedToken");
+        if (sharedToken == null) {
+            logger.info("No shared token, redirecting to MyProxy login.");
+            return new ModelAndView(new RedirectView(
+                    "/myproxylogin.html", true, false, false));
+        }
+
         if (request.getMethod().equalsIgnoreCase("GET")) {
             logger.debug("Handling GET request.");
             if (gridAccess.isProxyValid()) {
