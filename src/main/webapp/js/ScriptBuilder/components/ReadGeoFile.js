@@ -9,6 +9,10 @@ ReadGeoFileNode = Ext.extend(ScriptBuilder.BaseComponent, {
     );
   },
 
+  getUniqueName: function() {
+    return "geometry";
+  },
+
   getScript: function() {
     var ret="sim.readGeometry ( fileName = \""+this.values.fileName+"\" )\n";
     return ret;

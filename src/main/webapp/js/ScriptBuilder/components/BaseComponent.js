@@ -36,7 +36,7 @@ ScriptBuilder.BaseComponent = Ext.extend(Ext.tree.TreeNode, {
 
     // if the name has changed check for an existing node with the same name
     // and force changing
-    if (this.container &&
+    if (this.container && tmpVals.uniqueName &&
         this.getUniqueName() != tmpVals.uniqueName &&
         this.container.findByName(tmpVals.uniqueName) != null) {
       Ext.Msg.alert("Name not unique", "Please use a unique name for this component.");
