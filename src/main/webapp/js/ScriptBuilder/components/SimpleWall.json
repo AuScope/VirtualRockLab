@@ -9,7 +9,8 @@
     name: "uniqueName",
     value: "wall",
     fieldLabel: "Wall Name",
-    allowBlank: false
+    allowBlank: false,
+    maskRe: /[A-Za-z0-9._]+/
   }, {
     layout: "column",
     border: false,

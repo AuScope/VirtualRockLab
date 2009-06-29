@@ -10,7 +10,8 @@
     name: "fnPrefix",
     value: "LSM_CheckPt",
     fieldLabel: "Checkpoint Filename Prefix",
-    allowBlank: false
+    allowBlank: false,
+    maskRe: /[A-Za-z0-9._#-]+/
   }, {
     xtype: "numberfield",
     name: "beginTS",

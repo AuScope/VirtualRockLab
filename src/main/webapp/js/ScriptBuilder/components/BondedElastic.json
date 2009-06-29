@@ -10,7 +10,8 @@
     name: "uniqueName",
     value: "interaction",
     fieldLabel: "Unique Interaction Name",
-    allowBlank: false
+    allowBlank: false,
+    maskRe: /[A-Za-z0-9._]+/
   }, {
     xtype: "numberfield",
     name: "normalK",

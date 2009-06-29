@@ -10,7 +10,8 @@
     value: "fieldsaver",
     anchor: "100%",
     fieldLabel: "Unique Saver Name",
-    allowBlank: false
+    allowBlank: false,
+    maskRe: /[A-Za-z0-9._]+/
   }, {
     xtype: "combo",
     name: "fieldName",
@@ -28,7 +29,8 @@
     value: "out.dat",
     anchor: "100%",
     fieldLabel: "Save File Name",
-    allowBlank: false
+    allowBlank: false,
+    maskRe: /[A-Za-z0-9._#-]+/
   }, {
     xtype: "combo",
     name: "fileFormat",

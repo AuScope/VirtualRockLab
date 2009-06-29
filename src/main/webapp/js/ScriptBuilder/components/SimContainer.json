@@ -18,7 +18,7 @@
       fieldLabel: "Script Name",
       allowBlank: false,
       minLength: 3,
-      maskRe: /[^\W]/
+      maskRe: /[A-Za-z0-9._]+/
     }, {
       xtype: "combo",
       editable: false,

@@ -10,7 +10,8 @@
     name: "uniqueName",
     value: "runnable",
     fieldLabel: "Unique Name",
-    allowBlank: false
+    allowBlank: false,
+    maskRe: /[A-Za-z0-9._]+/
   }, {
     xtype: "combo",
     name: "wallName",
