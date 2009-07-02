@@ -63,7 +63,9 @@ public class JobListController extends MultiActionController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        if (gridAccess.isProxyValid()) {
+        // Ensure user has valid grid credentials
+        if (gridAccess.isProxyValid(
+                    request.getSession().getAttribute("userCred"))) {
             logger.debug("No/invalid action parameter; returning joblist view.");
             return new ModelAndView("joblist");
         } else {
@@ -90,6 +92,15 @@ public class JobListController extends MultiActionController {
         String jobIdStr = request.getParameter("jobId");
         VRLJob job = null;
         ModelAndView mav = new ModelAndView("jsonView");
+        Object credential = request.getSession().getAttribute("userCred");
+
+        if (credential == null) {
+            final String errorString = "Invalid grid credentials!";
+            logger.error(errorString);
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+            return mav;
+        }
 
         if (jobIdStr != null) {
             try {
@@ -111,9 +122,11 @@ public class JobListController extends MultiActionController {
         } else {
             logger.debug("jobID = " + jobIdStr);
             boolean success = false;
-            String jobState = gridAccess.retrieveJobStatus(job.getReference());
+            String jobState = gridAccess.retrieveJobStatus(
+                    job.getReference(), credential);
             if (jobState != null && jobState.equals("Active")) {
-                success = gridAccess.retrieveJobResults(job.getReference());
+                success = gridAccess.retrieveJobResults(
+                        job.getReference(), credential);
             } else {
                 mav.addObject("error", "Cannot retrieve files of a job that is not running!");
             }
@@ -140,6 +153,16 @@ public class JobListController extends MultiActionController {
         VRLJob job = null;
         ModelAndView mav = new ModelAndView("jsonView");
         boolean success = false;
+        Object credential = request.getSession().getAttribute("userCred");
+
+        if (credential == null) {
+            final String errorString = "Invalid grid credentials!";
+            logger.error(errorString);
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+            return mav;
+        }
+
 
         if (jobIdStr != null) {
             try {
@@ -162,7 +185,8 @@ public class JobListController extends MultiActionController {
             VRLSeries s = jobManager.getSeriesById(job.getSeriesId());
             if (request.getRemoteUser().equals(s.getUser())) {
                 logger.info("Cancelling job with ID "+jobIdStr);
-                String newState = gridAccess.killJob(job.getReference());
+                String newState = gridAccess.killJob(
+                        job.getReference(), credential);
                 if (newState == null)
                     newState = "Cancelled";
                 logger.debug("New job state: "+newState);
@@ -198,6 +222,16 @@ public class JobListController extends MultiActionController {
         ModelAndView mav = new ModelAndView("jsonView");
         boolean success = false;
         int seriesId = -1;
+        Object credential = request.getSession().getAttribute("userCred");
+
+        if (credential == null) {
+            final String errorString = "Invalid grid credentials!";
+            logger.error(errorString);
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+            return mav;
+        }
+
 
         if (seriesIdStr != null) {
             try {
@@ -229,7 +263,8 @@ public class JobListController extends MultiActionController {
                         continue;
                     }
                     logger.info("Killing job with ID "+job.getId());
-                    String newState = gridAccess.killJob(job.getReference());
+                    String newState = gridAccess.killJob(
+                            job.getReference(), credential);
                     if (newState == null)
                         newState = "Cancelled";
                     logger.debug("New job state: "+newState);
@@ -522,6 +557,15 @@ public class JobListController extends MultiActionController {
         String seriesIdStr = request.getParameter("seriesId");
         List<VRLJob> seriesJobs = null;
         ModelAndView mav = new ModelAndView("jsonView");
+        Object credential = request.getSession().getAttribute("userCred");
+
+        if (credential == null) {
+            final String errorString = "Invalid grid credentials!";
+            logger.error(errorString);
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+            return mav;
+        }
 
         if (seriesIdStr != null) {
             try {
@@ -542,7 +586,7 @@ public class JobListController extends MultiActionController {
                 if (!state.equals("Done") && !state.equals("Failed") &&
                         !state.equals("Cancelled")) {
                     String newState = gridAccess.retrieveJobStatus(
-                            j.getReference());
+                            j.getReference(), credential);
                     if (newState != null && !state.equals(newState)) {
                         j.setStatus(newState);
                         jobManager.saveJob(j);

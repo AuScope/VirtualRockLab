@@ -53,12 +53,15 @@ public class MyProxyLoginController implements Controller {
             }
 
             logger.info("Trying to initialize proxy with MyProxy details");
-            if (gridAccess.initProxy(user, pass, PROXY_LIFETIME)) {
+            Object credential = gridAccess.initProxy(user, pass, PROXY_LIFETIME);
+            if (credential != null) {
+                logger.info("Storing credentials in session.");
+                request.getSession().setAttribute("userCred", credential);
                 return new ModelAndView(
                         new RedirectView("joblist.html", true, false, false));
             } else {
                 logger.info("Proxy initialisation failed.");
-                error = new String("Could not initialize grid proxy with entered MyProxy details!");
+                error = new String("Could not initialise grid proxy with entered MyProxy details!");
             }
 
         }

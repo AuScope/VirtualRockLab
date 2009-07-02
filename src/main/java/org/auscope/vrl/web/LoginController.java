@@ -95,7 +95,8 @@ public class LoginController implements Controller {
 
         if (request.getMethod().equalsIgnoreCase("GET")) {
             logger.debug("Handling GET request.");
-            if (gridAccess.isProxyValid()) {
+            Object credential = request.getSession().getAttribute("userCred");
+            if (gridAccess.isProxyValid(credential)) {
                 logger.debug("Valid proxy found.");
                 return redirectToTarget(request);
             }
@@ -107,10 +108,6 @@ public class LoginController implements Controller {
                 processSlcsResponse(request);
                 return redirectToTarget(request);
 
-            } catch (GeneralSecurityException e) {
-                logger.error(e.getMessage(), e);
-                logger.info("Trying to get a new certificate.");
-                return redirectToSlcs(serviceUrl);
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
             }
@@ -307,9 +304,13 @@ public class LoginController implements Controller {
             InputStream in = new ByteArrayInputStream(certStr.getBytes());
             X509Certificate certificate = CertUtil.loadCertificate(in);
 
-            if (!gridAccess.initProxy(certKeys.getPrivate(), certificate,
-                        PROXY_LIFETIME)) {
+            Object credential = gridAccess.initProxy(
+                    certKeys.getPrivate(), certificate, PROXY_LIFETIME);
+            if (credential == null) {
                 throw new Exception("Proxy generation failed");
+            } else {
+                logger.info("Storing credentials in session.");
+                request.getSession().setAttribute("userCred", credential);
             }
         }
     }

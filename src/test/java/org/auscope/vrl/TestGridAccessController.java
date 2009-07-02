@@ -15,7 +15,8 @@ public class TestGridAccessController {
 
     @Test
     public void testIsProxyValid() {
-        Assert.assertFalse(gridAccess.isProxyValid());
+        Object credential = null;
+        Assert.assertFalse(gridAccess.isProxyValid(credential));
     }
 
 }

@@ -65,7 +65,9 @@ public class GridSubmitController extends MultiActionController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        if (gridAccess.isProxyValid()) {
+        // Ensure user has valid grid credentials
+        if (gridAccess.isProxyValid(
+                    request.getSession().getAttribute("userCred"))) {
             logger.debug("No/invalid action parameter; returning gridsubmit view.");
             return new ModelAndView("gridsubmit");
         } else {
@@ -350,6 +352,16 @@ public class GridSubmitController extends MultiActionController {
             .getAttribute("jobInputDir");
         String newSeriesName = request.getParameter("seriesName");
         String seriesIdStr = request.getParameter("seriesId");
+        ModelAndView mav = new ModelAndView("jsonView");
+        Object credential = request.getSession().getAttribute("userCred");
+
+        if (credential == null) {
+            final String errorString = "Invalid grid credentials!";
+            logger.error(errorString);
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+            return mav;
+        }
 
         // if seriesName parameter was provided then we create a new series
         // otherwise seriesId contains the id of the series to use.
@@ -403,13 +415,14 @@ public class GridSubmitController extends MultiActionController {
             logger.info("Submitting job with name " + job.getName() +
                     " to " + job.getSite());
             // ACTION!
-            submitEPR = gridAccess.submitJob(job);
+            submitEPR = gridAccess.submitJob(job, credential);
 
             if (submitEPR == null) {
                 success = false;
             } else {
                 logger.info("SUCCESS! EPR: "+submitEPR);
-                String status = gridAccess.retrieveJobStatus(submitEPR);
+                String status = gridAccess.retrieveJobStatus(
+                        submitEPR, credential);
                 job.setReference(submitEPR);
                 job.setStatus(status);
                 job.setSubmitDate(new Date().toString());
@@ -417,10 +430,9 @@ public class GridSubmitController extends MultiActionController {
             }
         }
 
-        ModelAndView result = new ModelAndView("jsonView");
-        result.addObject("success", success);
+        mav.addObject("success", success);
 
-        return result;
+        return mav;
     }
 
     /**
