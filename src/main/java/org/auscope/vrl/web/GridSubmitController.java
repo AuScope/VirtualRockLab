@@ -287,20 +287,17 @@ public class GridSubmitController extends MultiActionController {
                 File destination = new File(
                         jobInputDir+f.getOriginalFilename());
                 if (destination.exists()) {
-                    success = false;
-                    error = new String("A file by that name already exists.");
-                    logger.warn("Tried to upload a file with existing filename.");
-                } else {
-                    try {
-                        f.transferTo(destination);
-                    } catch (IOException e) {
-                        logger.error("Could not move file: "+e.getMessage());
-                        success = false;
-                        error = new String("Could not process file.");
-                    }
-                    fileInfo = new FileInformation(
-                            f.getOriginalFilename(), f.getSize());
+                    logger.debug("Will overwrite existing file.");
                 }
+                try {
+                    f.transferTo(destination);
+                } catch (IOException e) {
+                    logger.error("Could not move file: "+e.getMessage());
+                    success = false;
+                    error = new String("Could not process file.");
+                }
+                fileInfo = new FileInformation(
+                        f.getOriginalFilename(), f.getSize());
             }
 
         } else {

@@ -62,11 +62,17 @@ GridSubmit.onUploadFile = function(form, action) {
     if (action.result.success == "true") {
         GridSubmit.successDlg('The file was successfully uploaded!');
         var fileStore = Ext.getCmp('file-grid').getStore();
+        var idx = fileStore.find('name', action.result.name);
+        if (idx > -1) {
+            fileStore.removeAt(idx);
+        }
+
         var newFile = new GridSubmit.FileRecord({
             name: action.result.name,
             size: action.result.size
         });
         fileStore.add(newFile);
+        fileStore.sort('name');
     } else {
         GridSubmit.showError('Error uploading file. '+action.result.error);
     }
@@ -84,6 +90,7 @@ GridSubmit.onFileListResponse = function(response, request) {
         });
         fileStore.add(newFile);
     }
+    fileStore.sort('name');
 }
 
 // callback for a successful job object request
@@ -183,11 +190,25 @@ GridSubmit.submitJob = function() {
     });
 }
 
+GridSubmit.confirmOverwrite = function(btn) {
+    if (btn=='yes') {
+        GridSubmit.uploadFile(null, null, true);
+    }
+}
+
 //
 // Requests upload of a file to the server
 //
-GridSubmit.uploadFile = function() {
+GridSubmit.uploadFile = function(b, e, overwrite) {
     if (Ext.getCmp('filesForm').getForm().isValid()) {
+        var ufName = Ext.getCmp('fileInputField').getValue();
+        var fileStore = Ext.getCmp('file-grid').getStore();
+        if (!overwrite && fileStore.find('name', ufName) > -1) {
+            Ext.Msg.confirm('File exists',
+                   'A file by that name already exists. Overwrite?',
+                   GridSubmit.confirmOverwrite);
+            return;
+        }
         Ext.getCmp('filesForm').getForm().submit({
             url: GridSubmit.ControllerURL,
             success: GridSubmit.onUploadFile,
@@ -531,8 +552,9 @@ GridSubmit.initialize = function() {
         stripeRows: true,
         height: 150,
         columns: [
-            { header: 'Filename', width: 200, dataIndex: 'name' },
-            { header: 'Size', width: 100, dataIndex: 'size', renderer: Ext.util.Format.fileSize, align: 'right' }
+            { header: 'Filename', width: 200, sortable: true, dataIndex: 'name' },
+            { header: 'Size', width: 100, sortable: true, dataIndex: 'size',
+                renderer: Ext.util.Format.fileSize, align: 'right' }
         ]
     });
 

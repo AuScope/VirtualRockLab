@@ -1,7 +1,8 @@
 /*
  * This file is part of the AuScope Virtual Rock Lab (VRL) project.
  * Copyright (c) 2009 ESSCC, The University of Queensland
- * VRL is distributed under the terms of the GNU Lesser General Public License.
+
+ * Licensed under the terms of the GNU Lesser General Public License.
  */
 package org.auscope.vrl.web;
 
