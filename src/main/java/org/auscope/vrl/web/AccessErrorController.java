@@ -1,3 +1,9 @@
+/*
+ * This file is part of the AuScope Virtual Rock Lab (VRL) project.
+ * Copyright (c) 2009 ESSCC, The University of Queensland
+ *
+ * Licensed under the terms of the GNU Lesser General Public License.
+ */
 package org.auscope.vrl.web;
 
 import javax.servlet.http.HttpServletRequest;
@@ -11,6 +17,8 @@ import org.springframework.web.servlet.mvc.Controller;
 
 /**
  * Controller for the Access Error page.
+ *
+ * @author Cihan Altinay
  */
 public class AccessErrorController implements Controller {
 

@@ -1,7 +1,8 @@
 /*
- * This file is part of AuScope VirtualRockLab.
- * (c) 2009 ESSCC, The University of Queensland, Australia
- * All rights reserved.
+ * This file is part of the AuScope Virtual Rock Lab (VRL) project.
+ * Copyright (c) 2009 ESSCC, The University of Queensland
+ *
+ * Licensed under the terms of the GNU Lesser General Public License.
  */
 
 // reference local blank image

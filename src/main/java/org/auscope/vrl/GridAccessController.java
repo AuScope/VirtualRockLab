@@ -1,3 +1,9 @@
+/*
+ * This file is part of the AuScope Virtual Rock Lab (VRL) project.
+ * Copyright (c) 2009 ESSCC, The University of Queensland
+ *
+ * Licensed under the terms of the GNU Lesser General Public License.
+ */
 package org.auscope.vrl;
 
 import java.security.PrivateKey;
@@ -34,6 +40,7 @@ import org.ietf.jgss.GSSManager;
  * @author Ryan Fraser
  * @author Terry Rankine
  * @author Darren Kidd
+ * @author Cihan Altinay
  */
 public class GridAccessController {
     /** The handle to the <code>RegistryQueryClient</code> model. */

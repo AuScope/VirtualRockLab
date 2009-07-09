@@ -1,3 +1,9 @@
+/*
+ * This file is part of the AuScope Virtual Rock Lab (VRL) project.
+ * Copyright (c) 2009 ESSCC, The University of Queensland
+ *
+ * Licensed under the terms of the GNU Lesser General Public License.
+ */
 package org.auscope.vrl.web;
 
 import javax.servlet.http.HttpServletRequest;
@@ -14,6 +20,8 @@ import org.springframework.web.servlet.view.RedirectView;
 
 /**
  * Controller that handles MyProxy logins.
+ *
+ * @author Cihan Altinay
  */
 public class MyProxyLoginController implements Controller {
 

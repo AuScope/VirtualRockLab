@@ -1,3 +1,9 @@
+/*
+ * This file is part of the AuScope Virtual Rock Lab (VRL) project.
+ * Copyright (c) 2009 ESSCC, The University of Queensland
+ *
+ * Licensed under the terms of the GNU Lesser General Public License.
+ */
 package org.auscope.vrl.web;
 
 import java.io.File;
@@ -29,6 +35,8 @@ import org.springframework.web.servlet.view.RedirectView;
 
 /**
  * Controller for the job list view.
+ *
+ * @author Cihan Altinay
  */
 public class JobListController extends MultiActionController {
 

@@ -1,7 +1,7 @@
 /*
  * This file is part of the AuScope Virtual Rock Lab (VRL) project.
  * Copyright (c) 2009 ESSCC, The University of Queensland
-
+ *
  * Licensed under the terms of the GNU Lesser General Public License.
  */
 package org.auscope.vrl.web;
@@ -56,6 +56,8 @@ import org.xml.sax.InputSource;
 /**
  * Controller that forwards shibboleth token to SLCS to retrieve a certificate
  * which can subsequently be used to access grid resources.
+ *
+ * @author Cihan Altinay
  */
 public class LoginController implements Controller {
 
