@@ -469,6 +469,12 @@ GridSubmit.initialize = function() {
             maskRe: /\d+/
         }, {
             xtype: 'textfield',
+            name: 'cpuCount',
+            fieldLabel: 'Number of MPI procs',
+            allowBlank: false,
+            maskRe: /\d+/
+        }, {
+            xtype: 'textfield',
             name: 'scriptFile',
             fieldLabel: 'Script Filename',
             allowBlank: false,
@@ -479,7 +485,6 @@ GridSubmit.initialize = function() {
             fieldLabel: 'Description',
             height: 100
         },
-        { xtype: 'hidden', name: 'cpuCount' },
         { xtype: 'hidden', name: 'inTransfers' },
         { xtype: 'hidden', name: 'outTransfers' },
         { xtype: 'hidden', name: 'jobType' },
