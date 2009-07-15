@@ -452,8 +452,8 @@ public class GridSubmitController extends MultiActionController {
      */
     private VRLJob prepareModel(HttpServletRequest request) {
         final String user = request.getRemoteUser();
-        final String maxWallTime = "2";
-        final String maxMemory = "1024";
+        final String maxWallTime = "3000"; // 50 hours
+        final String maxMemory = "32768"; // 32 GB
         final String stdInput = "";
         final String stdOutput = "stdOutput.txt";
         final String stdError = "stdError.txt";
