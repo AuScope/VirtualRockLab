@@ -430,7 +430,7 @@ public class GridSubmitController extends MultiActionController {
                         submitEPR, credential);
                 job.setReference(submitEPR);
                 job.setStatus(status);
-                job.setSubmitDate(new Date().toString());
+                job.setSubmitDate(dateFmt);
                 jobManager.saveJob(job);
             }
         }

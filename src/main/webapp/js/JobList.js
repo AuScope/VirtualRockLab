@@ -353,7 +353,7 @@ JobList.initialize = function() {
             { name: 'reference', type: 'string' },
             { name: 'scriptFile', type: 'string' },
             { name: 'status', type: 'string'},
-            { name: 'submitDate', type: 'string'}
+            { name: 'submitDate', type: 'date', dateFormat: 'Ymd_His' }
         ],
         listeners: {
             'beforeload': JobList.showProgressDlg,
@@ -463,7 +463,7 @@ JobList.initialize = function() {
         store: JobList.jobStore,
         columns: [
             { header: 'Job Name', sortable: true, dataIndex: 'name'},
-            { header: 'Submit Date', width: 160, sortable: true, dataIndex: 'submitDate'},
+            { header: 'Submit Date', width: 160, sortable: true, dataIndex: 'submitDate', renderer: Ext.util.Format.dateRenderer('d M Y, H:i:s')},
             { header: 'Status', sortable: true, dataIndex: 'status', renderer: jobStatusRenderer}
         ],
         sm: new Ext.grid.RowSelectionModel({
