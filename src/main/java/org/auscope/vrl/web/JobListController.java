@@ -706,6 +706,7 @@ public class JobListController extends MultiActionController {
         }
 
         if (errorString != null) {
+            request.getSession().removeAttribute("resubmitJob");
             return new ModelAndView("joblist", "error", errorString);
         }
 
