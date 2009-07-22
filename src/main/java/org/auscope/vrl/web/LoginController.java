@@ -65,7 +65,7 @@ public class LoginController implements Controller {
 
     private static final String SLCS_URL = "https://slcs1.arcs.org.au/SLCS/";
     private static final String HOST_KEY_FILE = "/etc/shibboleth/hostkey.pem";
-    private static final int PROXY_LIFETIME = 6*60*60;
+    private static final int PROXY_LIFETIME = 10*24*60*60; // 10 days
     private GridAccessController gridAccess;
 
     private class RequestData {

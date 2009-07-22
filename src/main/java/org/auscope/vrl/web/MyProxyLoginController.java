@@ -26,7 +26,7 @@ import org.springframework.web.servlet.view.RedirectView;
 public class MyProxyLoginController implements Controller {
 
     protected final Log logger = LogFactory.getLog(getClass());
-    private static final int PROXY_LIFETIME = 6*60*60;
+    private static final int PROXY_LIFETIME = 10*24*60*60; // 10 days
     private GridAccessController gridAccess;
 
     /**
