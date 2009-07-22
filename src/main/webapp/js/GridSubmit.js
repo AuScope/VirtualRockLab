@@ -73,7 +73,7 @@ GridSubmit.onUploadFile = function(form, action) {
             size: action.result.size
         });
         fileStore.add(newFile);
-        fileStore.sort('name');
+        fileStore.sort('name', 'ASC');
     } else {
         GridSubmit.showError('Error uploading file. '+action.result.error);
     }
@@ -91,7 +91,7 @@ GridSubmit.onFileListResponse = function(response, request) {
         });
         fileStore.add(newFile);
     }
-    fileStore.sort('name');
+    fileStore.sort('name', 'ASC');
 }
 
 // callback for a successful job object request
