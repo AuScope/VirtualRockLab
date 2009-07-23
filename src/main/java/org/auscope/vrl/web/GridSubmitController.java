@@ -17,6 +17,8 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import net.sf.json.JSONArray;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -336,6 +338,75 @@ public class GridSubmitController extends MultiActionController {
     }
 
     /**
+     * Deletes one or more uploaded files of the current job.
+     *
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return A JSON object with a success attribute that indicates whether
+     *         the files were successfully deleted.
+     */
+    public ModelAndView deleteFiles(HttpServletRequest request,
+                                    HttpServletResponse response) {
+
+        String jobInputDir = (String) request.getSession()
+            .getAttribute("jobInputDir");
+        ModelAndView mav = new ModelAndView("jsonView");
+        boolean success;
+
+        if (jobInputDir != null) {
+            success = true;
+            String filesPrm = request.getParameter("files");
+            logger.debug("Request to delete "+filesPrm);
+            String[] files = (String[]) JSONArray.toArray(
+                    JSONArray.fromObject(filesPrm), String.class);
+
+            for (String filename: files) {
+                File f = new File(jobInputDir+filename);
+                if (f.exists() && f.isFile()) {
+                    logger.debug("Deleting "+f.getPath());
+                    boolean lsuccess = f.delete();
+                    if (!lsuccess) {
+                        logger.warn("Unable to delete "+f.getPath());
+                        success = false;
+                    }
+                } else {
+                    logger.warn(f.getPath()+" does not exist or is not a file!");
+                }
+            }
+        } else {
+            success = false;
+        }
+
+        mav.addObject("success", success);
+        return mav;
+    }
+
+    /**
+     * Cancels the current job submission. Called to clean up temporary files.
+     *
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return null
+     */
+    public ModelAndView cancelSubmission(HttpServletRequest request,
+                                         HttpServletResponse response) {
+
+        String jobInputDir = (String) request.getSession()
+            .getAttribute("jobInputDir");
+
+        if (jobInputDir != null) {
+            logger.debug("Deleting temporary job files.");
+            File jobDir = new File(jobInputDir);
+            Util.deleteFilesRecursive(jobDir);
+            request.getSession().removeAttribute("jobInputDir");
+        }
+
+        return null;
+    }
+
+    /**
      * Processes a job submission request.
      *
      * @param request The servlet request
@@ -432,6 +503,7 @@ public class GridSubmitController extends MultiActionController {
                 job.setStatus(status);
                 job.setSubmitDate(dateFmt);
                 jobManager.saveJob(job);
+                request.getSession().removeAttribute("jobInputDir");
             }
         }
 

@@ -16,7 +16,9 @@ GridSubmit.ControllerURL = "gridsubmit.html";
 ////// Callbacks ///////
 ////////////////////////
 
-// called when a JsonStore fails retrieving data from the server
+//
+// Called when a JsonStore fails retrieving data from the server
+//
 GridSubmit.onLoadException = function(proxy, options, response, e) {
     if (response.status != 0) {
         GridSubmit.showError("Could not interpret server response "+
@@ -28,37 +30,64 @@ GridSubmit.onLoadException = function(proxy, options, response, e) {
     }
 }
 
-// called when the user tries to navigate away from this site
+//
+// Called when the user tries to navigate away from this site
+//
 GridSubmit.onWindowUnloading = function(e) {
     if (GridSubmit.confirmUnloading != false) {
         e.browserEvent.returnValue = "All entered details will be lost!";
     }
 }
 
-// called when the job submit request fails
+//
+// Called when the job object or file list request fails
+//
+GridSubmit.onLoadDataFailure = function(response, request) {
+    GridSubmit.showError('Error retrieving data from the server!');
+}
+
+//
+// Called when the job submit request fails
+//
 GridSubmit.onSubmitFailure = function(form, action) {
     GridSubmit.showError('Could not execute submit request.');
 }
 
-// callback for a successful job submit request
+//
+// Called when the file upload request fails
+//
+GridSubmit.onUploadFailure = function(form, action) {
+    GridSubmit.showError('Could not upload file. '+action.result.error);
+}
+
+//
+// Callback for the cancelSubmission request
+//
+GridSubmit.onCancelResponse = function(response, request) {
+    GridSubmit.confirmUnloading = false;
+    window.location = "joblist.html";
+}
+
+//
+// Callback for delete files request
+//
+GridSubmit.onDeleteResponse = function(response, request) {
+    // Retrieve updated list of job files
+    GridSubmit.loadJobFiles();
+}
+
+//
+// Callback for a successful job submit request
+//
 GridSubmit.onSubmitJob = function(form, action) {
     //GridSubmit.successDlg('The job was successfully submitted!');
     GridSubmit.confirmUnloading = false;
     window.location = "joblist.html";
 }
 
-// callback for cancel request
-GridSubmit.onCancelResponse = function(response, request) {
-    GridSubmit.confirmUnloading = false;
-    window.location = "joblist.html";
-}
-
-// called when the file upload request fails
-GridSubmit.onUploadFailure = function(form, action) {
-    GridSubmit.showError('Could not upload file. '+action.result.error);
-}
-
-// callback for a successful file upload request
+//
+// Callback for a successful file upload request
+//
 GridSubmit.onUploadFile = function(form, action) {
     if (action.result.success == "true") {
         GridSubmit.successDlg('The file was successfully uploaded!');
@@ -80,9 +109,12 @@ GridSubmit.onUploadFile = function(form, action) {
     Ext.getCmp('filesForm').getForm().reset();
 }
 
-// callback for a successful file listing request
+//
+// Callback for a successful file listing request
+//
 GridSubmit.onFileListResponse = function(response, request) {
     var fileStore = Ext.getCmp('file-grid').getStore();
+    fileStore.removeAll();
     var resp = Ext.decode(response.responseText);
     for (var i=0; i<resp.files.length; i++) {
         var newFile = new GridSubmit.FileRecord({
@@ -94,7 +126,9 @@ GridSubmit.onFileListResponse = function(response, request) {
     fileStore.sort('name', 'ASC');
 }
 
-// callback for a successful job object request
+//
+// Callback for a successful job object request
+//
 GridSubmit.onLoadJobObject = function(response, request) {
     Ext.getCmp('versionsCombo').getStore().baseParams.site =
        Ext.getCmp('sitesCombo').getValue();
@@ -102,24 +136,16 @@ GridSubmit.onLoadJobObject = function(response, request) {
        Ext.getCmp('sitesCombo').getValue();
 
     // Retrieve list of job files if any
-    Ext.Ajax.request({
-        url: GridSubmit.ControllerURL,
-        success: GridSubmit.onFileListResponse,
-        failure: GridSubmit.onLoadJobFailure,
-        params: { 'action': 'listJobFiles' }
-    });
-}
-
-// called when the job object request fails
-GridSubmit.onLoadJobFailure = function(response, request) {
-    GridSubmit.showError('Could not load job details from the server!');
+    GridSubmit.loadJobFiles();
 }
 
 ////////////////////////
 ////// Functions ///////
 ////////////////////////
 
-// shows an error dialog with given message
+//
+// Shows an error dialog with given message
+//
 GridSubmit.showError = function(message) {
     Ext.Msg.show({
         title: 'Error',
@@ -129,7 +155,9 @@ GridSubmit.showError = function(message) {
     });
 }
 
-// shows a success dialog with given message
+//
+// Shows a success dialog with given message
+//
 GridSubmit.successDlg = function(message) {
     Ext.Msg.show({
         title: 'Success',
@@ -139,33 +167,27 @@ GridSubmit.successDlg = function(message) {
     });
 }
 
-
-// retrieves filelist of selected job and updates the Details panel
-GridSubmit.updateJobDetails = function() {
-    var jobGrid = Ext.getCmp('job-grid');
-    var descEl = Ext.getCmp('metadata-panel').body;
-
-    if (jobGrid.getSelectionModel().getSelected()) {
-        var jobData = jobGrid.getSelectionModel().getSelected().data;
-        GridSubmit.jobFileStore.baseParams.ref = jobData.reference;
-        GridSubmit.jobFileStore.reload();
-    } else {
-        GridSubmit.jobFileStore.removeAll();
-        if (jobGrid.getStore().getTotalCount() > 0) {
-            descEl.update("Please select a job to see its details");
-        } else {
-            descEl.update("");
-        }
-    }
+//
+// Loads a list of job files
+//
+GridSubmit.loadJobFiles = function() {
+    Ext.Ajax.request({
+        url: GridSubmit.ControllerURL,
+        success: GridSubmit.onFileListResponse,
+        failure: GridSubmit.onLoadDataFailure,
+        params: { 'action': 'listJobFiles' }
+    });
 }
 
-// loads the populated job object from the server
+//
+// Loads the populated job object from the server
+//
 GridSubmit.loadJobObject = function() {
     // Load job details from session
     Ext.getCmp('metadataForm').getForm().load({
         url: GridSubmit.ControllerURL,
         success: GridSubmit.onLoadJobObject,
-        failure: GridSubmit.onLoadJobFailure,
+        failure: GridSubmit.onLoadDataFailure,
         params: { 'action': 'getJobObject' },
         waitMsg: 'Retrieving data, please wait...',
         waitTitle: 'Submit Job'
@@ -176,24 +198,68 @@ GridSubmit.loadJobObject = function() {
 // Requests submission of the current job from the server
 //
 GridSubmit.submitJob = function() {
-    Ext.getCmp('metadataForm').getForm().submit({
-        url: GridSubmit.ControllerURL,
-        success: GridSubmit.onSubmitJob,
-        failure: GridSubmit.onSubmitFailure,
-        params: {
-            'action': 'submitJob',
-            'seriesId': GridSubmit.seriesId,
-            'seriesName': GridSubmit.seriesName,
-            'seriesDesc': GridSubmit.seriesDesc
-        },
-        waitMsg: 'Submitting job, please wait...',
-        waitTitle: 'Submit Job'
-    });
+    var fileStore = Ext.getCmp('file-grid').getStore();
+    // sanity check: ensure that the script file exists
+    var scriptFile = Ext.getCmp('scriptFile').getRawValue();
+    if (fileStore.find('name', scriptFile) == -1) {
+        GridSubmit.showError('The script filename you entered is invalid. Please upload "'+scriptFile+'" or change the filename.');
+    }else {
+        Ext.getCmp('metadataForm').getForm().submit({
+            url: GridSubmit.ControllerURL,
+            success: GridSubmit.onSubmitJob,
+            failure: GridSubmit.onSubmitFailure,
+            params: {
+                'action': 'submitJob',
+                'seriesId': GridSubmit.seriesId,
+                'seriesName': GridSubmit.seriesName,
+                'seriesDesc': GridSubmit.seriesDesc
+            },
+            waitMsg: 'Submitting job, please wait...',
+            waitTitle: 'Submit Job'
+        });
+    }
 }
 
+//
+// Called when user dismisses the confirmation dialog of a file upload
+//
 GridSubmit.confirmOverwrite = function(btn) {
     if (btn=='yes') {
         GridSubmit.uploadFile(null, null, true);
+    }
+}
+
+//
+// Requests removal of uploaded files
+//
+GridSubmit.deleteFiles = function() {
+    var fileGrid = Ext.getCmp('file-grid');
+    if (fileGrid.getSelectionModel().getCount() > 0) {
+        var selData = fileGrid.getSelectionModel().getSelections();
+        var files = new Array();
+        for (var i=0; i<selData.length; i++) {
+            files.push(selData[i].get('name'));
+        }
+        Ext.Msg.show({
+            title: 'Delete Files',
+            msg: 'Are you sure you want to delete the selected files?',
+            buttons: Ext.Msg.YESNO,
+            icon: Ext.Msg.WARNING,
+            animEl: 'delete-files-btn',
+            closable: false,
+            fn: function(btn) {
+                if (btn == 'yes') {
+                    Ext.Ajax.request({
+                        url: GridSubmit.ControllerURL,
+                        success: GridSubmit.onDeleteResponse,
+                        failure: GridSubmit.onDeleteResponse, 
+                        params: { 'action': 'deleteFiles',
+                                  'files': Ext.encode(files)
+                        }
+                    });
+                }
+            }
+        });
     }
 }
 
@@ -226,6 +292,9 @@ GridSubmit.uploadFile = function(b, e, overwrite) {
     }
 }
 
+//
+// Shows a confirmation dialog after user selected 'Cancel'
+//
 GridSubmit.confirmCancel = function() {
     Ext.Msg.show({
         title: 'Cancel Job Submit',
@@ -240,7 +309,7 @@ GridSubmit.confirmCancel = function() {
                     url: GridSubmit.ControllerURL,
                     success: GridSubmit.onCancelResponse,
                     failure: GridSubmit.onCancelResponse, 
-                    params: { 'action': 'cancel' }
+                    params: { 'action': 'cancelSubmission' }
                 });
             }
         }
@@ -253,12 +322,6 @@ GridSubmit.confirmCancel = function() {
 GridSubmit.initialize = function() {
     
     Ext.QuickTips.init();
-    //Ext.state.Manager.setProvider(
-    //    new Ext.state.CookieProvider({
-    //        secure: true,
-    //        expires: new Date(new Date().getTime()+(1000*60*60))
-    //    })
-    //);
 
     // Store for ESyS-Particle sites
     var sitesStore = new Ext.data.JsonStore({
@@ -366,17 +429,12 @@ GridSubmit.initialize = function() {
             xtype: 'fieldset',
             title: 'Series properties',
             collapsible: false,
-            autoHeight: true,
-            anchor: '100%',
+            anchor: '100% -80',
             defaults: { anchor: '100%' },
             items: [{
                 xtype: 'combo',
                 id: 'seriesCombo',
                 name: 'seriesName',
-                //stateful: true,
-                //stateEvents: ['valid'],
-                //getState: function() { return { value: this.getValue() }; },
-                //applyState: function(state) { this.setValue(state.value); },
                 editable: false,
                 mode: 'local',
                 minLength: 3,
@@ -391,7 +449,7 @@ GridSubmit.initialize = function() {
                 xtype: 'textarea',
                 id: 'seriesDesc',
                 name: 'seriesDesc',
-                height: 150,
+                anchor: '100% -30',
                 disabled: true,
                 fieldLabel: 'Description',
                 blankText: 'Please provide a meaningful description...',
@@ -436,7 +494,6 @@ GridSubmit.initialize = function() {
             xtype: 'combo',
             id: 'versionsCombo',
             name: 'version',
-            //editable: true,
             editable: false,
             store: versionsStore,
             triggerAction: 'all',
@@ -475,6 +532,7 @@ GridSubmit.initialize = function() {
             maskRe: /\d+/
         }, {
             xtype: 'textfield',
+            id: 'scriptFile',
             name: 'scriptFile',
             fieldLabel: 'Script Filename',
             allowBlank: false,
@@ -483,7 +541,7 @@ GridSubmit.initialize = function() {
             xtype: 'textarea',
             name: 'description',
             fieldLabel: 'Description',
-            height: 100
+            anchor: '100% -200'
         },
         { xtype: 'hidden', name: 'inTransfers' },
         { xtype: 'hidden', name: 'outTransfers' },
@@ -551,17 +609,45 @@ GridSubmit.initialize = function() {
         }
     };
 
+    var uploadAction = new Ext.Action({
+        text: 'Upload File',
+        disabled: false,
+        iconCls: 'disk-icon',
+        handler: GridSubmit.uploadFile
+    });
+
+    var deleteAction = new Ext.Action({
+        id: 'delete-files-btn',
+        text: 'Delete Selection',
+        disabled: true,
+        iconCls: 'cross-icon',
+        handler: GridSubmit.deleteFiles
+    });
+
     var fileGrid = new Ext.grid.GridPanel({
         id: 'file-grid',
         title: 'Uploaded files',
         store: uploadedFilesStore,
         stripeRows: true,
-        height: 150,
+        anchor: '100% -20',
         columns: [
             { header: 'Filename', width: 200, sortable: true, dataIndex: 'name' },
             { header: 'Size', width: 100, sortable: true, dataIndex: 'size',
                 renderer: Ext.util.Format.fileSize, align: 'right' }
-        ]
+        ],
+        sm: new Ext.grid.RowSelectionModel({
+            singleSelect: false,
+            listeners: {
+                'selectionchange': function(sm) {
+                    if (fileGrid.getSelectionModel().getCount() == 0) {
+                        deleteAction.setDisabled(true);
+                    } else {
+                        deleteAction.setDisabled(false);
+                    }
+                }
+            }
+
+        })
     });
 
     var filesForm = new Ext.FormPanel({
@@ -569,11 +655,14 @@ GridSubmit.initialize = function() {
         id: 'filesForm',
         fileUpload: true,
         frame: true,
-        defaults: { anchor: "100%" },
         labelWidth: 150,
-        buttons: [{ text: 'Upload File', handler: GridSubmit.uploadFile }],
+        buttons: [
+            uploadAction,
+            deleteAction
+        ],
         items: [
         {
+            anchor: '100%',
             xtype: 'textfield',
             id: 'fileInputField',
             name: 'file',
