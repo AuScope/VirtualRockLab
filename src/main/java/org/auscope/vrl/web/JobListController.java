@@ -566,6 +566,7 @@ public class JobListController extends MultiActionController {
         List<VRLJob> seriesJobs = null;
         ModelAndView mav = new ModelAndView("jsonView");
         Object credential = request.getSession().getAttribute("userCred");
+        int seriesId = -1;
 
         if (credential == null) {
             final String errorString = "Invalid grid credentials!";
@@ -577,7 +578,7 @@ public class JobListController extends MultiActionController {
 
         if (seriesIdStr != null) {
             try {
-                int seriesId = Integer.parseInt(seriesIdStr);
+                seriesId = Integer.parseInt(seriesIdStr);
                 seriesJobs = jobManager.getSeriesJobs(seriesId);
             } catch (NumberFormatException e) {
                 logger.error("Error parsing series ID '"+seriesIdStr+"'");
@@ -587,20 +588,27 @@ public class JobListController extends MultiActionController {
         }
 
         if (seriesJobs != null) {
-            logger.debug("Updating status of jobs attached to series " +
-                    seriesIdStr + ".");
-            for (VRLJob j : seriesJobs) {
-                String state = j.getStatus();
-                if (!state.equals("Done") && !state.equals("Failed") &&
-                        !state.equals("Cancelled")) {
-                    String newState = gridAccess.retrieveJobStatus(
-                            j.getReference(), credential);
-                    if (newState != null && !state.equals(newState)) {
-                        j.setStatus(newState);
-                        jobManager.saveJob(j);
+            // check if current user is the owner of the series and update
+            // the status of the jobs if so
+            VRLSeries s = jobManager.getSeriesById(seriesId);
+            if (request.getRemoteUser().equals(s.getUser())) {
+                logger.debug("Updating status of jobs attached to series " +
+                        seriesIdStr + ".");
+                for (VRLJob j : seriesJobs) {
+                    String state = j.getStatus();
+                    if (!state.equals("Done") && !state.equals("Failed") &&
+                            !state.equals("Cancelled")) {
+                        String newState = gridAccess.retrieveJobStatus(
+                                j.getReference(), credential);
+                        if (newState != null && !state.equals(newState)) {
+                            j.setStatus(newState);
+                            jobManager.saveJob(j);
+                        }
+                        // TODO: job might have finished but status cannot be
+                        // retrieved anymore -> a good heuristics is to check
+                        // if the job files have been staged out and assume
+                        // success if that is the case.
                     }
-                    //FIXME: job might have finished but status cannot be
-                    //retrieved anymore...
                 }
             }
             mav.addObject("jobs", seriesJobs);
