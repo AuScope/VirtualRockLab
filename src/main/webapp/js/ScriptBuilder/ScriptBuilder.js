@@ -308,6 +308,7 @@ ScriptBuilder.initialize = function() {
             }
         }],
         items: [{
+            autoCreate: { tag: 'textarea', spellcheck: 'false'},
             id: 'sourcetext',
             xtype: 'textarea',
             disabled: true,
