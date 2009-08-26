@@ -81,14 +81,14 @@
 		th.spec {
 			border-left: 1px solid #C1DAD7;
 			border-top: 0;
-			background: #fff url(images/bullet1.gif) no-repeat;
+			background: #fff;
 			font: bold 10px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif;
 		}
 		
 		th.specalt {
 			border-left: 1px solid #C1DAD7;
 			border-top: 0;
-			background: #f5fafa url(images/bullet2.gif) no-repeat;
+			background: #f5fafa;
 			font: bold 10px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif;
 			color: #F39650;
 		}
