@@ -10,7 +10,19 @@
     <link rel="stylesheet" type="text/css" href="js/ext/resources/css/ext-all.css">
     <style type="text/css">
       #sitenav-02 a {
-        background: url( "img/navigation.gif" ) -100px -38px no-repeat;
+          background: url( "img/navigation.gif" ) -100px -38px no-repeat;
+      }
+
+      #note {
+          position: fixed;
+          top: 102px;
+          left: 2px;
+          color: #b00000;
+          border-style: solid;
+          border-width: thin;
+          font-size: 12pt;
+          font-weight: bold;
+          padding: 2px;
       }
     </style>
     <script type="text/javascript" src="js/ext/adapter/ext/ext-base.js"></script>
@@ -39,6 +51,7 @@
 
 <body>
     <%@ include file="page_header.jsp" %>
+    <div id="note">Note: The Scriptbuilder is considered experimental at the moment and may produce invalid scripts!</div>
     <div id="body"></div>
 </body>
 

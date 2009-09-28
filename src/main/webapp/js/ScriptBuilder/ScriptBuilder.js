@@ -387,7 +387,7 @@ ScriptBuilder.initialize = function() {
             xtype: 'box',
             region: 'north',
             applyTo: 'body',
-            height: 100
+            height: 126 // 100 without warning
         },{
             id: 'component-browser',
             region:'west',
