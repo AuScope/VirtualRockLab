@@ -118,11 +118,13 @@
       </plugins>
    </build>
    <repositories>
+      <!--
       <repository>
          <id>vpac</id>
          <name>vpac</name>
          <url>http://hudson.vpac.org/maven_repository</url>
       </repository>
+      -->
       <repository>
          <id>shibboleth</id> <!-- for commons-ssl -->
          <name>shibboleth</name>
@@ -226,6 +228,45 @@
          <artifactId>slsc-common</artifactId>
          <version>1.4.0.1</version>
       </dependency>
+      <!-- These must be present in tomcat/shared/lib to allow multiple grid
+           enabled apps to work simultaneously -->
+      <dependency>
+         <groupId>bouncycastle</groupId>
+         <artifactId>bcprov-jdk14</artifactId>
+         <version>138</version>
+         <scope>provided</scope>
+      </dependency>
+      <dependency>
+         <groupId>org.globus</groupId>
+         <artifactId>cog-jglobus</artifactId>
+         <version>1.4</version>
+         <scope>provided</scope>
+      </dependency>
+      <dependency>
+         <groupId>puretls</groupId>
+         <artifactId>puretls</artifactId>
+         <version>gt4</version>
+         <scope>provided</scope>
+      </dependency>
+      <dependency>
+         <groupId>cryptix</groupId>
+         <artifactId>cryptix</artifactId>
+         <version>gt4</version>
+         <scope>provided</scope>
+      </dependency>
+      <dependency>
+         <groupId>cryptix</groupId>
+         <artifactId>cryptix32</artifactId>
+         <version>gt4</version>
+         <scope>provided</scope>
+      </dependency>
+      <dependency>
+         <groupId>cryptix</groupId>
+         <artifactId>asn1</artifactId>
+         <version>gt4</version>
+         <scope>provided</scope>
+      </dependency>
+      <!-- end of common jars -->
    </dependencies>
 </project>
 

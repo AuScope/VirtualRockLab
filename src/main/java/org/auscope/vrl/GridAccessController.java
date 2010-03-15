@@ -22,7 +22,6 @@ import org.auscope.gridtools.SiteInfo;
 import org.globus.exec.generated.JobDescriptionType;
 import org.globus.gsi.GlobusCredential;
 import org.globus.gsi.GSIConstants;
-import org.globus.gsi.X509ExtensionSet;
 import org.globus.gsi.bc.BouncyCastleCertProcessingFactory;
 import org.globus.gsi.gssapi.GlobusGSSCredentialImpl;
 import org.globus.myproxy.MyProxyException;
@@ -395,14 +394,13 @@ public class GridAccessController {
                                    int lifetime) {
         GSSCredential credential = null;
         int bits = 512;
-        int proxyType = GSIConstants.DELEGATION_FULL;
-        X509ExtensionSet extSet = null;
+        int delegationMode = GSIConstants.DELEGATION_FULL;
         BouncyCastleCertProcessingFactory factory =
             BouncyCastleCertProcessingFactory.getDefault();
         try {
             GlobusCredential proxy = factory.createCredential(
                     new X509Certificate[] { certificate },
-                    key, bits, lifetime, proxyType, extSet);
+                    key, bits, lifetime, delegationMode);
             credential = new GlobusGSSCredentialImpl(
                     proxy, GSSCredential.INITIATE_AND_ACCEPT);
             if (isProxyValid(credential)) {

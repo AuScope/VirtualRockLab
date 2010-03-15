@@ -21,7 +21,7 @@ import org.auscope.gridtools.GridJob;
  */
 public class VRLJob extends GridJob {
     /** The name of the software to run VRL jobs with */
-    public static final String CODE_NAME = "esys_particle";
+    public static final String CODE_NAME = "ESyS-Particle";
     /** The job type */
     private static final String JOB_TYPE = "mpi";
     /** The prefix of checkpoint files */
