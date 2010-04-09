@@ -49,6 +49,7 @@
     </bean>
 
     <bean name="/access_error.html" class="org.auscope.vrl.web.AccessErrorController">
+        <property name="mailSender" ref="mailSender"/>
     </bean>
 
 </beans>

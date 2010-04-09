@@ -15,6 +15,7 @@
         <intercept-url pattern="/css/**" filters="none"/>
         <intercept-url pattern="/**" access="ROLE_USER"/>
         <concurrent-session-control max-sessions="1"/>
+        <logout />
     </http>
 
     <authentication-manager alias="authenticationManager" />

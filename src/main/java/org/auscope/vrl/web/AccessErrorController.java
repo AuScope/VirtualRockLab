@@ -12,6 +12,10 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.mail.MailException;
+import org.springframework.mail.MailSender;
+import org.springframework.mail.SimpleMailMessage;
+
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.Controller;
 
@@ -23,9 +27,35 @@ import org.springframework.web.servlet.mvc.Controller;
 public class AccessErrorController implements Controller {
 
     protected final Log logger = LogFactory.getLog(getClass());
+    private MailSender mailSender;
+
+    public void setMailSender(MailSender mailSender) {
+        this.mailSender = mailSender;
+    }
 
     public ModelAndView handleRequest(HttpServletRequest request,
                                       HttpServletResponse response) {
+
+        if (request.getMethod().equalsIgnoreCase("POST")) {
+            logger.info("POST received from "+request.getRemoteUser());
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setTo("c.altinay@uq.edu.au");
+            msg.setText("A user has requested to be registered with the VRL.\n"
+                    +"\nUser Details:\n"
+                    +"\nName: "+request.getHeader("Shib-Person-commonName")
+                    +"\nEmail: "+request.getRemoteUser()
+                    +"\nAffiliation: "+request.getHeader("Shib-EP-Affiliation")
+                    +"\nToken: "+request.getHeader("Shib-AuEduPerson-SharedToken")
+                    +"\n"
+                    );
+            msg.setFrom("VRL Portal <portal@shake200>");
+            msg.setSubject("VRL Registration Request");
+            try {
+                mailSender.send(msg);
+            } catch (MailException e) {
+                logger.error(e.getMessage(), e);
+            }
+        }
 
         logger.info("Returning access_error view.");
         return new ModelAndView("access_error");

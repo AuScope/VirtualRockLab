@@ -54,6 +54,9 @@
         <property name="sessionFactory" ref="vrlSessionFactory"/>
     </bean>
 
+    <bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+    </bean>
+
     <bean id="vrlJobManager" class="org.auscope.vrl.VRLJobManager">
         <property name="VRLJobDao" ref="vrlJobDao"/>
         <property name="VRLSeriesDao" ref="vrlSeriesDao"/>
