@@ -40,15 +40,17 @@ public class AccessErrorController implements Controller {
             logger.info("POST received from "+request.getRemoteUser());
             SimpleMailMessage msg = new SimpleMailMessage();
             msg.setTo("c.altinay@uq.edu.au");
+            msg.setCc("d.weatherley@uq.edu.au");
             msg.setText("A user has requested to be registered with the VRL.\n"
                     +"\nUser Details:\n"
                     +"\nName: "+request.getHeader("Shib-Person-commonName")
                     +"\nEmail: "+request.getRemoteUser()
+                    +"\nOrganisation: "+request.getHeader("Shib-EP-OrgDN")
                     +"\nAffiliation: "+request.getHeader("Shib-EP-Affiliation")
                     +"\nToken: "+request.getHeader("Shib-AuEduPerson-SharedToken")
                     +"\n"
                     );
-            msg.setFrom("VRL Portal <portal@shake200>");
+            msg.setFrom("VRL Portal <webmaster@esscc.uq.edu.au>");
             msg.setSubject("VRL Registration Request");
             try {
                 mailSender.send(msg);
