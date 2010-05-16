@@ -20,7 +20,7 @@
         attribute. This means that you will need your own certificate to access
         the grid. If you have a valid grid certificate please upload it to the
         ARCS MyProxy server (e.g. using the
-        <a href="http://www.arcs.org.au/products-services/authorisation-services/grix">grix</a> tool).
+        <a href="http://www.arcs.org.au/index.php/services/services-list/290-grix">grix</a> tool).
         <br/>
 <% } %>
         Please enter your MyProxy username and password.<br/>
