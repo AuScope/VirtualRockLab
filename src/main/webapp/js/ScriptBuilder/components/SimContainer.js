@@ -1,6 +1,6 @@
 /*
  * This file is part of the AuScope Virtual Rock Lab (VRL) project.
- * Copyright (c) 2009 ESSCC, The University of Queensland
+ * Copyright (c) 2010 The University of Queensland, ESSCC
  *
  * Licensed under the terms of the GNU Lesser General Public License.
  */
@@ -48,7 +48,7 @@ SimContainerNode = Ext.extend(ScriptBuilder.BaseComponent, {
     var scriptHeader = "\
 # ESyS-Particle Simulation Script\n\
 # Created using the ESyS-Particle Script Builder Web Interface\n\
-# (c) 2009 ESSCC, The University of Queensland, Australia. All rights reserved.\n\n\
+# (c) 2010 The University of Queensland, ESSCC, Australia. All rights reserved.\n\n\
 from esys.lsm import *\n\
 from esys.lsm.util import *\n\
 from esys.lsm.geometry import *\n\n";

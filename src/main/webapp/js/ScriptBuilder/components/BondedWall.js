@@ -1,6 +1,6 @@
 /*
  * This file is part of the AuScope Virtual Rock Lab (VRL) project.
- * Copyright (c) 2009 ESSCC, The University of Queensland
+ * Copyright (c) 2010 The University of Queensland, ESSCC
  *
  * Licensed under the terms of the GNU Lesser General Public License.
  */
