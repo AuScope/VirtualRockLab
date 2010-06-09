@@ -9,8 +9,8 @@
         class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
         <property name="locations">
             <list>
-                <value>classpath:server.properties</value>
                 <value>classpath:jdbc.properties</value>
+                <value>classpath:server.properties</value>
             </list>
         </property>
     </bean>
@@ -38,7 +38,7 @@
             </list>
         </property>
         <property name="hibernateProperties">
-            <value>hibernate.dialect=org.hibernate.dialect.HSQLDialect</value>
+            <value>hibernate.dialect=org.hibernate.dialect.MySQLMyISAMDialect</value>
         </property>
     </bean>
 

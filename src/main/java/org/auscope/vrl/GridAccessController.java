@@ -423,13 +423,13 @@ public class GridAccessController {
      * 
      * @return the grid credential object (which can be null)
      */
-    public static Object initProxy(String proxyUser, String proxyPass,
+    public static Object initProxy(String proxyUser, char[] proxyPass,
                                    int lifetime) {
         GSSCredential credential = null;
         try {
             credential = MyProxyManager.getDelegation(
                     myProxyServer, myProxyPort,
-                    proxyUser, proxyPass.toCharArray(),
+                    proxyUser, proxyPass,
                     lifetime);
 
             if (isProxyValid(credential)) {

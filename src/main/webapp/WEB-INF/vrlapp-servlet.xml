@@ -24,13 +24,14 @@
 
     <bean name="/about.html" class="org.auscope.vrl.web.AboutController"/>
 
+    <bean name="/access_error.html" class="org.auscope.vrl.web.AccessErrorController">
+        <property name="mailSender" ref="mailSender"/>
+    </bean>
+
     <bean name="/login.html" class="org.auscope.vrl.web.LoginController">
         <property name="gridAccess" ref="gridAccess"/>
     </bean>
 
-    <bean name="/myproxylogin.html" class="org.auscope.vrl.web.MyProxyLoginController">
-        <property name="gridAccess" ref="gridAccess"/>
-    </bean>
 
     <bean name="/gridsubmit.html" class="org.auscope.vrl.web.GridSubmitController">
         <property name="gridAccess" ref="gridAccess"/>
@@ -46,10 +47,6 @@
 
     <bean name="/scriptbuilder.html" class="org.auscope.vrl.web.ScriptBuilderController">
         <property name="methodNameResolver" ref="methodNameResolver"/>
-    </bean>
-
-    <bean name="/access_error.html" class="org.auscope.vrl.web.AccessErrorController">
-        <property name="mailSender" ref="mailSender"/>
     </bean>
 
 </beans>

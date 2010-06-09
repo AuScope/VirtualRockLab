@@ -44,6 +44,7 @@ import org.glite.slcs.pki.CertificateRequest;
 
 import org.globus.gsi.CertUtil;
 
+import org.springframework.security.context.SecurityContextHolder;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.Controller;
 import org.springframework.web.servlet.view.RedirectView;
@@ -54,8 +55,14 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 /**
- * Controller that forwards shibboleth token to SLCS to retrieve a certificate
- * which can subsequently be used to access grid resources.
+ * Controller that handles Grid proxy initialisation using either a SLCS
+ * certificate or MyProxy details entered by the user.
+ * If the IdP releases a Shared Token attribute it is forwarded to the ARCS
+ * SLCS service to retrieve a certificate which is subsequently used to
+ * generate a Grid proxy. Otherwise the user is presented with a
+ * login form to enter MyProxy details which in turn are used to access
+ * the Grid. If login attempts fail three times the session
+ * is destroyed and the user is redirected to the Shibboleth logout page.
  *
  * @author Cihan Altinay
  */
@@ -65,7 +72,11 @@ public class LoginController implements Controller {
 
     private static final String SLCS_URL = "https://slcs1.arcs.org.au/SLCS/";
     private static final String HOST_KEY_FILE = "/etc/shibboleth/hostkey.pem";
-    private static final int PROXY_LIFETIME = 10*24*60*60; // 10 days
+    /** Lifetime of the generated proxy in seconds (10 days) */
+    private static final int PROXY_LIFETIME = 10*24*60*60;
+    /** maximum number of login failures */
+    private static final int MAX_ATTEMPTS = 3;
+
     private GridAccessController gridAccess;
 
     private class RequestData {
@@ -90,50 +101,119 @@ public class LoginController implements Controller {
      * a redirect to the SLCS server is performed. A POST request is handled
      * as being a response from the SLCS server so the certificate is extracted
      * and a grid proxy is generated.
+     *
+     * @return an appropriate ModelAndView
      */
     public ModelAndView handleRequest(HttpServletRequest request,
                                       HttpServletResponse response) {
 
-        final String serviceUrl = "https://" + request.getServerName() +
-            "/vrl/login.html";
-
-        String sharedToken = request.getHeader("Shib-AuEduPerson-SharedToken");
-        if (sharedToken == null) {
-            logger.info("No shared token, redirecting to MyProxy login.");
-            return new ModelAndView(new RedirectView(
-                    "/myproxylogin.html", true, false, false));
+        Integer loginAttempts = (Integer)request.getSession()
+            .getAttribute("loginAttempt");
+        String errorMessage = null;
+        
+        if (loginAttempts == null) {
+            loginAttempts = new Integer(1);
         }
 
-        if (request.getMethod().equalsIgnoreCase("GET")) {
-            logger.debug("Handling GET request.");
-            Object credential = request.getSession().getAttribute("userCred");
-            if (gridAccess.isProxyValid(credential)) {
-                logger.debug("Valid proxy found.");
-                return redirectToTarget(request);
-            }
-            return redirectToSlcs(serviceUrl);
-
-        } else if (request.getMethod().equalsIgnoreCase("POST")) {
-            logger.debug("Handling POST request.");
+        if (loginAttempts.intValue() <= MAX_ATTEMPTS) {
+            logger.debug(request.getRemoteUser() + "'s login attempt #"
+                    + loginAttempts.toString());
             try {
-                processSlcsResponse(request);
-                return redirectToTarget(request);
+                // CASE 1: MyProxy login attempt
+                if (request.getParameter("proxyuser") != null) {
+                    logger.debug("Handling MyProxy login.");
+                    handleMyProxyLogin(request);
+                    return redirectToTarget(request);
 
+                // CASE 2: No shared token -> show login form
+                } else if (request
+                        .getHeader("Shib-AuEduPerson-SharedToken") == null) {
+                    logger.debug("No shared token.");
+
+                // CASE 3: valid shared token and GET request
+                } else if (request.getMethod().equalsIgnoreCase("GET")) {
+                    logger.debug("Handling GET request.");
+
+                    // CASE 3.1: Grid proxy valid -> nothing to do
+                    Object credential = request.getSession().getAttribute("userCred");
+                    if (gridAccess.isProxyValid(credential)) {
+                        logger.debug("Valid proxy found.");
+                        return redirectToTarget(request);
+
+                    // CASE 3.2: No Grid proxy -> request SLCS cert
+                    } else {
+                        final String serviceUrl = "https://"
+                            + request.getServerName() + "/vrl/login.html";
+                        return redirectToSlcs(serviceUrl);
+                    }
+
+                // CASE 4: valid shared token and POST request (from SLCS)
+                } else if (request.getMethod().equalsIgnoreCase("POST")) {
+                    logger.debug("Handling POST request.");
+                    processSlcsResponse(request);
+                    return redirectToTarget(request);
+                }
             } catch (Exception e) {
-                logger.error(e.getMessage(), e);
+                errorMessage = new String(e.getMessage());
+                logger.error(errorMessage, e);
+                loginAttempts = new Integer(loginAttempts.intValue()+1);
+                request.getSession().setAttribute(
+                        "loginAttempt", loginAttempts);
             }
+        } else {
+            logger.warn("Too many failed login attempts. Killing session.");
+            return doLogout(request);
         }
 
-        // proxy is not valid so redirect to a page showing what
-        // happened, maybe giving option of MyProxy details entry.
-        // Simple solution: logout
+        logger.debug("Returning login view.");
+        return new ModelAndView("login", "error", errorMessage);
+    }
+
+    /**
+     * Invalidates the security context and the session and returns a redirect
+     * to Shibboleth logout.
+     */
+    private ModelAndView doLogout(HttpServletRequest request) {
+        request.getSession(false).invalidate();
+        SecurityContextHolder.clearContext();
         return new ModelAndView(new RedirectView(
                     "/Shibboleth.sso/Logout", false, false, false));
     }
 
     /**
-     * Returns a <code>ModelAndView</code> object for a redirect to the
-     * SLCS server.
+     * Checks MyProxy details submitted and tries to retrieve Grid proxy
+     * using the details.
+     */
+    private void handleMyProxyLogin(HttpServletRequest request)
+            throws Exception {
+
+        String user = request.getParameter("proxyuser");
+        char[] pass;
+
+        if (user != null) {
+            if (request.getParameter("proxypass") == null) {
+                pass = new char[0];
+            } else {
+                pass = request.getParameter("proxypass").toCharArray();
+            }
+
+            logger.info("Initializing Grid proxy with MyProxy details.");
+            Object credential = gridAccess.initProxy(
+                    user, pass, PROXY_LIFETIME);
+            if (credential != null) {
+                logger.info("Storing credentials in session.");
+                request.getSession().setAttribute("userCred", credential);
+            } else {
+                logger.info("Proxy initialisation failed.");
+                throw new Exception("Proxy initialisation failed.");
+            }
+        } else {
+            throw new Exception("Empty user name!");
+        }
+    }
+
+    /**
+     * Returns a {@link ModelAndView} object for a redirect to the SLCS server.
      *
      * @return A prepared <code>ModelAndView</code> to redirect to SLCS.
      */
@@ -144,13 +224,15 @@ public class LoginController implements Controller {
     }
 
     /**
-     * Returns a <code>ModelAndView</code> object which is a redirect either
-     * to a page requested prior to login or the JobList view by default.
+     * Returns a {@link ModelAndView} object which is a redirect either to a
+     * page requested prior to login or the default view.
      * 
      * @return The <code>ModelAndView</code> of the proper destination page.
      */
     private ModelAndView redirectToTarget(HttpServletRequest request) {
         Object target = request.getSession().getAttribute("redirectAfterLogin");
+        // clear login attempt counter
+        request.getSession().removeAttribute("loginAttempt");
         if (target != null) {
             logger.debug("Redirecting to "+target.toString());
             request.getSession().removeAttribute("redirectAfterLogin");
@@ -242,7 +324,9 @@ public class LoginController implements Controller {
     }
 
     /**
-     * Extracts and decrypts the XML response received from the SLCS server
+     * Extracts and decrypts the XML response received from the SLCS server.
+     *
+     * @return the decrypted XML response
      */
     private String extractSlcsResponse(HttpServletRequest request)
             throws GeneralSecurityException, IOException {
@@ -250,7 +334,7 @@ public class LoginController implements Controller {
         String certReqDataHex = request.getParameter("CertificateRequestData");
         String sessionKeyHex = request.getParameter("SessionKey");
         if (certReqDataHex == null || sessionKeyHex == null) {
-            logger.error("CertificateRequestData or SessionKey empty!");
+            throw new GeneralSecurityException("Invalid Request.");
         } else {
             // load host key
             FileInputStream in = new FileInputStream(HOST_KEY_FILE);
@@ -334,6 +418,8 @@ public class LoginController implements Controller {
                 logger.info("Storing credentials in session.");
                 request.getSession().setAttribute("userCred", credential);
             }
+        } else {
+            throw new Exception("Error retrieving SLCS certificate!");
         }
     }
 }
