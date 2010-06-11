@@ -138,7 +138,7 @@ public class JobListController extends MultiActionController {
                 try {
                     logger.info("Terminating job with ID "+jobIdStr);
                     JobObject grisuJob = new JobObject(si, handle);
-                    grisuJob.kill(true);
+                    grisuJob.kill(false);
                     //job.setHandle(null);
                     //jobManager.saveJob(job);
                 } catch (Exception e) {
@@ -212,7 +212,7 @@ public class JobListController extends MultiActionController {
                         int oldStatus = grisuJob.getStatus(true);
                         if (oldStatus <= JobConstants.ACTIVE) {
                             logger.debug("Killing job with ID "+job.getId());
-                            grisuJob.kill(true);
+                            grisuJob.kill(false);
                             //job.setHandle(null);
                             //jobManager.saveJob(job);
                         }

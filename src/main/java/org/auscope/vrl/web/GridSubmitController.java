@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.auscope.vrl.FileInformation;
-import org.auscope.vrl.ScriptParser;
 import org.auscope.vrl.Util;
 import org.auscope.vrl.VRLJob;
 import org.auscope.vrl.VRLJobManager;
