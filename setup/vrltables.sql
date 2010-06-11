@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS series (
   id long NOT NULL PRIMARY KEY auto_increment,
   user varchar(64) NOT NULL,
   name varchar(255) NOT NULL,
+  creationDate long NOT NULL,
   description TEXT
   );
 

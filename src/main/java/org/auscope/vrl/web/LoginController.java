@@ -238,9 +238,9 @@ public class LoginController implements Controller {
             return new ModelAndView(new RedirectView(
                         target.toString(), true, false, false));
         }
-        logger.debug("Redirecting to joblist.");
+        logger.debug("Redirecting to home.");
         return new ModelAndView(new RedirectView(
-                    "/joblist.html", true, false, false));
+                    "/home.html", true, false, false));
     }
 
     /**

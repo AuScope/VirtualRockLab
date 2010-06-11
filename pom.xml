@@ -4,8 +4,8 @@
     <groupId>org.auscope.vrl</groupId>
     <artifactId>VirtualRockLab</artifactId>
     <packaging>war</packaging>
-    <version>1.0.1</version>
-    <name>AuScope-VirtualRockLab</name>
+    <version>2.0.0</version>
+    <name>VirtualRockLab</name>
     <url>https://portal.esscc.uq.edu.au</url>
     <scm>
         <connection>scm:svn:https://svn.auscope.org/subversion/AuScopePortal/VirtualRockLab/trunk</connection>
@@ -33,6 +33,20 @@
         </plugins>
     </reporting>
 
+    <pluginRepositories>
+        <pluginRepository>
+            <id>samaxes-releases</id>
+            <name>samaxes Release Repository (minify-plugin)</name>
+            <url>http://maven-samaxes-repo.googlecode.com/svn/releases</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
     <build>
         <finalName>VirtualRockLab</finalName>
         <plugins>
@@ -43,6 +57,53 @@
                     <target>1.5</target>
                     <compilerVersion>2.2</compilerVersion>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.samaxes.maven</groupId>
+                <artifactId>maven-minify-plugin</artifactId>
+                <version>1.1</version>
+                <executions>
+                    <execution>
+                        <id>default-minify</id>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <cssFiles>
+                                <param>../js/treegrid/treegrid.css</param>
+                                <param>vrl.css</param>
+                            </cssFiles>
+                            <jsFiles>
+                                <param>treegrid/TreeGridSorter.js</param>
+                                <param>treegrid/TreeGridSorter.js</param>
+                                <param>treegrid/TreeGridColumnResizer.js</param>
+                                <param>treegrid/TreeGridNodeUI.js</param>
+                                <param>treegrid/TreeGridLoader.js</param>
+                                <param>treegrid/TreeGridColumns.js</param>
+                                <param>treegrid/TreeGrid.js</param>
+                                <param>codemirror/codemirror.js</param>
+                                <param>CodeMirror.js</param>
+                                <param>CenterLayout.js</param>
+                                <param>GroupTabPanel.js</param>
+                                <param>GroupTab.js</param>
+                                <param>FileUploadField.js</param>
+                                <param>FileManager.js</param>
+                                <param>JobManager.js</param>
+                                <param>NewSeriesDialog.js</param>
+                                <param>JobDetailsDialog.js</param>
+                                <param>SeriesBrowser.js</param>
+                                <param>SaveSeriesDialog.js</param>
+                                <param>SubmitJobDialog.js</param>
+                                <param>WelcomeDialog.js</param>
+                                <param>VRLMain.js</param>
+                            </jsFiles>
+                            <cssFinalFile>vrl.css</cssFinalFile>
+                            <jsFinalFile>vrl.js</jsFinalFile>
+                        </configuration>
+                        <goals>
+                            <goal>minify</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
@@ -88,6 +149,7 @@
                     <goals>
                         <goal>manifest</goal>
                     </goals>
+                    <warSourceExcludes>css/vrl.css,js/CenterLayout.js,js/CodeMirror.js,js/VRLMain.js,js/FileManager.js,js/FileUploadField.js,js/GroupTab.js,js/GroupTabPanel.js,js/NewSeriesDialog.js,js/SeriesBrowser.js,js/SaveSeriesDialog.js,js/SubmitJobDialog.js,js/JobDetailsDialog.js,js/JobManager.js,js/WelcomeDialog.js,**/treegrid/**,**/codemirror/codemirror.js</warSourceExcludes>
                 </configuration>
             <!-- This is needed to create ${basedir}/src/main/webapp/META-INF/MANIFEST.MF file -->
                 <executions>

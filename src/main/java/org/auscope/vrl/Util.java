@@ -164,5 +164,26 @@ public class Util
 
         return success;
     }
+
+    /**
+     * Returns a sanitized version of a path string.
+     * All occurrences of ".." and leading separators ("/") are removed.
+     * For example: "/home/test/../../etc/passwd" becomes
+     * "home/test/etc/passwd".
+     *
+     * @param path The path string to sanitize
+     *
+     * @return String which contains the sanitized path
+     */
+    public static String sanitizeSubPath(final String path) {
+        if (path == null || path.length() == 0) {
+            return "";
+        } else {
+            return path
+                .replaceFirst("^\\"+File.separator, "")
+                .replaceAll("\\.\\.", "")
+                .replaceAll("[/\\\\]+", "\\" + File.separator);
+        }
+    }
 }
 

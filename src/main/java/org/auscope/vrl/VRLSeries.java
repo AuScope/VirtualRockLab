@@ -16,13 +16,15 @@ import java.io.Serializable;
  */
 public class VRLSeries implements Serializable {
     /** A unique identifier for this series */
-    private Long id;
+    private Long   id;
+    /** Creation date and time of this series */
+    private Long   creationDate;
     /** The user owning this series */
-    private String  user;
+    private String user;
     /** A short name for this series */
-    private String  name;
+    private String name;
     /** A description of this series */
-    private String  description;
+    private String description;
 
     /**
      * Default constructor.
@@ -46,8 +48,25 @@ public class VRLSeries implements Serializable {
      * @param id The new ID for this series.
      */
     private void setId(Long id) {
-        assert (id != null);
         this.id = id;
+    }
+
+    /**
+     * Returns the date this series was created.
+     *
+     * @return The creation date.
+     */
+    public Long getCreationDate() {
+        return creationDate;
+    }
+
+    /**
+     * Sets the creation date.
+     *
+     * @param creationDate The date.
+     */
+    public void setCreationDate(Long creationDate) {
+        this.creationDate = creationDate;
     }
 
     /**
@@ -65,7 +84,6 @@ public class VRLSeries implements Serializable {
      * @param description The description of this series.
      */
     public void setDescription(String description) {
-        assert (description != null);
         this.description = description;
     }
 
@@ -84,7 +102,6 @@ public class VRLSeries implements Serializable {
      * @param user The user owning this series.
      */
     public void setUser(String user) {
-        assert (user != null);
         this.user = user;
     }
 
@@ -103,7 +120,6 @@ public class VRLSeries implements Serializable {
      * @param name The name of this series.
      */
     public void setName(String name) {
-        assert (name != null);
         this.name = name;
     }
 
@@ -114,8 +130,8 @@ public class VRLSeries implements Serializable {
      * @return A summary of the values of this object's fields
      */
     public String toString() {
-        return super.toString() +
-               ",id=" + id +
+        return "id=" + id +
+               ",creationDate=" + creationDate +
                ",user=\"" + user + "\"" +
                ",name=\"" + name + "\"" +
                ",description=\"" + description + "\"";

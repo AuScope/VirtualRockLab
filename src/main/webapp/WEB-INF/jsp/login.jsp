@@ -4,8 +4,8 @@
 <html>
 
 <head>
-    <title>AuScope Virtual Rock Laboratory - MyProxy Login</title>
-    <link rel="stylesheet" type="text/css" href="css/virtualrocklab.css">
+    <title>Virtual Rock Laboratory - MyProxy Login</title>
+    <link rel="stylesheet" type="text/css" href="css/vrl.min.css">
     <style type="text/css">
       .error { font-size:medium;font-weight:bold;color:red; }
       .note { font-size:medium;font-weight:bold;color:blue; }

@@ -30,10 +30,10 @@ public class VRLJobDao extends HibernateDaoSupport {
      *
      * @return list of <code>VRLJob</code> objects belonging to given series
      */
-    public List<VRLJob> getJobsOfSeries(final long seriesID) {
+    public List<VRLJob> getJobsBySeries(final long seriesId) {
         return (List<VRLJob>) getHibernateTemplate()
-            .findByNamedParam("from VRLJob j where j.seriesId=:searchID",
-                    "searchID", seriesID);
+            .findByNamedParam("from VRLJob j where j.seriesId=:searchId",
+                    "searchId", seriesId);
     }
 
     /**
@@ -47,12 +47,13 @@ public class VRLJobDao extends HibernateDaoSupport {
         return (List<VRLJob>) getHibernateTemplate()
             .findByNamedParam("from VRLJob j where j.user=:searchUser",
                     "searchUser", user);
-        /*
-        return sessionFactory.getCurrentSession()
-            .createQuery("from jobs j where j.user=:searchUser")
-            .setString("searchUser", user)
-            .list();
-        */
+    }
+
+    /**
+     * Deletes the given job.
+     */
+    public void deleteJob(final VRLJob job) {
+        getHibernateTemplate().delete(job);
     }
 
     /**
@@ -60,14 +61,14 @@ public class VRLJobDao extends HibernateDaoSupport {
      *
      * @return <code>VRLJob</code> object with given ID.
      */
-    public VRLJob get(final long id) {
+    public VRLJob getJobById(final long id) {
         return (VRLJob) getHibernateTemplate().get(VRLJob.class, id);
     }
 
     /**
      * Saves or updates the given job.
      */
-    public void save(final VRLJob job) {
+    public void saveJob(final VRLJob job) {
         getHibernateTemplate().saveOrUpdate(job);
     }
 }

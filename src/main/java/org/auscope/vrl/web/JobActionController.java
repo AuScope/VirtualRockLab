@@ -1,0 +1,827 @@
+/*
+ * This file is part of the AuScope Virtual Rock Lab (VRL) project.
+ * Copyright (c) 2010 The University of Queensland, ESSCC
+ *
+ * Licensed under the terms of the GNU Lesser General Public License.
+ */
+package org.auscope.vrl.web;
+
+import au.org.arcs.jcommons.constants.Constants;
+import au.org.arcs.jcommons.constants.JobSubmissionProperty;
+import au.org.arcs.jcommons.interfaces.GridResource;
+import au.org.arcs.jcommons.utils.SubmissionLocationHelpers;
+
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.auscope.vrl.VRLJob;
+import org.auscope.vrl.VRLJobManager;
+import org.auscope.vrl.VRLSeries;
+import org.auscope.vrl.Util;
+
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
+import org.springframework.web.servlet.mvc.multiaction.NoSuchRequestHandlingMethodException;
+import org.springframework.web.servlet.view.RedirectView;
+
+import org.vpac.grisu.control.JobConstants;
+import org.vpac.grisu.control.ServiceInterface;
+import org.vpac.grisu.control.exceptions.JobPropertiesException;
+import org.vpac.grisu.frontend.model.job.JobException;
+import org.vpac.grisu.frontend.model.job.JobObject;
+import org.vpac.grisu.model.GrisuRegistry;
+import org.vpac.grisu.model.GrisuRegistryManager;
+
+/**
+ * Controller for job related actions.
+ *
+ * @author Cihan Altinay
+ */
+public class JobActionController extends MultiActionController {
+
+    /** Logger for this class */
+    private final Log logger = LogFactory.getLog(getClass());
+    private static final String FQAN = "/ARCS/AuScope";
+
+    private String jobFileArchiveDir = "/home/vrl/repo";
+    private VRLJobManager jobManager;
+
+    /**
+     * Sets the {@link VRLJobManager} to be used to retrieve and store series
+     * and job details.
+     *
+     * @param jobManager the <code>VRLJobManager</code> to use
+     */
+    public void setJobManager(VRLJobManager jobManager) {
+        this.jobManager = jobManager;
+    }
+
+    protected ModelAndView handleNoSuchRequestHandlingMethod(
+            NoSuchRequestHandlingMethodException ex,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+
+        logger.warn(ex.getMessage());
+        String referer = request.getHeader("referer");
+        if (referer != null && referer.contains(request.getServerName())) {
+            ModelAndView mav = new ModelAndView("jsonView");
+            mav.addObject("error", ex.getMessage());
+            mav.addObject("success", false);
+            return mav;
+        } else {
+            return new ModelAndView(
+                    new RedirectView("/login.html", true, false, false));
+        }
+    }
+
+    private ServiceInterface getGrisuService(HttpServletRequest request) {
+        return (ServiceInterface)
+            request.getSession().getAttribute("grisuService");
+    }
+
+    ///////////////////////////////////////////////////////////////////////
+    ////////////////////////////// ACTIONS ////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////
+
+    /**
+     * Deletes a job including all its files from the active series.
+     *
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return A JSON object
+     */
+    public ModelAndView deleteJob(HttpServletRequest request,
+                                  HttpServletResponse response) {
+        ServiceInterface si = getGrisuService(request);
+        final String user = request.getRemoteUser();
+        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
+        final String jobStr = request.getParameter("job");
+        VRLJob job = null;
+        long jobId = -1;
+        String errorString = null;
+        ModelAndView mav = new ModelAndView("jsonView");
+        if (jobStr != null) {
+            try {
+                jobId = Long.parseLong(jobStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID!");
+            }
+        }
+
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (seriesDir == null) {
+            errorString = "No active series in session";
+            logger.error("series is null!");
+        } else if (job == null) {
+            errorString = "No/Invalid job specified";
+            logger.error(errorString);
+        } else {
+            // check if current user is the owner of the job
+            VRLSeries s = jobManager.getSeriesById(job.getSeriesId());
+            if (user.equals(s.getUser())) {
+                String handle = job.getHandle();
+                if (handle != null && handle.length() > 0) {
+                    try {
+                        // try to get the job status
+                        JobObject grisuJob = new JobObject(si, handle);
+                        int status = grisuJob.getStatus(true);
+                        if (status <= JobConstants.ACTIVE) {
+                            errorString = "Cannot delete running job";
+                            logger.warn(errorString);
+                        }
+                    } catch (Exception e) {
+                        logger.warn(e.getMessage());
+                    }
+                }
+            } else {
+                logger.warn(user+"'s attempt to delete "+s.getUser()
+                    +"'s job denied!");
+                errorString = "You are not authorised to delete this job";
+            }
+
+            if (errorString == null) {
+                try {
+                    logger.debug("Deleting job files");
+                    File jobDir = new File(seriesDir, jobStr);
+                    File[] array = jobDir.listFiles();
+                    for (File f : array) {
+                        f.delete();
+                    }
+                    jobDir.delete();
+                    logger.debug("Deleting job "+jobStr+" from database.");
+                    jobManager.deleteJob(job);
+                } catch (Exception e) {
+                    errorString = new String("Unable to delete job files");
+                    logger.error(e.getMessage());
+                }
+            } 
+        }
+
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
+        return mav;
+    }
+
+    /**
+     * Terminates a job given by its identifier.
+     *
+     * @param request The servlet request including a job parameter
+     * @param response The servlet response
+     *
+     * @return A JSON object with a success attribute and an error attribute
+     *         in case of an error.
+     */
+    public ModelAndView killJob(HttpServletRequest request,
+                                HttpServletResponse response) {
+
+        ServiceInterface si = getGrisuService(request);
+        final String user = request.getRemoteUser();
+        final String jobStr = request.getParameter("job");
+        VRLJob job = null;
+        long jobId = -1;
+        String handle = null;
+        ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
+
+        if (jobStr != null) {
+            try {
+                jobId = Long.parseLong(jobStr);
+                job = jobManager.getJobById(jobId);
+                handle = job.getHandle();
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID!");
+            }
+        }
+
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (job == null) {
+            errorString = "No/Invalid job specified";
+            logger.error(errorString);
+        } else if (handle == null || handle.length() == 0) {
+            errorString = "Job has not been submitted";
+            logger.error(errorString);
+        } else {
+            // check if current user is the owner of the job
+            VRLSeries s = jobManager.getSeriesById(job.getSeriesId());
+            if (user.equals(s.getUser())) {
+                try {
+                    logger.info("Terminating job with ID "+jobStr);
+                    JobObject grisuJob = new JobObject(si, handle);
+                    grisuJob.kill(true);
+                    job.setHandle(null);
+                    jobManager.saveJob(job);
+                } catch (Exception e) {
+                    errorString = "Error terminating job";
+                    logger.error(e.getMessage(), e);
+                }
+            } else {
+                logger.warn(user+"'s attempt to kill "+s.getUser()
+                    +"'s job denied!");
+                errorString = "You are not authorised to terminate this job";
+            }
+        }
+
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
+        return mav;
+    }
+
+    /**
+     * Returns a JSON object containing an array of jobs of the active
+     * series.
+     *
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return
+     */
+    public ModelAndView listJobs(HttpServletRequest request,
+                                 HttpServletResponse response) {
+
+        ServiceInterface si = getGrisuService(request);
+        Long seriesId = (Long)request.getSession().getAttribute("seriesId");
+        ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
+
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (seriesId == null) {
+            errorString = "No active series in session";
+            logger.error("series is null!");
+        } else {
+            GrisuRegistry registry = GrisuRegistryManager.getDefault(si);
+            List jobs = jobManager.getJobsBySeries(seriesId.longValue());
+            JSONArray jsJobs = (JSONArray)JSONSerializer.toJSON(jobs);
+            Iterator it = jsJobs.listIterator();
+            while (it.hasNext()) {
+                JSONObject job = (JSONObject)it.next();
+                String handle = job.getString("handle");
+                if (handle != null && handle.length() > 0) {
+                    try {
+                        JobObject grisuJob = new JobObject(si, handle);
+                        String status = grisuJob.getStatusString(true);
+                        String subLoc = grisuJob.getSubmissionLocation();
+                        String queue = SubmissionLocationHelpers
+                            .extractQueue(subLoc);
+                        String site = registry.getResourceInformation()
+                            .getSite(subLoc);
+                        String stdOut = null;
+                        String stdErr = null;
+                        try {
+                            stdOut = lastLinesOf(
+                                    grisuJob.getStdOutContent(), 10);
+                            stdErr = lastLinesOf(
+                                    grisuJob.getStdErrContent(), 10);
+                        } catch (JobException e) {
+                            // there might not be a stdout/err file yet
+                        }
+                        String version = grisuJob.getApplicationVersion();
+                        Long submitDate = Long.parseLong(
+                                grisuJob.getJobProperty(
+                                    Constants.SUBMISSION_TIME_KEY));
+                        job.put("memory", grisuJob.getMemory()/(1024L*1024L));
+                        job.put("numProcs", grisuJob.getCpus());
+                        job.put("queue", queue);
+                        job.put("site", site);
+                        job.put("status", status);
+                        job.put("stderr", stdErr);
+                        job.put("stdout", stdOut);
+                        job.put("submitDate", submitDate);
+                        job.put("version", version);
+                        job.put("walltime", grisuJob.getWalltimeInSeconds()/60);
+                    } catch (Exception e) {
+                        logger.error(e.getMessage(), e);
+                    }
+                } else {
+                    // set some sane defaults
+                    job.put("memory", 30720);
+                    job.put("numProcs", 2);
+                    job.put("walltime", 3000);
+                }
+            }
+            mav.addObject("jobs", jsJobs);
+        }
+
+        if (errorString != null) {
+            mav.addObject("jobs", "");
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
+        return mav;
+    }
+
+    /**
+     * Very simple helper class (bean).
+     */
+    public final class SimpleBean {
+        private final String value;
+        public SimpleBean(String value) { this.value = value; }
+        public String getValue() { return value; }
+    }
+
+    /**
+     * Returns a JSON object containing an array of ESyS-Particle sites.
+     *
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return A JSON object with a sites attribute which is an array of
+     *         sites on the grid that have an installation of ESyS-Particle.
+     */
+    public ModelAndView listSites(HttpServletRequest request,
+                                  HttpServletResponse response) {
+
+        ServiceInterface si = getGrisuService(request);
+        String version = request.getParameter("version");
+        List<SimpleBean> sites = new ArrayList<SimpleBean>();
+        ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
+
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else {
+            GrisuRegistry registry = GrisuRegistryManager.getDefault(si);
+            if (version != null) {
+                logger.debug("Retrieving sites with ESyS-Particle " + version
+                        + " installations.");
+                /* this method seems buggy and returns JCU half of the time
+                HashMap propMap = new HashMap();
+                propMap.put(JobSubmissionProperty.APPLICATIONVERSION, version);
+                Set<GridResource> resources = registry
+                    .getApplicationInformation(VRLJob.APPLICATION_NAME)
+                    .getBestSubmissionLocations(propMap, FQAN);
+                Iterator<GridResource> it = resources.iterator();
+                while (it.hasNext()) {
+                    sites.add(new SimpleBean(it.next().getSiteName()));
+                }
+                */
+                Set<String> subLocs = registry
+                    .getApplicationInformation(VRLJob.APPLICATION_NAME)
+                    .getAvailableSubmissionLocationsForVersionAndFqan(
+                            version, FQAN);
+                Set<String> siteSet = registry.getResourceInformation()
+                    .distillSitesFromSubmissionLocations(subLocs);
+                Iterator<String> it = siteSet.iterator();
+                while (it.hasNext()) {
+                    sites.add(new SimpleBean(it.next()));
+                }
+            } else {
+                logger.debug("Retrieving sites with ESyS-Particle installations.");
+                Set<String> siteSet = registry
+                    .getUserApplicationInformation(VRLJob.APPLICATION_NAME)
+                    .getAllAvailableSitesForUser();
+                Iterator<String> it = siteSet.iterator();
+                while (it.hasNext()) {
+                    sites.add(new SimpleBean(it.next()));
+                }
+            }
+            logger.debug("Returning list of "+sites.size()+" sites.");
+        }
+        // always need to return this property to allow client to parse
+        // the error if any
+        mav.addObject("sites", sites);
+
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
+        return mav;
+    }
+
+    /**
+     * Returns a JSON object containing an array of ESyS-Particle versions at
+     * the specified site.
+     *
+     * @param request The servlet request including a site parameter
+     * @param response The servlet response
+     *
+     * @return A JSON object with a versions attribute which is an array of
+     *         versions installed at requested site.
+     */
+    public ModelAndView listVersions(HttpServletRequest request,
+                                     HttpServletResponse response) {
+
+        ServiceInterface si = getGrisuService(request);
+        List<SimpleBean> versions = new ArrayList<SimpleBean>();
+        ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
+
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else {
+            logger.debug("Retrieving available ESyS-Particle versions");
+            GrisuRegistry registry = GrisuRegistryManager.getDefault(si);
+            Set<String> versionSet = registry.
+                getUserApplicationInformation(VRLJob.APPLICATION_NAME)
+                .getAllAvailableVersionsForUser();
+            Iterator<String> it = versionSet.iterator();
+            while (it.hasNext()) {
+                versions.add(new SimpleBean(it.next()));
+            }
+
+            logger.debug("Returning list of "+versions.size()+" versions.");
+        }
+        // always need to return this property to allow client to parse
+        // the error if any
+        mav.addObject("versions", versions);
+
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
+        return mav;
+    }
+
+    /**
+     * Returns a JSON object containing an array of job manager queues at
+     * the specified site.
+     *
+     * @param request The servlet request including a site parameter
+     * @param response The servlet response
+     *
+     * @return A JSON object with a queues attribute which is an array of
+     *         job queues available at requested site.
+     */
+    public ModelAndView listSiteQueues(HttpServletRequest request,
+                                       HttpServletResponse response) {
+
+        ServiceInterface si = getGrisuService(request);
+        String site = request.getParameter("site");
+        String version = request.getParameter("version");
+        List<SimpleBean> queues = new ArrayList<SimpleBean>();
+        ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
+
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (site == null || version == null) {
+            errorString = "Missing parameter";
+            logger.warn("No site or version specified!");
+        } else {
+            GrisuRegistry registry = GrisuRegistryManager.getDefault(si);
+
+            logger.debug("Retrieving queue names at "+site+" for version "
+                    +version);
+            Set<String> subLocs = registry
+                .getApplicationInformation(VRLJob.APPLICATION_NAME)
+                .getAvailableSubmissionLocationsForVersionAndFqan(
+                        version, FQAN);
+            Iterator<String> it = subLocs.iterator();
+            while (it.hasNext()) {
+                String sl = it.next();
+                if (site.equals(registry.getResourceInformation()
+                            .getSite(sl))) {
+                    queues.add(new SimpleBean(SubmissionLocationHelpers
+                            .extractQueue(sl)));
+                }
+            }
+            logger.debug("Returning list of "+queues.size()+" queue names.");
+        }
+        // always need to return this property to allow client to parse
+        // the error if any
+        mav.addObject("queues", queues);
+
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
+        return mav;
+    }
+
+    /**
+     * Creates a new job or updates job details within the active series.
+     *
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return A JSON object with a job attribute.
+     */
+    public ModelAndView saveJob(HttpServletRequest request,
+                                HttpServletResponse response) {
+        final String user = request.getRemoteUser();
+        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
+        Long seriesId = (Long)request.getSession().getAttribute("seriesId");
+        String name = request.getParameter("name");
+        String scriptFile = request.getParameter("scriptFile");
+        String description = request.getParameter("description");
+        String jobStr = request.getParameter("id");
+        VRLSeries series = null;
+        VRLJob job = null;
+        ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
+
+        if (seriesId != null) {
+            series = jobManager.getSeriesById(seriesId.longValue());
+        }
+
+        if (seriesDir == null || series == null) {
+            errorString = "No active series in session";
+            logger.error("series is null!");
+        } else if (!series.getUser().equals(user)) {
+            errorString = "You can only save your own jobs";
+            logger.warn(user+" tried to edit "+series.getUser()+"'s job");
+        } else if (name == null || scriptFile == null) {
+            errorString = "Missing parameter(s)";
+            logger.warn(errorString);
+        } else if (!scriptFile.endsWith(".py")) {
+            errorString = "Script filename must end in '.py'";
+            logger.warn(errorString);
+        } else if (!scriptFile.equals(Util.sanitizeSubPath(scriptFile))) {
+            errorString = "Invalid script filename";
+            logger.warn(errorString);
+        } else if (jobStr != null && jobStr.length() > 0) {
+            try {
+                long jobId = Long.parseLong(jobStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID "+jobStr);
+            }
+            if (job == null) {
+                errorString = "Invalid job";
+            }
+        }
+
+        if (errorString == null) {
+            // prevent duplicate job names
+            List<VRLJob> jobs = jobManager.getJobsBySeries(
+                    seriesId.longValue());
+            Iterator<VRLJob> it = jobs.listIterator();
+            while (it.hasNext()) {
+                VRLJob j = it.next();
+                if (name.equals(j.getName())) {
+                    if (job == null || !job.getId().equals(j.getId())) {
+                        errorString = "A job by that name already exists";
+                        logger.warn(errorString+": "+j.getId()+"/"+jobStr);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (errorString == null) {
+            if (job != null) {
+                // update existing job
+                job.setName(name);
+                job.setDescription(description);
+                job.setScriptFile(scriptFile);
+                jobManager.saveJob(job);
+                mav.addObject("job", job);
+            } else {
+                // create new job
+                String outputDir = jobFileArchiveDir
+                    + File.separator + user
+                    + File.separator + name;
+                VRLJob newJob = new VRLJob(name, description, scriptFile,
+                        outputDir, seriesId);
+                jobManager.saveJob(newJob);
+                File jobDir = new File(seriesDir, newJob.getId().toString());
+                jobDir.mkdir();
+                File jobScript = new File(jobDir, scriptFile);
+                try {
+                    jobScript.createNewFile();
+                } catch (IOException e) {
+                    logger.warn(e);
+                }
+                mav.addObject("job", newJob);
+            }
+            mav.addObject("success", true);
+        } else {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        }
+
+        return mav;
+    }
+
+    /**
+     * Processes a job submission request.
+     *
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return A JSON object with a success attribute that indicates whether
+     *         the job was successfully submitted.
+     */
+    public ModelAndView submitJob(HttpServletRequest request,
+                                  HttpServletResponse response) {
+
+        final String user = request.getRemoteUser();
+        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
+        Long seriesId = (Long)request.getSession().getAttribute("seriesId");
+        ServiceInterface si = getGrisuService(request);
+        final String jobStr = request.getParameter("job");
+        final String memoryStr = request.getParameter("memory");
+        final String numprocsStr = request.getParameter("numprocs");
+        final String queue = request.getParameter("queue");
+        final String site = request.getParameter("site");
+        final String version = request.getParameter("version");
+        final String walltimeStr = request.getParameter("walltime");
+        VRLSeries series = null;
+        VRLJob job = null;
+        ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
+
+        if (jobStr != null) {
+            try {
+                long jobId = Long.parseLong(jobStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID!");
+            }
+        }
+
+        if (seriesId != null) {
+            series = jobManager.getSeriesById(seriesId.longValue());
+        }
+
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (seriesDir == null || series == null) {
+            errorString = "No active series in session";
+            logger.warn("series is null!");
+        } else if (job == null) {
+            errorString = "Invalid job";
+            logger.warn("job is null!");
+        } else if (!series.getUser().equals(user)) {
+            errorString = "You can only submit your own jobs";
+            logger.warn(user+" tried to submit "+series.getUser()+"'s job");
+        } else if (memoryStr == null || numprocsStr == null || queue == null
+                || site == null || version == null || walltimeStr == null) {
+            errorString = "Missing parameter(s)";
+            logger.warn(errorString);
+        } else {
+            File jobDir = new File(seriesDir, jobStr);
+            File scriptPath = new File(jobDir, job.getScriptFile());
+            if (!scriptPath.exists()) {
+                errorString = "The script file does not exist";
+                logger.warn(job.getScriptFile()+" does not exist");
+            }
+        }
+
+        if (errorString == null) {
+            JobObject grisuJob = new JobObject(si);
+            try {
+                int walltime = Integer.parseInt(walltimeStr) * 60;
+                int numprocs = Integer.parseInt(numprocsStr);
+                long memory = Long.parseLong(memoryStr) * 1024L * 1024L;
+                grisuJob.setCpus(numprocs);
+                grisuJob.setMemory(memory);
+                grisuJob.setWalltimeInSeconds(walltime);
+
+                String subLoc = getSubmissionLocationForVersionSiteQueue(si,
+                        version, site, queue);
+                if (subLoc == null) {
+                    errorString = "Invalid site, queue, or version specified";
+                    throw new Exception("Site/queue/version combo not found: "
+                        + site + ", " + queue + ", " + version);
+                }
+                grisuJob.setSubmissionLocation(subLoc);
+                String cmdline = new String(VRLJob.BINARY_NAME + " "
+                        + job.getScriptFile());
+                grisuJob.setCommandline(cmdline);
+                grisuJob.setApplication(VRLJob.APPLICATION_NAME);
+                grisuJob.setApplicationVersion(version);
+                grisuJob.setTimestampJobname(job.getName());
+
+                File jobDir = new File(seriesDir, jobStr);
+                // Adding directories doesn't work yet in grisu
+                //job.addInputFileUrl(jobDir.getPath());
+                File[] files = jobDir.listFiles();
+                for (File f : files) {
+                    if (f.isFile()) {
+                        grisuJob.addInputFileUrl(f.getPath());
+                    }
+                }
+
+                grisuJob.createJob(FQAN);
+                logger.info("Submitting job with name " + grisuJob.getJobname()
+                        + " to " + grisuJob.getSubmissionLocation());
+                grisuJob.submitJob();
+
+                job.setHandle(grisuJob.getJobname());
+                jobManager.saveJob(job);
+
+                String status = grisuJob.getStatusString(true);
+                logger.debug("New job status: "+status);
+                mav.addObject("status", status);
+
+            } catch (NumberFormatException e) {
+                logger.warn("Error parsing integer value(s): " + walltimeStr
+                        + " / " + numprocsStr + " / " + memoryStr);
+                errorString = "Invalid wall time / CPUs / memory";
+
+            } catch (JobPropertiesException e) {
+                logger.error(e.getMessage());
+                errorString = "The job could not be submitted";
+
+            } catch (Exception e) {
+                logger.error(e.getMessage(), e);
+                if (errorString == null) {
+                    errorString = "The job could not be submitted";
+                }
+
+            } catch (java.lang.Error e) {
+                logger.error(e,e);
+                errorString =
+                    "Internal error. Please contact site administrator.";
+            }
+        }
+
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
+        return mav;
+    }
+
+    /**
+     *
+     */
+    private String getSubmissionLocationForVersionSiteQueue(
+            ServiceInterface si, String version, String site, String queue) {
+        GrisuRegistry registry = GrisuRegistryManager.getDefault(si);
+        String subLoc = null;
+        Set<String> subLocs = registry
+            .getApplicationInformation(VRLJob.APPLICATION_NAME)
+            .getAvailableSubmissionLocationsForVersionAndFqan(
+                    version, FQAN);
+        Iterator<String> it = subLocs.iterator();
+        while (it.hasNext()) {
+            String sl = it.next();
+            if (site.equals(registry.getResourceInformation().getSite(sl))
+                    && queue.equals(
+                        SubmissionLocationHelpers.extractQueue(sl))) {
+                subLoc=sl;
+                break;
+            }
+        }
+        return subLoc;
+    }
+
+    /**
+     *
+     */
+    private String lastLinesOf(String source, int numLines) {
+        int idx = source.lastIndexOf('\n');
+        int i = 0;
+        while (idx > -1 && i < numLines) {
+            idx=source.lastIndexOf('\n', idx-1);
+            i++;
+        }
+        return source.substring(idx+1);
+    }
+}
+

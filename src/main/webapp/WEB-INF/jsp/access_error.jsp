@@ -7,8 +7,8 @@
 <html>
 
 <head>
-    <title>AuScope Virtual Rock Laboratory - Access Denied</title>
-    <link rel="stylesheet" type="text/css" href="css/virtualrocklab.css">
+    <title>Virtual Rock Laboratory - Access Denied</title>
+    <link rel="stylesheet" type="text/css" href="css/vrl.min.css">
     <style type="text/css">
       .error { font-size:medium; font-weight:bold; color:red; }
       .att-table {

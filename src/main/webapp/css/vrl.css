@@ -1,0 +1,159 @@
+body {
+    font-family:'lucida grande',tahoma,arial,sans-serif;
+    font-size: 11px;
+    margin: 0px;
+    padding: 0px;
+}
+
+a {
+    color:#15428B;
+}
+
+a:link, a:visited {
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+img {
+    border: 0 none;
+}
+
+#header-container {
+    width: 100%;
+    height: 100px;
+    background-color: #ffffff;
+}
+
+#header {
+    background-image: url(../img/img-auscope-banner.gif);
+    background-repeat: no-repeat;
+    width: 100%;
+    height: 100px;
+}
+
+#logo {
+    float: left;
+    width: 531px;
+    height: 100px;
+}
+
+#sitenav {
+    background: url(../img/navigation.gif) no-repeat;
+    width: 300px;
+    height: 38px;
+    margin: 0;
+    padding: 0;
+    float: right;
+    padding-right: 40px;
+}
+
+#header-container {
+    width: 100%;
+    height: 100px;
+    background-color: #ffffff;
+}
+
+#header {
+    background-image: url("../img/img-auscope-banner.gif");
+    background-repeat: no-repeat;
+    width: 100%;
+    height: 100px;
+}
+
+#logo {
+    float: left;
+    width: 531px;
+    height: 100px;
+}
+
+.x-form-check-group .x-form-check-wrap, 
+.x-form-radio-group .x-form-radio-wrap {
+    white-space: nowrap;
+}
+
+.jobdesc-title {
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 15px;
+}
+
+.jobdesc-key {
+    font-weight: bold;
+}
+
+.jobdesc-content {
+    font-size: 11px;
+}
+
+.seriesdesc-title {
+    background: url("../img/folder.png") no-repeat left;
+    color: #395B8E;
+    font-size: 13px;
+    font-weight: bold;
+    line-height: 16px;
+    margin: 15px 10px;
+    text-indent: 20px;
+}
+
+.seriesdesc {
+    width: 100%;
+    border-collapse:collapse;
+}
+
+.seriesdesc td, .seriesdesc th {
+    font-size: 12px;
+    padding: 5px;
+    border:1px solid #DFE8F6;
+}
+
+.seriesdesc th {
+    font-weight: bold;
+    vertical-align:top;
+    text-align:right;
+    background-color:#4E78B1;
+    color:#DFE8F6;
+    width: 140px;
+}
+
+.welcome-title {
+    font-size: 12px;
+    font-weight: bold;
+    font-style: italic;
+    padding: 5px;
+}
+
+.welcome-text {
+    font-size: 12px;
+    padding: 5px;
+}
+
+.add-icon { background-image: url("../img/add.png") !important }
+.arrowleft-icon { background-image: url("../img/arrow_left.png") !important }
+.auscope-icon { background-image: url("../img/auscope.png") !important }
+.brick-icon { background-image: url("../img/brick.png") !important }
+.copy-icon { background-image: url("../img/copy.png") !important }
+.compressed-icon { background-image: url("../img/compressed.png") !important }
+.cross-icon { background-image: url("../img/cross.png") !important }
+.delete-icon { background-image: url("../img/delete.png") !important }
+.deletefile-icon { background-image: url("../img/deletefile.png") !important }
+.disk-icon { background-image: url("../img/disk.png") !important }
+.drivedisk-icon { background-image: url("../img/drive_disk.png") !important }
+.edit-icon { background-image: url("../img/edit.png") !important }
+.examples-icon { background-image: url("../img/examples.png") !important }
+.find-icon { background-image: url("../img/find.png") !important }
+.folder-icon { background-image: url("../img/folder.png") !important }
+.go-icon { background-image: url("../img/go.png") !important }
+.grid-icon { background-image: url("../img/grid.png") !important }
+.killjob-icon { background-image: url("../img/killjob.png") !important }
+.lightning-icon { background-image: url("../img/lightning.png") !important }
+.myseries-icon { background-image: url("../img/myseries.png") !important }
+.new-icon { background-image: url("../img/new.png") !important }
+.newjob-icon { background-image: url("../img/newjob.png") !important }
+.newseries-icon { background-image: url("../img/newseries.png") !important }
+.refresh-icon { background-image: url("../img/refresh.png") !important }
+.save-icon { background-image: url("../img/save.png") !important }
+.view-icon { background-image: url("../img/view.png") !important }
+

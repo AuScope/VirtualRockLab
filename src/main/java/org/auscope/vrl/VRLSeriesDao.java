@@ -65,18 +65,33 @@ public class VRLSeriesDao extends HibernateDaoSupport {
     }
 
     /**
+     * Retrieves series that belong to a specific user
+     *
+     * @param user the user whose series are to be retrieved
+     *
+     * @return list of <code>VRLSeries</code> objects of given user
+     */
+    public List<VRLSeries> getSeriesByUser(final String user) {
+        return (List<VRLSeries>) getHibernateTemplate()
+            .findByNamedParam("from VRLSeries s where s.user=:searchUser",
+                    "searchUser", user);
+    }
+
+    /**
      * Retrieves the series with given ID.
+     *
+     * @param id the series' ID
      *
      * @return <code>VRLSeries</code> object with given ID.
      */
-    public VRLSeries get(final long id) {
+    public VRLSeries getSeriesById(final long id) {
         return (VRLSeries) getHibernateTemplate().get(VRLSeries.class, id);
     }
 
     /**
      * Saves or updates the given series.
      */
-    public void save(final VRLSeries series) {
+    public void saveSeries(final VRLSeries series) {
         getHibernateTemplate().saveOrUpdate(series);
     }
 }
