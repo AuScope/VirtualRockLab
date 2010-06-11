@@ -26,15 +26,15 @@ public class VRLJobManager {
         return vrlSeriesDao.query(user, name, desc);
     }
 
-    public List<VRLJob> getSeriesJobs(int seriesId) {
+    public List<VRLJob> getSeriesJobs(long seriesId) {
         return vrlJobDao.getJobsOfSeries(seriesId);
     }
 
-    public VRLJob getJobById(int jobId) {
+    public VRLJob getJobById(long jobId) {
         return vrlJobDao.get(jobId);
     }
 
-    public VRLSeries getSeriesById(int seriesId) {
+    public VRLSeries getSeriesById(long seriesId) {
         return vrlSeriesDao.get(seriesId);
     }
 

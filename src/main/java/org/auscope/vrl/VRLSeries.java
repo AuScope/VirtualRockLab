@@ -16,7 +16,7 @@ import java.io.Serializable;
  */
 public class VRLSeries implements Serializable {
     /** A unique identifier for this series */
-    private Integer id;
+    private Long id;
     /** The user owning this series */
     private String  user;
     /** A short name for this series */
@@ -36,7 +36,7 @@ public class VRLSeries implements Serializable {
      *
      * @return The unique ID of this series.
      */
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
@@ -45,7 +45,7 @@ public class VRLSeries implements Serializable {
      *
      * @param id The new ID for this series.
      */
-    private void setId(Integer id) {
+    private void setId(Long id) {
         assert (id != null);
         this.id = id;
     }

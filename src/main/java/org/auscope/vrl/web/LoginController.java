@@ -19,8 +19,11 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.Key;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import javax.crypto.Cipher;
@@ -33,7 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.ssl.PKCS8Key;
 
-import org.auscope.vrl.GridAccessController;
+import org.auscope.vrl.VRLJob;
 
 // see http://www.hpc.jcu.edu.au/projects/archer-data-activities/browser/security/current/slcs-common/src/
 // for source code of these classes
@@ -42,12 +45,22 @@ import org.glite.slcs.pki.CertificateExtensionFactory;
 import org.glite.slcs.pki.CertificateKeys;
 import org.glite.slcs.pki.CertificateRequest;
 
-import org.globus.gsi.CertUtil;
+import org.ietf.jgss.GSSCredential;
 
 import org.springframework.security.context.SecurityContextHolder;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.Controller;
 import org.springframework.web.servlet.view.RedirectView;
+
+import org.vpac.grisu.control.ServiceInterface;
+import org.vpac.grisu.frontend.control.login.LoginException;
+import org.vpac.grisu.frontend.control.login.LoginHelpers;
+import org.vpac.grisu.frontend.control.login.LoginManager;
+import org.vpac.grisu.frontend.control.login.LoginParams;
+import org.vpac.grisu.model.GrisuRegistry;
+import org.vpac.grisu.model.GrisuRegistryManager;
+import org.vpac.security.light.certificate.CertificateHelper;
+import org.vpac.security.light.plainProxy.PlainProxy;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -55,13 +68,13 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 /**
- * Controller that handles Grid proxy initialisation using either a SLCS
- * certificate or MyProxy details entered by the user.
+ * Controller that handles the creation of a Grisu {@link ServiceInterface}
+ * using either a SLCS certificate or MyProxy details entered by the user.
  * If the IdP releases a Shared Token attribute it is forwarded to the ARCS
  * SLCS service to retrieve a certificate which is subsequently used to
- * generate a Grid proxy. Otherwise the user is presented with a
- * login form to enter MyProxy details which in turn are used to access
- * the Grid. If login attempts fail three times the session
+ * generate a Grid proxy via Grisu. Otherwise the user is presented with a
+ * login form to enter MyProxy details which in turn are used to initialize
+ * the Grisu service interface. If login attempts fail three times the session
  * is destroyed and the user is redirected to the Shibboleth logout page.
  *
  * @author Cihan Altinay
@@ -74,10 +87,12 @@ public class LoginController implements Controller {
     private static final String HOST_KEY_FILE = "/etc/shibboleth/hostkey.pem";
     /** Lifetime of the generated proxy in seconds (10 days) */
     private static final int PROXY_LIFETIME = 10*24*60*60;
+    /** Minimum remaining proxy lifetime for a successful login (1 day) */
+    private static final int MIN_LIFETIME = 24*60*60;
+    /** FQAN (VO) to use for jobs */
+    private static final String FQAN = "/ARCS/AuScope";
     /** maximum number of login failures */
     private static final int MAX_ATTEMPTS = 3;
-
-    private GridAccessController gridAccess;
 
     private class RequestData {
         public String authToken;
@@ -86,21 +101,11 @@ public class LoginController implements Controller {
     }
 
     /**
-     * Sets the <code>GridAccessController</code> to be used for proxy checking
-     * and initialisation.
-     *
-     * @param gridAccess the GridAccessController to use
-     */
-    public void setGridAccess(GridAccessController gridAccess) {
-        this.gridAccess = gridAccess;
-    }
-
-    /**
      * Main entry point which decides where to redirect to.
-     * If this is a GET request and the current grid proxy is not valid then
+     * If this is a GET request and there is no active ServiceInterface then
      * a redirect to the SLCS server is performed. A POST request is handled
      * as being a response from the SLCS server so the certificate is extracted
-     * and a grid proxy is generated.
+     * and a ServiceInterface is initialized.
      *
      * @return an appropriate ModelAndView
      */
@@ -134,13 +139,12 @@ public class LoginController implements Controller {
                 } else if (request.getMethod().equalsIgnoreCase("GET")) {
                     logger.debug("Handling GET request.");
 
-                    // CASE 3.1: Grid proxy valid -> nothing to do
-                    Object credential = request.getSession().getAttribute("userCred");
-                    if (gridAccess.isProxyValid(credential)) {
-                        logger.debug("Valid proxy found.");
+                    // CASE 3.1: Grisu service valid -> nothing to do
+                    if (request.getSession().getAttribute("grisuService") != null) {
+                        logger.debug("Valid grisu service found.");
                         return redirectToTarget(request);
 
-                    // CASE 3.2: No Grid proxy -> request SLCS cert
+                    // CASE 3.2: No Grisu service -> request SLCS cert
                     } else {
                         final String serviceUrl = "https://"
                             + request.getServerName() + "/vrl/login.html";
@@ -181,7 +185,7 @@ public class LoginController implements Controller {
     }
 
     /**
-     * Checks MyProxy details submitted and tries to retrieve Grid proxy
+     * Checks MyProxy details submitted and tries to create a ServiceInterface
      * using the details.
      */
     private void handleMyProxyLogin(HttpServletRequest request)
@@ -197,16 +201,11 @@ public class LoginController implements Controller {
                 pass = request.getParameter("proxypass").toCharArray();
             }
 
-            logger.info("Initializing Grid proxy with MyProxy details.");
-            Object credential = gridAccess.initProxy(
-                    user, pass, PROXY_LIFETIME);
-            if (credential != null) {
-                logger.info("Storing credentials in session.");
-                request.getSession().setAttribute("userCred", credential);
-            } else {
-                logger.info("Proxy initialisation failed.");
-                throw new Exception("Proxy initialisation failed.");
-            }
+            logger.info("Initializing ServiceInterface with MyProxy details.");
+            ServiceInterface si = initGrisu(user, pass);
+            checkServiceValidity(si);
+            logger.info("Storing service interface in session.");
+            request.getSession().setAttribute("grisuService", si);
         } else {
             throw new Exception("Empty user name!");
         }
@@ -245,7 +244,7 @@ public class LoginController implements Controller {
     }
 
     /**
-     * Parses the request data and sets attributes accordingly.
+     * Parses the SLCS request data and sets attributes accordingly.
      *
      * @param requestData the data to parse
      */
@@ -405,22 +404,90 @@ public class LoginController implements Controller {
 
         logger.info("Response status: "+status);
         if (!status.equals("Error")) {
-            String certStr = doc.getElementsByTagName("Certificate")
+            String certPEM = doc.getElementsByTagName("Certificate")
                 .item(0).getFirstChild().getNodeValue();
-            InputStream in = new ByteArrayInputStream(certStr.getBytes());
-            X509Certificate certificate = CertUtil.loadCertificate(in);
-
-            Object credential = gridAccess.initProxy(
-                    certKeys.getPrivate(), certificate, PROXY_LIFETIME);
-            if (credential == null) {
-                throw new Exception("Proxy generation failed");
-            } else {
-                logger.info("Storing credentials in session.");
-                request.getSession().setAttribute("userCred", credential);
-            }
+            X509Certificate certificate = CertificateHelper
+                .readCertificate(certPEM);
+            ServiceInterface si = initGrisu(
+                    certificate, certKeys.getPrivate());
+            checkServiceValidity(si);
+            logger.info("Storing service interface in session.");
+            request.getSession().setAttribute("grisuService", si);
         } else {
             throw new Exception("Error retrieving SLCS certificate!");
         }
+    }
+
+    private void checkServiceValidity(ServiceInterface si) throws Exception {
+        long lifetime = si.getCredentialEndTime() - new Date().getTime();
+        lifetime /= 1000L;
+        logger.debug("DN: " + si.getDN() + ", End time: "
+            + new Date(si.getCredentialEndTime()).toString()
+            + ", Seconds left: "+lifetime);
+        if (lifetime < MIN_LIFETIME) {
+            throw new Exception("Proxy lifetime too short!");
+        }
+        GrisuRegistry registry = GrisuRegistryManager.getDefault(si);
+        if (!Arrays.asList(registry.getUserEnvironmentManager()
+                    .getAllAvailableFqans()).contains(FQAN)) {
+            throw new Exception("You must be a member of the '" + FQAN
+                    + "' VO group to use the Virtual Rock Lab.");
+        } else if (registry.getUserEnvironmentManager()
+                .getAllAvailableFqansForApplication(VRLJob.APPLICATION_NAME)
+                .isEmpty()) {
+            throw new Exception("Unable to find ESyS-Particle installations "
+                    + "on the Grid. Please try again later.");
+        }
+    }
+
+    /**
+     * Initializes a Grisu ServiceInterface which may subsequently be used
+     * for grid activities.
+     * Uses a certificate and the corresponding private key for proxy
+     * generation.
+     *
+     * @param certificate The certificate
+     * @param key The private key
+     *
+     * @return the Grisu ServiceInterface object or null on error
+     */
+    private ServiceInterface initGrisu(X509Certificate certificate,
+                                       PrivateKey key) throws Exception {
+        ServiceInterface si = null;
+        try {
+            GSSCredential cred = PlainProxy.init(
+                    certificate, key, PROXY_LIFETIME);
+            LoginParams loginParams = new LoginParams("Local", null, null);
+            si = LoginHelpers.gssCredentialLogin(loginParams, cred);
+        } catch (Exception e) {
+            logger.error("Unable to create ServiceInterface: "+e.toString(), e);
+            throw new Exception("Proxy generation failed!");
+        }
+
+        return si;
+    }
+
+    /**
+     * Initializes a Grisu ServiceInterface which may subsequently be used
+     * for grid activities.
+     * Uses a username and password for MyProxy authentication.
+     *
+     * @param proxyUser MyProxy username
+     * @param proxyPass MyProxy password
+     * 
+     * @return the Grisu ServiceInterface object or null on error
+     */
+    private ServiceInterface initGrisu(String proxyUser, char[] proxyPass)
+                throws Exception {
+        ServiceInterface si = null;
+        try {
+            si = LoginManager.myProxyLogin("Local", proxyUser, proxyPass);
+        } catch (LoginException e) {
+            logger.error("Unable to create ServiceInterface: "+e.toString(), e);
+            throw new Exception("Proxy generation failed!");
+        }
+        
+        return si;
     }
 }
 

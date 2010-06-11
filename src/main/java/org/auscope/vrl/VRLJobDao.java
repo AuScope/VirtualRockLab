@@ -30,7 +30,7 @@ public class VRLJobDao extends HibernateDaoSupport {
      *
      * @return list of <code>VRLJob</code> objects belonging to given series
      */
-    public List<VRLJob> getJobsOfSeries(final int seriesID) {
+    public List<VRLJob> getJobsOfSeries(final long seriesID) {
         return (List<VRLJob>) getHibernateTemplate()
             .findByNamedParam("from VRLJob j where j.seriesId=:searchID",
                     "searchID", seriesID);
@@ -60,7 +60,7 @@ public class VRLJobDao extends HibernateDaoSupport {
      *
      * @return <code>VRLJob</code> object with given ID.
      */
-    public VRLJob get(final int id) {
+    public VRLJob get(final long id) {
         return (VRLJob) getHibernateTemplate().get(VRLJob.class, id);
     }
 

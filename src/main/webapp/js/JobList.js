@@ -44,16 +44,6 @@ JobList.onKillJobResponse = function(response, request) {
     JobList.jobStore.reload();
 }
 
-// callback for retrieveFiles action
-JobList.onRetrieveFilesResponse = function(response, request) {
-    var resp = Ext.decode(response.responseText);
-    if (resp.error != null) {
-        JobList.showError(resp.error);
-    } else {
-        Ext.Msg.alert("Success", "The output files of the selected job will be transferred as soon as possible. Please note that it may take a while though.");
-    }
-}
-
 ////////////////////////
 ////// Functions ///////
 ////////////////////////
@@ -179,17 +169,6 @@ JobList.querySeries = function(user, name, desc) {
         JobList.seriesStore.baseParams.qSeriesDesc = desc;
     }
     JobList.seriesStore.reload();
-}
-
-JobList.retrieveFiles = function(jobId) {
-    Ext.Ajax.request({
-        url: JobList.ControllerURL,
-        success: JobList.onRetrieveFilesResponse,
-        failure: JobList.onRequestFailure, 
-        params: { 'action': 'retrieveJobFiles',
-                  'jobId': jobId
-                }
-    });
 }
 
 // submits a "kill job" request after asking for confirmation
@@ -323,7 +302,7 @@ JobList.initialize = function() {
         root: 'series',
         autoLoad: true,
         fields: [
-            { name: 'id', type: 'int' },
+            { name: 'id', type: 'long' },
             { name: 'name', type: 'string' },
             { name: 'description', type: 'string' },
             { name: 'user', type: 'string'}
@@ -340,20 +319,16 @@ JobList.initialize = function() {
         baseParams: { 'action': 'listJobs' },
         root: 'jobs',
         fields: [
-            { name: 'id', type: 'int' },
+            { name: 'id', type: 'long' },
             { name: 'name', type: 'string' },
             { name: 'description', type: 'string' },
             { name: 'site', type: 'string' },
             { name: 'version', type: 'string' },
-            { name: 'checkpointPrefix', type: 'string' },
-            { name: 'numTimesteps', type: 'int' },
-            { name: 'numParticles', type: 'int' },
-            { name: 'numBonds', type: 'int' },
             { name: 'outputDir', type: 'string' },
-            { name: 'reference', type: 'string' },
+            { name: 'handle', type: 'string' },
             { name: 'scriptFile', type: 'string' },
             { name: 'status', type: 'string'},
-            { name: 'submitDate', type: 'date', dateFormat: 'Ymd_His' }
+            { name: 'submitDate', type: 'long' }
         ],
         listeners: {
             'beforeload': JobList.showProgressDlg,
@@ -454,6 +429,15 @@ JobList.initialize = function() {
         }
     });
 
+    function dateRenderer(value) {
+        if (!Ext.isEmpty(value)) {
+            return Ext.util.Format.date(
+                new Date(value), 'd M Y, g:i:s a');
+        } else {
+            return "Unsubmitted";
+        }
+    }
+
     var jobGrid = new Ext.grid.GridPanel({
         id: 'job-grid',
         title: 'Jobs of selected series',
@@ -463,7 +447,7 @@ JobList.initialize = function() {
         store: JobList.jobStore,
         columns: [
             { header: 'Job Name', sortable: true, dataIndex: 'name'},
-            { header: 'Submit Date', width: 160, sortable: true, dataIndex: 'submitDate', renderer: Ext.util.Format.dateRenderer('d M Y, H:i:s')},
+            { header: 'Submit Date', width: 160, sortable: true, dataIndex: 'submitDate', renderer: dateRenderer},
             { header: 'Status', sortable: true, dataIndex: 'status', renderer: jobStatusRenderer}
         ],
         sm: new Ext.grid.RowSelectionModel({
@@ -504,9 +488,6 @@ JobList.initialize = function() {
             return '<span style="font-weight:bold;">*' + value + '</span>';
         } else if (value.lastIndexOf(".py") == value.length-3) {
             return '<span style="color:green;">' + value + '</span>';
-        } else if (jobData.checkpointPrefix.length > 0 &&
-                value.indexOf(jobData.checkpointPrefix) == 0) {
-            return '<span style="color:blue;">' + value + '</span>';
         }
         return value;
     }
@@ -537,14 +518,6 @@ JobList.initialize = function() {
         handler: function() {
             var jobData = jobGrid.getSelectionModel().getSelected().data;
             JobList.useScript(jobData.id);
-        }
-    });
-    var retrieveFilesAction = new Ext.Action({
-        text: 'Retrieve latest files',
-        iconCls: 'grid-icon',
-        handler: function() {
-            var jobData = jobGrid.getSelectionModel().getSelected().data;
-            JobList.retrieveFiles(jobData.id);
         }
     });
     
@@ -578,9 +551,7 @@ JobList.initialize = function() {
         tbar: [{
             text: 'Actions',
             iconCls: 'folder-icon',
-            menu: [ downloadAction, downloadZipAction, useScriptAction,
-                    retrieveFilesAction
-                  ]
+            menu: [ downloadAction, downloadZipAction, useScriptAction ]
         }]
     });
 
@@ -591,7 +562,7 @@ JobList.initialize = function() {
             JobList.downloadFile(jobData.id, fileName);
         },
         'rowcontextmenu': function(grid, rowIndex, e) {
-            grid.getSelectionModel().selectRow(rowIndex);
+            //grid.getSelectionModel().selectRow(rowIndex);
             if (!this.contextMenu) {
                 this.contextMenu = new Ext.menu.Menu({
                     items: [ downloadAction, downloadZipAction ]
@@ -607,16 +578,23 @@ JobList.initialize = function() {
         '<p class="jobdesc-title">{name}</p>',
         '<table width="100%"><col width="150px"></col><col class="jobdesc-content"></col>',
         '<tr><td class="jobdesc-key">Part of series:</td><td>{seriesName}</td></tr>',
-        '<tr><td class="jobdesc-key">Submitted on:</td><td>{submitDate}</td></tr>',
+        '<tr><td class="jobdesc-key">Submitted on:</td><td>{submitDate:this.dateFmt}</td></tr>',
         '<tr><td class="jobdesc-key">Computation site:</td><td>{site}</td></tr>',
         '<tr><td class="jobdesc-key">ESyS-Particle version:</td><td>{version}</td></tr>',
         '<tr><td class="jobdesc-key">Input script filename:</td><td>{scriptFile}</td></tr>',
-        '<tr><td class="jobdesc-key">Number of timesteps:</td><td>{numTimesteps}</td></tr>',
-        '<tr><td class="jobdesc-key">Number of particles:</td><td>{numParticles}</td></tr>',
-        '<tr><td class="jobdesc-key">Number of bonds:</td><td>{numBonds}</td></tr></table><br/>',
-        '<p class="jobdesc-key">Description:</p><br/><p>{description}</p>'
+        '<p class="jobdesc-key">Description:</p><br/><p>{description}</p>',
+        {
+            dateFmt: function(value) {
+                if (!Ext.isEmpty(value)) {
+                    return Ext.util.Format.date(
+                        new Date(value), 'd M Y, g:i:s a');
+                } else {
+                    return "Unsubmitted";
+                }
+            },
+            compiled: true
+        }
     );
-    JobList.jobDescTpl.compile();
 
     // a template for the series description html area
     JobList.seriesDescTpl = new Ext.Template(

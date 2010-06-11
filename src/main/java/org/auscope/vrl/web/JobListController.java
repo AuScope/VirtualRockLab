@@ -6,11 +6,16 @@
  */
 package org.auscope.vrl.web;
 
+import au.org.arcs.jcommons.constants.Constants;
+import au.org.arcs.jcommons.utils.SubmissionLocationHelpers;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -18,11 +23,14 @@ import java.util.zip.ZipOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.auscope.vrl.FileInformation;
-import org.auscope.vrl.GridAccessController;
 import org.auscope.vrl.Util;
 import org.auscope.vrl.VRLJob;
 import org.auscope.vrl.VRLJobManager;
@@ -32,6 +40,15 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
 import org.springframework.web.servlet.mvc.multiaction.NoSuchRequestHandlingMethodException;
 import org.springframework.web.servlet.view.RedirectView;
+
+import org.vpac.grisu.control.JobConstants;
+import org.vpac.grisu.control.ServiceInterface;
+import org.vpac.grisu.frontend.model.job.JobObject;
+import org.vpac.grisu.model.GrisuRegistry;
+import org.vpac.grisu.model.GrisuRegistryManager;
+import org.vpac.grisu.model.dto.DtoFile;
+import org.vpac.grisu.model.dto.DtoFolder;
+
 
 /**
  * Controller for the job list view.
@@ -43,18 +60,7 @@ public class JobListController extends MultiActionController {
     /** Logger for this class */
     private final Log logger = LogFactory.getLog(getClass());
 
-    private GridAccessController gridAccess;
     private VRLJobManager jobManager;
-
-    /**
-     * Sets the <code>GridAccessController</code> to be used for grid
-     * activities.
-     *
-     * @param gridAccess the GridAccessController to use
-     */
-    public void setGridAccess(GridAccessController gridAccess) {
-        this.gridAccess = gridAccess;
-    }
 
     /**
      * Sets the <code>VRLJobManager</code> to be used to retrieve and store
@@ -71,82 +77,26 @@ public class JobListController extends MultiActionController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        // Ensure user has valid grid credentials
-        if (gridAccess.isProxyValid(
-                    request.getSession().getAttribute("userCred"))) {
+        // Ensure Grid Service is initialized
+        if (getGrisuService(request) != null) {
             logger.debug("No/invalid action parameter; returning joblist view.");
             return new ModelAndView("joblist");
         } else {
             request.getSession().setAttribute(
                     "redirectAfterLogin", "/joblist.html");
-            logger.debug("Proxy not initialized. Redirecting to login.");
+            logger.debug("ServiceInterface not initialized. Redirecting to login.");
             return new ModelAndView(
                     new RedirectView("/login.html", true, false, false));
         }
     }
 
-    /**
-     * Triggers the retrieval of latest job files
-     *
-     * @param request The servlet request including a jobId parameter
-     * @param response The servlet response
-     *
-     * @return A JSON object with a success attribute and an error attribute
-     *         in case the job was not found in the job manager.
-     */
-    public ModelAndView retrieveJobFiles(HttpServletRequest request,
-                                         HttpServletResponse response) {
-
-        String jobIdStr = request.getParameter("jobId");
-        VRLJob job = null;
-        ModelAndView mav = new ModelAndView("jsonView");
-        Object credential = request.getSession().getAttribute("userCred");
-
-        if (credential == null) {
-            final String errorString = "Invalid grid credentials!";
-            logger.error(errorString);
-            mav.addObject("error", errorString);
-            mav.addObject("success", false);
-            return mav;
-        }
-
-        if (jobIdStr != null) {
-            try {
-                int jobId = Integer.parseInt(jobIdStr);
-                job = jobManager.getJobById(jobId);
-            } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
-            }
-        } else {
-            logger.warn("No job ID specified!");
-        }
-
-        if (job == null) {
-            final String errorString = "The requested job was not found.";
-            logger.error(errorString);
-            mav.addObject("error", errorString);
-            mav.addObject("success", false);
-
-        } else {
-            logger.debug("jobID = " + jobIdStr);
-            boolean success = false;
-            String jobState = gridAccess.retrieveJobStatus(
-                    job.getReference(), credential);
-            if (jobState != null && jobState.equals("Active")) {
-                success = gridAccess.retrieveJobResults(
-                        job.getReference(), credential);
-            } else {
-                mav.addObject("error", "Cannot retrieve files of a job that is not running!");
-            }
-            logger.debug("Success = "+success);
-            mav.addObject("success", success);
-        }
-
-        return mav;
+    private ServiceInterface getGrisuService(HttpServletRequest request) {
+        return (ServiceInterface)
+            request.getSession().getAttribute("grisuService");
     }
 
     /**
-     * Kills the job given by its reference.
+     * Kills the job given by its identifier.
      *
      * @param request The servlet request including a jobId parameter
      * @param response The servlet response
@@ -157,58 +107,57 @@ public class JobListController extends MultiActionController {
     public ModelAndView killJob(HttpServletRequest request,
                                 HttpServletResponse response) {
 
-        String jobIdStr = request.getParameter("jobId");
+        ServiceInterface si = getGrisuService(request);
+        final String user = request.getRemoteUser();
+        final String jobIdStr = request.getParameter("jobId");
         VRLJob job = null;
+        String handle = null;
         ModelAndView mav = new ModelAndView("jsonView");
-        boolean success = false;
-        Object credential = request.getSession().getAttribute("userCred");
-
-        if (credential == null) {
-            final String errorString = "Invalid grid credentials!";
-            logger.error(errorString);
-            mav.addObject("error", errorString);
-            mav.addObject("success", false);
-            return mav;
-        }
-
+        String errorString = null;
 
         if (jobIdStr != null) {
             try {
-                int jobId = Integer.parseInt(jobIdStr);
+                long jobId = Long.parseLong(jobIdStr);
                 job = jobManager.getJobById(jobId);
+                handle = job.getHandle();
             } catch (NumberFormatException e) {
                 logger.error("Error parsing job ID!");
             }
-        } else {
-            logger.warn("No job ID specified!");
         }
 
-        if (job == null) {
-            final String errorString = "The requested job was not found.";
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (job == null) {
+            errorString = "No/Invalid job specified";
             logger.error(errorString);
-            mav.addObject("error", errorString);
-
         } else {
             // check if current user is the owner of the job
             VRLSeries s = jobManager.getSeriesById(job.getSeriesId());
-            if (request.getRemoteUser().equals(s.getUser())) {
-                logger.info("Cancelling job with ID "+jobIdStr);
-                String newState = gridAccess.killJob(
-                        job.getReference(), credential);
-                if (newState == null)
-                    newState = "Cancelled";
-                logger.debug("New job state: "+newState);
-
-                job.setStatus(newState);
-                jobManager.saveJob(job);
-                success = true;
+            if (user.equals(s.getUser())) {
+                try {
+                    logger.info("Terminating job with ID "+jobIdStr);
+                    JobObject grisuJob = new JobObject(si, handle);
+                    grisuJob.kill(true);
+                    //job.setHandle(null);
+                    //jobManager.saveJob(job);
+                } catch (Exception e) {
+                    errorString = "Error terminating task";
+                    logger.error(e.getMessage(), e);
+                }
             } else {
-                logger.warn(request.getRemoteUser()+"'s attempt to kill "+
-                        s.getUser()+"'s job denied!");
-                mav.addObject("error", "You are not authorised to cancel this job.");
+                logger.warn(user + "'s attempt to kill " + s.getUser()
+                        + "'s job denied!");
+                errorString = "You are not authorised to terminate this job.";
             }
         }
-        mav.addObject("success", success);
+
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
 
         return mav;
     }
@@ -225,70 +174,66 @@ public class JobListController extends MultiActionController {
     public ModelAndView killSeriesJobs(HttpServletRequest request,
                                        HttpServletResponse response) {
 
+        ServiceInterface si = getGrisuService(request);
+        final String user = request.getRemoteUser();
         String seriesIdStr = request.getParameter("seriesId");
         List<VRLJob> jobs = null;
         ModelAndView mav = new ModelAndView("jsonView");
-        boolean success = false;
-        int seriesId = -1;
-        Object credential = request.getSession().getAttribute("userCred");
-
-        if (credential == null) {
-            final String errorString = "Invalid grid credentials!";
-            logger.error(errorString);
-            mav.addObject("error", errorString);
-            mav.addObject("success", false);
-            return mav;
-        }
-
+        long seriesId = -1;
+        String errorString = null;
 
         if (seriesIdStr != null) {
             try {
-                seriesId = Integer.parseInt(seriesIdStr);
+                seriesId = Long.parseLong(seriesIdStr);
                 jobs = jobManager.getSeriesJobs(seriesId);
             } catch (NumberFormatException e) {
                 logger.error("Error parsing series ID!");
             }
-        } else {
-            logger.warn("No series ID specified!");
         }
 
-        if (jobs == null) {
-            final String errorString = "The requested series was not found.";
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (jobs == null) {
+            errorString = "No/Invalid series specified";
             logger.error(errorString);
-            mav.addObject("error", errorString);
-            mav.addObject("success", false);
-
         } else {
             // check if current user is the owner of the series
             VRLSeries s = jobManager.getSeriesById(seriesId);
-            if (request.getRemoteUser().equals(s.getUser())) {
-                logger.info("Cancelling jobs of series "+seriesIdStr);
+            if (user.equals(s.getUser())) {
+                logger.info("Terminating jobs within series "+seriesIdStr);
                 for (VRLJob job : jobs) {
-                    String oldStatus = job.getStatus();
-                    if (oldStatus.equals("Failed") || oldStatus.equals("Done") ||
-                            oldStatus.equals("Cancelled")) {
-                        logger.debug("Skipping finished job "+job.getId());
+                    String handle = job.getHandle();
+                    if (handle == null || handle.length() == 0) {
                         continue;
                     }
-                    logger.info("Killing job with ID "+job.getId());
-                    String newState = gridAccess.killJob(
-                            job.getReference(), credential);
-                    if (newState == null)
-                        newState = "Cancelled";
-                    logger.debug("New job state: "+newState);
-
-                    job.setStatus(newState);
-                    jobManager.saveJob(job);
+                    try {
+                        JobObject grisuJob = new JobObject(si, handle);
+                        int oldStatus = grisuJob.getStatus(true);
+                        if (oldStatus <= JobConstants.ACTIVE) {
+                            logger.debug("Killing job with ID "+job.getId());
+                            grisuJob.kill(true);
+                            //job.setHandle(null);
+                            //jobManager.saveJob(job);
+                        }
+                    } catch (Exception e) {
+                        logger.warn(e.getMessage());
+                    }
                 }
-                success = true;
             } else {
-                logger.warn(request.getRemoteUser()+"'s attempt to kill "+
-                        s.getUser()+"'s jobs denied!");
-                mav.addObject("error", "You are not authorised to cancel the jobs of this series.");
+                logger.warn(user + "'s attempt to kill " + s.getUser()
+                        + "'s jobs denied!");
+                errorString = "You are not authorised to terminate these jobs.";
             }
         }
 
-        mav.addObject("success", success);
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
         return mav;
     }
 
@@ -307,46 +252,55 @@ public class JobListController extends MultiActionController {
     public ModelAndView jobFiles(HttpServletRequest request,
                                  HttpServletResponse response) {
 
+        ServiceInterface si = getGrisuService(request);
         String jobIdStr = request.getParameter("jobId");
         VRLJob job = null;
         ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
 
         if (jobIdStr != null) {
             try {
-                int jobId = Integer.parseInt(jobIdStr);
+                long jobId = Long.parseLong(jobIdStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
                 logger.error("Error parsing job ID!");
             }
-        } else {
-            logger.warn("No job ID specified!");
         }
 
-        if (job == null) {
-            final String errorString = "The requested job was not found.";
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (job == null) {
+            errorString = "The requested job was not found.";
             logger.error(errorString);
-            mav.addObject("error", errorString);
-
         } else {
-            logger.debug("Generating file list for job with ID "+jobIdStr+".");
-            FileInformation[] fileDetails = null;
+            logger.debug("Retrieving file list for job with ID "+jobIdStr+".");
+            List<FileInformation> fileList = new ArrayList<FileInformation>();
+            String handle = job.getHandle();
 
-            File dir = new File(job.getOutputDir());
-            File[] files = dir.listFiles();
-            if (files != null) {
-                Arrays.sort(files);
-
-                fileDetails = new FileInformation[files.length];
-                for (int i=0; i<files.length; i++) {
-                    fileDetails[i] = new FileInformation(
-                            files[i].getName(), files[i].length());
+            if (handle != null && handle.length() > 0) {
+                try {
+                    JobObject grisuJob = new JobObject(si, handle);
+                    String url = grisuJob.getJobDirectoryUrl();
+                    DtoFolder folder = si.ls(url, 1);
+                    for (DtoFile file : folder.getChildrenFiles()) {
+                        fileList.add(new FileInformation(
+                            file.getName(), file.getSize()));
+                    }
+                } catch (Exception e) {
+                    logger.error(e.getMessage(), e);
+                    errorString = "There was an error getting the file listing";
                 }
-            } else {
-                // Files not staged out (yet)
-                fileDetails = new FileInformation[0];
             }
 
-            mav.addObject("files", fileDetails);
+            mav.addObject("files", fileList.toArray());
+        }
+
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
         }
 
         return mav;
@@ -365,24 +319,41 @@ public class JobListController extends MultiActionController {
     public ModelAndView downloadFile(HttpServletRequest request,
                                      HttpServletResponse response) {
 
-        String jobIdStr = request.getParameter("jobId");
-        String fileName = request.getParameter("filename");
+        ServiceInterface si = getGrisuService(request);
+        final String jobIdStr = request.getParameter("jobId");
+        final String fileName = request.getParameter("filename");
         VRLJob job = null;
         String errorString = null;
 
         if (jobIdStr != null) {
             try {
-                int jobId = Integer.parseInt(jobIdStr);
+                long jobId = Long.parseLong(jobIdStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
                 logger.error("Error parsing job ID!");
             }
         }
 
-        if (job != null && fileName != null) {
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (job == null) {
+            errorString = "No/Invalid job specified";
+            logger.error(errorString);
+        } else if (fileName == null) {
+            errorString = "No filename provided";
+            logger.error(errorString);
+        } else {
             logger.debug("Download "+fileName+" of job with ID "+jobIdStr+".");
-            File f = new File(job.getOutputDir()+File.separator+fileName);
-            if (!f.canRead()) {
+            File f = null;
+            try {
+                JobObject grisuJob = new JobObject(si, job.getHandle());
+                f = grisuJob.downloadAndCacheOutputFile(fileName);
+            } catch (Exception e) {
+                logger.error(e.getMessage());
+            }
+
+            if (f == null || !f.canRead()) {
                 logger.error("File "+f.getPath()+" not readable!");
                 errorString = new String("File could not be read.");
             } else {
@@ -409,20 +380,7 @@ public class JobListController extends MultiActionController {
             }
         }
 
-        // We only end up here in case of an error so return a suitable message
-        if (errorString == null) {
-            if (job == null) {
-                errorString = new String("Invalid job specified!");
-                logger.error(errorString);
-            } else if (fileName == null) {
-                errorString = new String("No filename provided!");
-                logger.error(errorString);
-            } else {
-                // should never get here
-                errorString = new String("Something went wrong.");
-                logger.error(errorString);
-            }
-        }
+        // We only end up here in case of an error so return the message
         return new ModelAndView("joblist", "error", errorString);
     }
 
@@ -440,6 +398,7 @@ public class JobListController extends MultiActionController {
     public ModelAndView downloadAsZip(HttpServletRequest request,
                                       HttpServletResponse response) {
 
+        ServiceInterface si = getGrisuService(request);
         String jobIdStr = request.getParameter("jobId");
         String filesParam = request.getParameter("files");
         VRLJob job = null;
@@ -447,14 +406,23 @@ public class JobListController extends MultiActionController {
 
         if (jobIdStr != null) {
             try {
-                int jobId = Integer.parseInt(jobIdStr);
+                long jobId = Long.parseLong(jobIdStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
                 logger.error("Error parsing job ID!");
             }
         }
 
-        if (job != null && filesParam != null) {
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (job == null) {
+            errorString = "No/Invalid job specified";
+            logger.error(errorString);
+        } else if (filesParam == null) {
+            errorString = "No filename(s) provided";
+            logger.error(errorString);
+        } else {
             String[] fileNames = filesParam.split(",");
             logger.debug("Archiving " + fileNames.length + " file(s) of job " +
                     jobIdStr);
@@ -464,11 +432,12 @@ public class JobListController extends MultiActionController {
                     "attachment; filename=\"jobfiles.zip\"");
 
             try {
+                JobObject grisuJob = new JobObject(si, job.getHandle());
                 boolean readOneOrMoreFiles = false;
                 ZipOutputStream zout = new ZipOutputStream(
                         response.getOutputStream());
                 for (String fileName : fileNames) {
-                    File f = new File(job.getOutputDir()+File.separator+fileName);
+                    File f = grisuJob.downloadAndCacheOutputFile(fileName);
                     if (!f.canRead()) {
                         // if a file could not be read we go ahead and try the
                         // next one.
@@ -497,27 +466,13 @@ public class JobListController extends MultiActionController {
                     logger.error(errorString);
                 }
 
-            } catch (IOException e) {
-                errorString = new String("Could not create ZIP file: " +
-                        e.getMessage());
-                logger.error(errorString);
+            } catch (Exception e) {
+                errorString = "Could not archive files";
+                logger.error(e.getMessage());
             }
         }
 
-        // We only end up here in case of an error so return a suitable message
-        if (errorString == null) {
-            if (job == null) {
-                errorString = new String("Invalid job specified!");
-                logger.error(errorString);
-            } else if (filesParam == null) {
-                errorString = new String("No filename(s) provided!");
-                logger.error(errorString);
-            } else {
-                // should never get here
-                errorString = new String("Something went wrong.");
-                logger.error(errorString);
-            }
-        }
+        // We only end up here in case of an error so return the message
         return new ModelAndView("joblist", "error", errorString);
     }
 
@@ -557,64 +512,82 @@ public class JobListController extends MultiActionController {
      * @param response The servlet response
      *
      * @return A JSON object with a jobs attribute which is an array of
-     *         <code>VRLJob</code> objects.
+     *         job properties.
      */
     public ModelAndView listJobs(HttpServletRequest request,
                                  HttpServletResponse response) {
 
+        ServiceInterface si = getGrisuService(request);
         String seriesIdStr = request.getParameter("seriesId");
-        List<VRLJob> seriesJobs = null;
         ModelAndView mav = new ModelAndView("jsonView");
-        Object credential = request.getSession().getAttribute("userCred");
-        int seriesId = -1;
-
-        if (credential == null) {
-            final String errorString = "Invalid grid credentials!";
-            logger.error(errorString);
-            mav.addObject("error", errorString);
-            mav.addObject("success", false);
-            return mav;
-        }
+        String errorString = null;
+        List<VRLJob> seriesJobs = null;
+        long seriesId = -1;
 
         if (seriesIdStr != null) {
             try {
-                seriesId = Integer.parseInt(seriesIdStr);
+                seriesId = Long.parseLong(seriesIdStr);
                 seriesJobs = jobManager.getSeriesJobs(seriesId);
             } catch (NumberFormatException e) {
                 logger.error("Error parsing series ID '"+seriesIdStr+"'");
             }
-        } else {
-            logger.warn("No series ID specified!");
         }
 
-        if (seriesJobs != null) {
-            // check if current user is the owner of the series and update
-            // the status of the jobs if so
-            VRLSeries s = jobManager.getSeriesById(seriesId);
-            if (request.getRemoteUser().equals(s.getUser())) {
-                logger.debug("Updating status of jobs attached to series " +
-                        seriesIdStr + ".");
-                for (VRLJob j : seriesJobs) {
-                    String state = j.getStatus();
-                    if (!state.equals("Done") && !state.equals("Failed") &&
-                            !state.equals("Cancelled")) {
-                        String newState = gridAccess.retrieveJobStatus(
-                                j.getReference(), credential);
-                        if (newState != null && !state.equals(newState)) {
-                            j.setStatus(newState);
-                            jobManager.saveJob(j);
-                        }
-                        // TODO: job might have finished but status cannot be
-                        // retrieved anymore -> a good heuristics is to check
-                        // if the job files have been staged out and assume
-                        // success if that is the case.
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (seriesJobs == null) {
+            errorString = new String("No/invalid series specified");
+            logger.warn(errorString);
+        } else {
+            GrisuRegistry registry = GrisuRegistryManager.getDefault(si);
+            JSONArray jsJobs = (JSONArray)JSONSerializer.toJSON(seriesJobs);
+            Iterator it = jsJobs.listIterator();
+            while (it.hasNext()) {
+                JSONObject job = (JSONObject)it.next();
+                String handle = job.getString("handle");
+                if (handle != null && handle.length() > 0) {
+                    try {
+                        JobObject grisuJob = new JobObject(si, handle);
+                        String status = grisuJob.getStatusString(true);
+                        String subLoc = grisuJob.getSubmissionLocation();
+                        String queue = SubmissionLocationHelpers
+                            .extractQueue(subLoc);
+                        String site = registry.getResourceInformation()
+                            .getSite(subLoc);
+                        String version = grisuJob.getApplicationVersion();
+                        Long submitDate = Long.parseLong(grisuJob
+                            .getJobProperty(Constants.SUBMISSION_TIME_KEY));
+                        job.put("memory", grisuJob.getMemory()/(1024L*1024L));
+                        job.put("numProcs", grisuJob.getCpus());
+                        job.put("queue", queue);
+                        job.put("site", site);
+                        job.put("status", status);
+                        job.put("submitDate", submitDate);
+                        job.put("version", version);
+                        job.put("walltime", grisuJob
+                            .getWalltimeInSeconds()/60);
+                    } catch (Exception e) {
+                        logger.error(e.getMessage(), e);
                     }
+                } else {
+                    // set some sane defaults
+                    job.put("memory", 30000);
+                    job.put("numProcs", 2);
+                    job.put("walltime", 24*60);
                 }
             }
-            mav.addObject("jobs", seriesJobs);
+            mav.addObject("jobs", jsJobs);
         }
 
-        logger.debug("Returning series job list");
+        if (errorString != null) {
+            mav.addObject("jobs", "");
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
         return mav;
     }
 
@@ -635,7 +608,7 @@ public class JobListController extends MultiActionController {
 
         if (jobIdStr != null) {
             try {
-                int jobId = Integer.parseInt(jobIdStr);
+                long jobId = Long.parseLong(jobIdStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
                 logger.error("Error parsing job ID!");
@@ -669,34 +642,47 @@ public class JobListController extends MultiActionController {
     public ModelAndView useScript(HttpServletRequest request,
                                   HttpServletResponse response) {
 
+        ServiceInterface si = getGrisuService(request);
         String jobIdStr = request.getParameter("jobId");
-
         VRLJob job = null;
+        String handle = null;
         String errorString = null;
         String scriptFileName = null;
         File sourceFile = null;
 
         if (jobIdStr != null) {
             try {
-                int jobId = Integer.parseInt(jobIdStr);
+                long jobId = Long.parseLong(jobIdStr);
                 job = jobManager.getJobById(jobId);
+                handle = job.getHandle();
             } catch (NumberFormatException e) {
                 logger.error("Error parsing job ID!");
             }
-        } else {
-            logger.warn("No job ID specified!");
         }
 
-        if (job == null) {
-            errorString = new String("Could not access the job!");
-            logger.error(errorString);
+        if (si == null) {
+            errorString = "You are not logged in or your session has expired";
+            logger.warn("ServiceInterface is null!");
+        } else if (job == null) {
+            errorString = new String("No/Invalid job specified");
+            logger.error("job is null!");
+        } else if (handle == null || handle.length() == 0) {
+            errorString = new String("Could not access job files");
+            logger.error("handle is null!");
         } else {
             scriptFileName = job.getScriptFile();
-            sourceFile = new File(
-                    job.getOutputDir()+File.separator+scriptFileName);
-            if (!sourceFile.canRead()) {
+            try {
+                JobObject grisuJob = new JobObject(si, handle);
+                final String url = grisuJob.getJobDirectoryUrl();
+                sourceFile = grisuJob.downloadAndCacheOutputFile(
+                        scriptFileName);
+            } catch (Exception e) {
+                logger.error(e.getMessage());
+            }
+
+            if (sourceFile == null || !sourceFile.canRead()) {
                 errorString = new String("Script file could not be read.");
-                logger.error("File "+sourceFile.getPath()+" not readable!");
+                logger.error("File "+scriptFileName+" not readable!");
             }
         }
 

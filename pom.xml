@@ -18,6 +18,8 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
                     <links>
+                        <link>https://code.arcs.org.au/hudson/job/JGridAuth-SNAPSHOT/javadoc</link>
+                        <link>https://code.arcs.org.au/hudson/job/Grisu-SNAPSHOT/javadoc</link>
                         <link>http://www.globus.org/api/javadoc-4.0/globus_java_ws_core</link>
                         <link>http://www.globus.org/api/javadoc-4.0/globus_wsrf_gram_client_java</link>
                         <link>http://www.globus.org/api/javadoc-4.0/globus_wsrf_gram_common_java</link>
@@ -25,6 +27,7 @@
                         <link>http://java.sun.com/j2se/1.5.0/docs/api</link>
                         <link>http://static.springframework.org/spring/docs/2.5.x/api</link>
                     </links>
+                    <show>private</show>
                 </configuration>
             </plugin>
         </plugins>
@@ -100,25 +103,23 @@
     </build>
 
     <repositories>
-        <!--
-        <repository>
-            <id>vpac</id>
-            <name>vpac</name>
-            <url>http://hudson.vpac.org/maven_repository</url>
-        </repository>
-        -->
         <repository>
             <id>shibboleth</id> <!-- for commons-ssl -->
             <name>shibboleth</name>
             <url>http://shibboleth.internet2.edu/downloads/maven2</url>
         </repository>
-        <!--
+
         <repository>
-            <id>gridtools</id>
-            <name>gridtools</name>
-            <url>http://grid.in2p3.fr/maven2</url>
+            <id>ARCS</id>
+            <name>ARCS Repo</name>
+            <url>http://code.arcs.org.au/nexus/content/groups/public</url>
         </repository>
-        -->
+
+        <repository>
+            <id>ARCS Snapshots</id>
+            <name>ARCS Snapshots</name>
+            <url>http://code.arcs.org.au/nexus/content/groups/public-snapshots</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -158,7 +159,7 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-core-tiger</artifactId>
-            <version>2.0.4</version>
+            <version>2.0.5.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>commons-dbcp</groupId>
@@ -181,19 +182,19 @@
             <version>0.3.10</version>
         </dependency>
         <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-c3p0</artifactId>
+            <version>3.3.1.GA</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.4.3</version>
+        </dependency>
+        <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>5.1.6</version>
-        </dependency>
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate</artifactId>
-            <version>3.2.6.ga</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-collections</groupId>
-            <artifactId>commons-collections</artifactId>
-            <version>3.2.1</version>
         </dependency>
         <dependency>
             <groupId>net.sf.json-lib</groupId>
@@ -201,64 +202,77 @@
             <version>1.0.2</version>
         </dependency>
         <dependency>
-            <groupId>org.globus</groupId>
-            <artifactId>wsgram-api</artifactId>
-            <version>4.0.8</version>
+            <groupId>org.vpac.grisu</groupId>
+            <artifactId>grisu-client</artifactId>
+            <version>0.3-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.vpac.grisu</groupId>
+            <artifactId>grisu-core</artifactId>
+            <version>0.3-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>au.org.arcs.auth</groupId>
+            <artifactId>arcs-gsi</artifactId>
+            <version>1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.glite.slcs</groupId>
             <artifactId>slsc-common</artifactId>
             <version>1.4.0.1</version>
         </dependency>
-        <!-- this is incompatible with the original javamail -->
+
+        <dependency>
+            <!-- incompatible with json-lib -->
+            <groupId>external.globus</groupId>
+            <artifactId>commons-collections-3</artifactId>
+            <version>0.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- incompatible with the original javamail -->
         <dependency>
             <groupId>geronimo-spec</groupId>
             <artifactId>geronimo-spec-javamail</artifactId>
             <version>1.3.1-rc1</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>javax.mail</groupId>
-            <artifactId>mail</artifactId>
-            <version>1.4.3</version>
-        </dependency>
 
         <!-- These must be present in tomcat/shared/lib to allow multiple grid
              enabled apps to work simultaneously -->
         <dependency>
             <groupId>bouncycastle</groupId>
-            <artifactId>bcprov-jdk14</artifactId>
-            <version>138</version>
+            <artifactId>bcprov-jdk15</artifactId>
+            <version>140</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.globus</groupId>
+            <groupId>external.jglobus</groupId>
             <artifactId>cog-jglobus</artifactId>
-            <version>1.4</version>
+            <version>1.7.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>puretls</groupId>
+            <groupId>external.jglobus</groupId>
             <artifactId>puretls</artifactId>
-            <version>gt4</version>
+            <version>1.7.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>cryptix</groupId>
+            <groupId>external.jglobus</groupId>
             <artifactId>cryptix</artifactId>
-            <version>gt4</version>
+            <version>1.7.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>cryptix</groupId>
+            <groupId>external.jglobus</groupId>
             <artifactId>cryptix32</artifactId>
-            <version>gt4</version>
+            <version>1.7.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>cryptix</groupId>
-            <artifactId>asn1</artifactId>
-            <version>gt4</version>
+            <groupId>external.jglobus</groupId>
+            <artifactId>cryptix-asn1</artifactId>
+            <version>1.7.0</version>
             <scope>provided</scope>
         </dependency>
         <!-- end of common jars -->

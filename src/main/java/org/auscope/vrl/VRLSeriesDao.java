@@ -69,7 +69,7 @@ public class VRLSeriesDao extends HibernateDaoSupport {
      *
      * @return <code>VRLSeries</code> object with given ID.
      */
-    public VRLSeries get(final int id) {
+    public VRLSeries get(final long id) {
         return (VRLSeries) getHibernateTemplate().get(VRLSeries.class, id);
     }
 

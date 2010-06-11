@@ -152,7 +152,8 @@ ScriptBuilder.updateSource = function() {
 // changes the interface so script can be edited and component adding is
 // no longer possible
 ScriptBuilder.switchToTextEditor = function() {
-    Ext.getCmp('content-panel').remove('usedcomps-panel');
+    //Ext.getCmp('content-panel').remove('usedcomps-panel');
+    Ext.getCmp('usedcomps-panel').hide();
     Ext.getCmp('content-panel').doLayout();
     var descEl = Ext.getCmp('sb-description-panel').body;
     descEl.update(this.compDescTextEditor).setStyle('background','#eee');

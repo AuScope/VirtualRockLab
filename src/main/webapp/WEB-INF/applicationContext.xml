@@ -61,11 +61,5 @@
         <property name="VRLJobDao" ref="vrlJobDao"/>
         <property name="VRLSeriesDao" ref="vrlSeriesDao"/>
     </bean>
-
-    <bean id="gridAccess" class="org.auscope.vrl.GridAccessController">
-        <property name="localGridFtpServer" value="${gridftp.server}"/>
-        <property name="localGridFtpStageInDir" value="${gridftp.stageInDir}"/>
-        <property name="localGridFtpStageOutDir" value="${gridftp.stageOutDir}"/>
-    </bean>
 </beans>
 

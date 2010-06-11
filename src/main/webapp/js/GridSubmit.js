@@ -130,10 +130,10 @@ GridSubmit.onFileListResponse = function(response, request) {
 // Callback for a successful job object request
 //
 GridSubmit.onLoadJobObject = function(response, request) {
-    Ext.getCmp('versionsCombo').getStore().baseParams.site =
-       Ext.getCmp('sitesCombo').getValue();
-    Ext.getCmp('queuesCombo').getStore().baseParams.site =
-       Ext.getCmp('sitesCombo').getValue();
+    Ext.getCmp('sitesCombo').getStore().baseParams.version =
+       Ext.getCmp('versionsCombo').getValue();
+    Ext.getCmp('queuesCombo').getStore().baseParams.version =
+       Ext.getCmp('versionsCombo').getValue();
 
     // Retrieve list of job files if any
     GridSubmit.loadJobFiles();
@@ -203,7 +203,7 @@ GridSubmit.submitJob = function() {
     var scriptFile = Ext.getCmp('scriptFile').getRawValue();
     if (fileStore.find('name', scriptFile) == -1) {
         GridSubmit.showError('The script filename you entered is invalid. Please upload "'+scriptFile+'" or change the filename.');
-    }else {
+    } else {
         Ext.getCmp('metadataForm').getForm().submit({
             url: GridSubmit.ControllerURL,
             success: GridSubmit.onSubmitJob,
@@ -323,7 +323,7 @@ GridSubmit.initialize = function() {
     
     Ext.QuickTips.init();
 
-    // Store for ESyS-Particle sites
+    // Store for sites with ESyS-Particle installations (with specific version)
     var sitesStore = new Ext.data.JsonStore({
         url: GridSubmit.ControllerURL,
         baseParams: { 'action': 'listSites' },
@@ -332,7 +332,7 @@ GridSubmit.initialize = function() {
         listeners: { 'loadexception': GridSubmit.onLoadException }
     });
 
-    // Store for ESyS-Particle versions at a specific site
+    // Store for ESyS-Particle versions available on the Grid
     var versionsStore = new Ext.data.JsonStore({
         url: GridSubmit.ControllerURL,
         baseParams: { 'action': 'listSiteVersions' },
@@ -481,17 +481,6 @@ GridSubmit.initialize = function() {
             maskRe: /[^\W]/
         }, {
             xtype: 'combo',
-            id: 'sitesCombo',
-            name: 'site',
-            editable: false,
-            store: sitesStore,
-            triggerAction: 'all',
-            displayField: 'value',
-            emptyText: 'Select a site...',
-            fieldLabel: 'Site',
-            allowBlank: false
-        }, {
-            xtype: 'combo',
             id: 'versionsCombo',
             name: 'version',
             editable: false,
@@ -503,8 +492,21 @@ GridSubmit.initialize = function() {
             allowBlank: false
         }, {
             xtype: 'combo',
+            id: 'sitesCombo',
+            name: 'site',
+            disabled: true,
+            editable: false,
+            store: sitesStore,
+            triggerAction: 'all',
+            displayField: 'value',
+            emptyText: 'Select a site...',
+            fieldLabel: 'Site',
+            allowBlank: false
+        }, {
+            xtype: 'combo',
             id: 'queuesCombo',
             name: 'queue',
+            disabled: true,
             editable: false,
             store: queuesStore,
             triggerAction: 'all',
@@ -513,23 +515,29 @@ GridSubmit.initialize = function() {
             fieldLabel: 'Queue on site',
             allowBlank: false
         }, {
-            xtype: 'textfield',
-            name: 'maxWallTime',
+            xtype: 'numberfield',
+            name: 'walltime',
             fieldLabel: 'Max Walltime (mins)',
             allowBlank: false,
-            maskRe: /\d+/
+            allowDecimals: false,
+            allowNegative: false,
+            minValue: 1
         }, {
-            xtype: 'textfield',
-            name: 'maxMemory',
+            xtype: 'numberfield',
+            name: 'memory',
             fieldLabel: 'Max Memory (MB)',
             allowBlank: false,
-            maskRe: /\d+/
+            allowDecimals: false,
+            allowNegative: false,
+            minValue: 1
         }, {
-            xtype: 'textfield',
-            name: 'cpuCount',
+            xtype: 'numberfield',
+            name: 'numprocs',
             fieldLabel: 'Number of MPI procs',
             allowBlank: false,
-            maskRe: /\d+/
+            allowDecimals: false,
+            allowNegative: false,
+            minValue: 2
         }, {
             xtype: 'textfield',
             id: 'scriptFile',
@@ -543,34 +551,34 @@ GridSubmit.initialize = function() {
             fieldLabel: 'Description',
             anchor: '100% -200'
         },
-        { xtype: 'hidden', name: 'inTransfers' },
-        { xtype: 'hidden', name: 'outTransfers' },
-        { xtype: 'hidden', name: 'jobType' },
-        { xtype: 'hidden', name: 'numBonds' },
-        { xtype: 'hidden', name: 'numParticles' },
-        { xtype: 'hidden', name: 'numTimesteps' },
-        { xtype: 'hidden', name: 'checkpointPrefix' },
-        { xtype: 'hidden', name: 'outputDir' },
-        { xtype: 'hidden', name: 'stdError' },
-        { xtype: 'hidden', name: 'stdInput' },
-        { xtype: 'hidden', name: 'stdOutput' }
+        { xtype: 'hidden', name: 'outputDir' }
         ]
     });
 
-    Ext.getCmp('sitesCombo').on({
-        'select': function(combo, record, index) {
-            var versionsCombo = Ext.getCmp('versionsCombo');
-            versionsStore.baseParams.site = record.get('value');
-            versionsStore.reload();
-            versionsCombo.enable();
-            versionsCombo.reset();
+    Ext.getCmp('versionsCombo').on('select',
+        function(combo, record, index) {
+            var sitesCombo = Ext.getCmp('sitesCombo');
+            sitesStore.baseParams.version = record.get('value');
+            sitesStore.reload();
+            sitesCombo.enable();
+            sitesCombo.reset();
+
+            var queuesCombo = Ext.getCmp('queuesCombo');
+            queuesStore.baseParams.version = record.get('value');
+            queuesCombo.disable();
+            queuesCombo.reset();
+        }
+    );
+
+    Ext.getCmp('sitesCombo').on('select',
+        function(combo, record, index) {
             var queuesCombo = Ext.getCmp('queuesCombo');
             queuesStore.baseParams.site = record.get('value');
             queuesStore.reload();
             queuesCombo.enable();
             queuesCombo.reset();
         }
-    });
+    );
 
     var gotoStep = function(newStep) {
         var layout = Ext.getCmp('jobwizard-panel').getLayout();
