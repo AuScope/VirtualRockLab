@@ -7,7 +7,6 @@
 package org.auscope.vrl;
 
 import java.io.Serializable;
-import java.text.NumberFormat;
 
 /**
  * Simple bean class that stores information about a file.
@@ -17,17 +16,18 @@ import java.text.NumberFormat;
 public class FileInformation implements Serializable {
     /** The filename */
     private String name;
-    /** The file size formatted to be readable */
-    private String readableSize;
     /** The file size in bytes */
     private long size;
+    /** A file status if applicable (eg "M" for modified) */
+    private String state;
 
     /**
-     * Constructor with name and size
+     * Constructor with name, size and state
      */
-    public FileInformation(String name, long size) {
+    public FileInformation(String name, long size, String state) {
         this.name = name;
-        setSize(size);
+        this.size = size;
+        this.state = state;
     }
 
     /**
@@ -58,22 +58,30 @@ public class FileInformation implements Serializable {
     }
 
     /**
-     * Returns a readable form of the file size.
-     *
-     * @return The file size.
-     */
-    public String getReadableSize() {
-        return readableSize;
-    }
-
-    /**
      * Sets the file size in bytes.
      *
      * @param size The file size.
      */
     public void setSize(long size) {
         this.size = size;
-        readableSize = NumberFormat.getInstance().format(size);
+    }
+
+    /**
+     * Returns the file status.
+     *
+     * @return The file status string.
+     */
+    public String getState() {
+        return state;
+    }
+
+    /**
+     * Sets the file status string.
+     *
+     * @param state The file status.
+     */
+    public void setState(String state) {
+        this.state = state;
     }
 }
 

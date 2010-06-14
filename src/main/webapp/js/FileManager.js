@@ -46,6 +46,16 @@ VRL.FileManager = {
         disabled: true
     }),
 
+    commitChangesAction: new Ext.Action({
+        text: 'Commit Changes...',
+        iconCls: 'disk-icon',
+        tooltip: 'Saves modifications under a new series revision',
+        handler: function() {
+            VRL.FileManager.commitChanges();
+        },
+        disabled: true
+    }),
+
     //
     // EDITOR ACTIONS
     //
@@ -252,6 +262,16 @@ VRL.FileManager = {
         }
 
         var me = this;
+        var i = 0;
+
+        // ignore deleted files
+        while (i<files.length && files[i].data.state === 'D') {
+            i++;
+        }
+        if (i==files.length) {
+            return;
+        }
+        var fparam = files[i].data.name;
 
         Ext.Msg.show({
             title: 'Delete Files',
@@ -262,21 +282,21 @@ VRL.FileManager = {
             closable: false,
             fn: function(btn) {
                 if (btn == 'yes') {
-                    // close editor
-                    var i = 0;
-                    var fparam = files[i].data.name;
+                    // close editor(s)
                     var title = me.editorTitle(job, fparam);
                     var arr = Ext.getCmp('editor-tab').find('title', title);
                     if (arr.length > 0) {
                         Ext.getCmp('editor-tab').remove(arr[0]);
                     }
                     for (i=i+1; i<files.length; i++) {
-                        var filename = files[i].data.name;
-                        var title = me.editorTitle(job, filename);
-                        fparam += ','+filename;
-                        arr = Ext.getCmp('editor-tab').find('title', title);
-                        if (arr.length > 0) {
-                            Ext.getCmp('editor-tab').remove(arr[0]);
+                        if (files[i].data.state !== 'D') {
+                            var filename = files[i].data.name;
+                            var title = me.editorTitle(job, filename);
+                            fparam += ','+filename;
+                            arr = Ext.getCmp('editor-tab').find('title', title);
+                            if (arr.length > 0) {
+                                Ext.getCmp('editor-tab').remove(arr[0]);
+                            }
                         }
                     }
                     VRL.doRequest(me.controllerURL, 'deleteFiles',
@@ -292,9 +312,17 @@ VRL.FileManager = {
     // issues a Download Files request
     downloadFiles: function(jobId, files, remote) {
         var i=0;
+        while (i<files.length && files[i].data.state === 'D') {
+            i++;
+        }
+        if (i==files.length) {
+            return;
+        }
         var fparam = files[i].data.name;
         for (i=i+1; i<files.length; i++) {
-            fparam += ','+files[i].data.name;
+            if (files[i].data.state !== 'D') {
+                fparam += ','+files[i].data.name;
+            }
         }
         var iframe = document.createElement("iframe");
         iframe.style.display = "none";
@@ -323,6 +351,9 @@ VRL.FileManager = {
         var first = true;
 
         for (var i=0; i<files.length; i++) {
+            if (files[i].data.state === 'D') {
+                continue;
+            }
             if (first) {
                 VRL.activateTab('editor-tab');
                 first = false;
@@ -342,6 +373,60 @@ VRL.FileManager = {
                     onOpenFilesResponse.createDelegate(this));
             }
         }
+    },
+
+    // issues a Revert Files request after asking for confirmation
+    revertFiles: function(job, files) {
+        var onRevertFilesResponse = function(response, options) {
+            VRL.decodeResponse(response);
+            this.localFileGrid.getStore().reload();
+        }
+
+        var me = this;
+        var i = 0;
+
+        // ignore unmodified files
+        while (i<files.length && files[i].data.state === 'N') {
+            i++;
+        }
+        if (i==files.length) {
+            return;
+        }
+        var fparam = files[i].data.name;
+
+        Ext.Msg.show({
+            title: 'Revert Files',
+            msg: 'Are you sure you want to revert the selected file(s)?',
+            buttons: Ext.Msg.YESNO,
+            icon: Ext.Msg.WARNING,
+            animEl: 'file-grid',
+            closable: false,
+            fn: function(btn) {
+                if (btn == 'yes') {
+                    // close editor
+                    var title = me.editorTitle(job, fparam);
+                    var arr = Ext.getCmp('editor-tab').find('title', title);
+                    if (arr.length > 0) {
+                        Ext.getCmp('editor-tab').remove(arr[0]);
+                    }
+                    for (i=i+1; i<files.length; i++) {
+                        if (files[i].data.state !== 'N') {
+                            var filename = files[i].data.name;
+                            var title = me.editorTitle(job, filename);
+                            fparam += ','+filename;
+                            arr = Ext.getCmp('editor-tab').find('title', title);
+                            if (arr.length > 0) {
+                                Ext.getCmp('editor-tab').remove(arr[0]);
+                            }
+                        }
+                    }
+                    VRL.doRequest(me.controllerURL, 'revertFiles',
+                        { job: job.get('id'), files: fparam },
+                        onRevertFilesResponse.createDelegate(VRL.FileManager)
+                    );
+                }
+            }
+        });
     },
 
     // issues a Save File request
@@ -565,6 +650,7 @@ VRL.FileManager = {
                         this.job=record;
                         this.reloadFileList();
                         if (!this.seriesReadOnly) {
+                            this.commitChangesAction.enable();
                             this.newFileAction.enable();
                             this.refreshAction.enable();
                             this.uploadAction.enable();
@@ -575,8 +661,26 @@ VRL.FileManager = {
         });
     },
 
+    commitChanges: function() {
+        var callback = function(seriesDetails) {
+            Ext.Msg.alert('New revision saved',
+                'Revision '+seriesDetails.revision+' saved successfully.');
+            Ext.apply(VRL.currentSeries, seriesDetails);
+            VRL.updateSeriesSummary();
+            VRL.FileManager.reloadFileList();
+        }
+        VRL.SaveSeriesDialog.show(callback);
+    },
+
     checkForModifications: function(callback, scope) {
-        callback.call(scope || this, false);
+        var onResponse = function(response, options) {
+            var resp = VRL.decodeResponse(response);
+            var modified = (resp ? resp.modified : true);
+            if (Ext.isFunction(callback)) {
+                callback.call(scope || this, modified);
+            }
+        }
+        VRL.doRequest(this.controllerURL, 'isModified', {}, onResponse);
     },
 
     // creates the file grid for local files
@@ -621,16 +725,38 @@ VRL.FileManager = {
             disabled: true
         });
 
+        var revertFilesAction = new Ext.Action({
+            text: 'Revert',
+            iconCls: 'refresh-icon',
+            tooltip: 'Restores the selected file(s)',
+            handler: function() {
+                var job = VRL.FileManager.job;
+                var files = VRL.FileManager.localFileGrid
+                    .getSelectionModel().getSelections();
+                VRL.FileManager.revertFiles(job, files);
+            },
+            disabled: true
+        });
+
         var fileContextMenu = new Ext.menu.Menu({
             items: [
                 editAction,
                 deleteFilesAction,
+                revertFilesAction,
                 downloadAction
             ]
         });
 
         function fileNameRenderer(value, cell, record) {
             var styleStr = '';
+            // weight
+            if (record.get('state') !== 'N') {
+                styleStr += 'font-weight:bold;';
+            }
+            // decoration
+            if (record.get('state') === 'D') {
+                styleStr += 'text-decoration:line-through;';
+            }
             // color
             if (value.lastIndexOf('.py') == value.length-3) {
                 styleStr += 'color:green;';
@@ -643,6 +769,19 @@ VRL.FileManager = {
             return '<span style="' + styleStr + '">' + value + '</span>';
         }
 
+        function fileStatusRenderer(value, cell, record) {
+            if (value === 'M') {
+                return '<span style="font-weight:bold;">Modified</span>';
+            } else if (value === 'A') {
+                return '<span style="color:blue">New File</span>';
+            } else if (value === 'D') {
+                return '<span style="color:red">Deleted</span>';
+            } else if (value === 'N') {
+                return 'Normal';
+            }
+            return value;
+        }
+
         var localFileStore = new Ext.data.JsonStore({
             url: this.controllerURL,
             baseParams: { 'action': 'listFiles' },
@@ -650,7 +789,8 @@ VRL.FileManager = {
             sortInfo: { field: 'name', direction: 'ASC' },
             fields: [
                 { name: 'name', type: 'string' },
-                { name: 'size', type: 'int' }
+                { name: 'size', type: 'int' },
+                { name: 'state', type: 'string' }
             ],
             listeners: { 'exception': VRL.onLoadException }
         });
@@ -669,7 +809,9 @@ VRL.FileManager = {
                 { header: 'Filename', width: 200, sortable: true,
                     dataIndex: 'name', renderer: fileNameRenderer },
                 { header: 'Size', width: 100, sortable: true, dataIndex: 'size',
-                    renderer: Ext.util.Format.fileSize, align: 'right'}
+                    renderer: Ext.util.Format.fileSize, align: 'right'},
+                { header: 'Status', width: 100, sortable: true,
+                    dataIndex: 'state', renderer: fileStatusRenderer }
             ],
             stripeRows: true,
 
@@ -683,12 +825,27 @@ VRL.FileManager = {
                             deleteFilesAction.disable();
                             downloadAction.disable();
                             editAction.disable();
+                            revertFilesAction.disable();
                         } else {
                             var files = sm.getSelections();
-                            downloadAction.enable();
-                            editAction.enable();
-                            if (!this.seriesReadOnly) {
-                                deleteFilesAction.enable();
+                            var canEdit = false, canRevert = false;
+                            for (var i=0; i<files.length; i++) {
+                                if (files[i].data.state !== 'D') {
+                                    canEdit = true;
+                                }
+                                if (files[i].data.state !== 'N') {
+                                    canRevert = true;
+                                }
+                            }
+                            if (canEdit) {
+                                downloadAction.enable();
+                                editAction.enable();
+                                if (!this.seriesReadOnly) {
+                                    deleteFilesAction.enable();
+                                }
+                            }
+                            if (canRevert && !this.seriesReadOnly) {
+                                revertFilesAction.enable();
                             }
                         }
                     }
@@ -698,8 +855,11 @@ VRL.FileManager = {
                 this.newFileAction,
                 editAction,
                 deleteFilesAction,
+                revertFilesAction,
                 downloadAction,
-                this.uploadAction
+                this.uploadAction,
+                '->',
+                this.commitChangesAction
             ],
             listeners: {
                 'contextmenu' : function(e) {
@@ -895,8 +1055,10 @@ VRL.FileManager = {
     setSeries: function(series) {
         if (Ext.isObject(series)) {
             this.seriesReadOnly = series.isExample;
+            this.commitChangesAction.disable();
             this.newFileAction.disable();
             this.uploadAction.disable();
+            this.revertFileAction.setDisabled(this.seriesReadOnly);
             this.saveFileAction.setDisabled(this.seriesReadOnly);
             this.job = undefined;
             Ext.getCmp('fm-jobcombo').setValue();

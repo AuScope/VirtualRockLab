@@ -164,11 +164,9 @@ public class JobActionController extends MultiActionController {
                 try {
                     logger.debug("Deleting job files");
                     File jobDir = new File(seriesDir, jobStr);
-                    File[] array = jobDir.listFiles();
-                    for (File f : array) {
-                        f.delete();
-                    }
-                    jobDir.delete();
+                    jobManager.deleteFiles(new File[]{jobDir});
+                    String message = "Deleted job '" + job.getName() + "'.";
+                    jobManager.saveRevision(jobDir, message);
                     logger.debug("Deleting job "+jobStr+" from database.");
                     jobManager.deleteJob(job);
                 } catch (Exception e) {
@@ -628,8 +626,14 @@ public class JobActionController extends MultiActionController {
                 File jobScript = new File(jobDir, scriptFile);
                 try {
                     jobScript.createNewFile();
+                    jobManager.addFile(jobDir);
+                    jobManager.addFile(jobScript);
+                    String message = "Created job '"+name+"'.";
+                    jobManager.saveRevision(jobDir, message);
                 } catch (IOException e) {
                     logger.warn(e);
+                } catch (Exception e) {
+                    logger.error(e);
                 }
                 mav.addObject("job", newJob);
             }

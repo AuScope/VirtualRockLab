@@ -110,14 +110,13 @@ doRequest: function(url, action, params, sCallback, fCallback) {
 
 updateSeriesSummary: function() {
     var descEl = Ext.getCmp('seriesdesc-panel').body;
-    VRL.seriesDescTpl.overwrite(
-        descEl, VRL.currentSeries);
+    VRL.seriesDescTpl.overwrite(descEl, VRL.currentSeries);
 },
 
-openSeries: function(seriesId) {
+openSeries: function(seriesId, revision) {
     function doOpen() {
         VRL.doRequest(this.controllerURL, 'openSeries',
-            { seriesId: seriesId },
+            { seriesId: seriesId, revision: revision },
             function(response, options) {
                 var resp = VRL.decodeResponse(response, VRL.showWelcome);
                 if (!resp) {
@@ -189,7 +188,8 @@ showWelcome: function() {
     var browserCb = function(attributes) {
         if (attributes) {
             var seriesId = attributes.seriesId;
-            VRL.openSeries(seriesId);
+            var revision = attributes.revision;
+            VRL.openSeries(seriesId, revision);
         } else {
             VRL.showWelcome();
         }
@@ -230,6 +230,10 @@ initialize: function() {
         '<table class="seriesdesc">',
         '<tr><th>Description:</th><td>{description}</td></tr>',
         '<tr><th>Created on:</th><td>{creationDate:this.dateFmt}</td></tr>',
+        '<tr><th>Last Modified:</th><td>{lastModified:this.dateFmt}</td></tr>',
+        '<tr><th>Latest Revision:</th><td>{latestRevision}</td></tr>',
+        '<tr><th>This Revision:</th><td>{revision}</td></tr>',
+        '<tr><th>Revision Comment:</th><td>{revisionLog}</td></tr>',
         '</table>'
     );
     this.seriesDescTpl.dateFmt = function(value) {

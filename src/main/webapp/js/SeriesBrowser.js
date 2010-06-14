@@ -20,6 +20,10 @@ descTpl: new Ext.Template(
 ),
 
 updateDetails: function(node) {
+    if (node.leaf) {
+        node.attributes.name = node.parentNode.attributes.name
+            +' (Revision '+node.attributes.revision+')';
+    }
     var descEl = Ext.getCmp('sb-details-panel').body;
     this.descTpl.overwrite(descEl, node.attributes);
 },
@@ -52,7 +56,7 @@ show: function(callback, doExamples) {
         enableSort: true,
         singleExpand: true,
         columns: [
-            { header: 'Name', width: 160, dataIndex: 'name' },
+            { header: 'Name/Revision', width: 160, dataIndex: 'name' },
             { header: 'Date Created', width: 160, dataIndex: 'date',
               sortType: dateSorter, renderer: dateRenderer }
         ],

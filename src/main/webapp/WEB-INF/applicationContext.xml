@@ -11,6 +11,7 @@
             <list>
                 <value>classpath:jdbc.properties</value>
                 <value>classpath:server.properties</value>
+                <value>classpath:svn.properties</value>
             </list>
         </property>
     </bean>
@@ -58,8 +59,15 @@
     </bean>
 
     <bean id="vrlJobManager" class="org.auscope.vrl.VRLJobManager">
+        <property name="revisionCtl" ref="revisionCtl"/>
         <property name="VRLJobDao" ref="vrlJobDao"/>
         <property name="VRLSeriesDao" ref="vrlSeriesDao"/>
+    </bean>
+
+    <bean id="revisionCtl" class="org.auscope.vrl.RevisionControl">
+        <property name="username" value="${svn.username}"/>
+        <property name="password" value="${svn.password}"/>
+        <property name="svnroot" value="${svn.root}"/>
     </bean>
 </beans>
 

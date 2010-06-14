@@ -9,8 +9,10 @@ package org.auscope.vrl;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -23,11 +25,13 @@ import org.apache.commons.logging.LogFactory;
 public class VRLJobManager {
     protected final Log logger = LogFactory.getLog(getClass());
 
-    private static final String TEMP_DIR = System.getProperty("java.io.tmpdir")
-        + File.separator + "vrl" + File.separator;
-
+    private RevisionControl revisionCtl;
     private VRLJobDao vrlJobDao;
     private VRLSeriesDao vrlSeriesDao;
+
+    public void setRevisionCtl(RevisionControl revisionCtl) {
+        this.revisionCtl = revisionCtl;
+    }
 
     public void setVRLJobDao(VRLJobDao vrlJobDao) {
         this.vrlJobDao = vrlJobDao;
@@ -69,7 +73,8 @@ public class VRLJobManager {
         vrlSeriesDao.saveSeries(series);
     }
 
-    public VRLSeries cloneSeries(VRLSeries series, String user, String name,
+    public VRLSeries cloneSeries(VRLSeries series, String revision,
+                                 String user, String name,
                                  String description) throws Exception {
         VRLSeries newSeries = new VRLSeries();
         newSeries.setDescription(description);
@@ -79,8 +84,9 @@ public class VRLJobManager {
         saveSeries(newSeries);
         long newId = newSeries.getId();
 
-        // copy jobs
+        // copy jobs - jobIdMap holds the mapping of old jobId to new jobId
         List jobs = getJobsBySeries(series.getId().longValue());
+        Map jobIdMap = new HashMap(jobs.size());
         Iterator it = jobs.listIterator();
         while (it.hasNext()) {
             VRLJob job = (VRLJob)it.next();
@@ -88,8 +94,14 @@ public class VRLJobManager {
                     job.getScriptFile(), job.getOutputDir(),
                     newId);
             saveJob(newJob);
+            jobIdMap.put(job.getId().toString(), newJob.getId().toString());
         }
 
+        // copy series files
+        String message = new String("Copy of '" + series.getName()
+                + "' at revision " + revision);
+        revisionCtl.cloneSeries(series.getUser(), series.getId(), revision,
+                user, newSeries.getId(), jobIdMap, message);
         return newSeries;
     }
 
@@ -101,23 +113,66 @@ public class VRLJobManager {
         series.setUser(user);
         series.setCreationDate((new Date()).getTime());
         saveSeries(series);
+        String message = new String("Initial revision of '"
+                + series.getName() + "'");
+        try {
+            revisionCtl.createSeries(series.getUser(), series.getId(), message);
+        } catch (Exception e) {
+            //TODO: deleteSeries(series.getId());
+            throw(e);
+        }
         return series;
     }
 
-    public File openSeries(String user, long seriesId) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
-        String targetDir = TEMP_DIR + user + File.separator
-            + sdf.format(new Date());
-        File path = new File(targetDir);
-        path.mkdirs();
-        List jobs = getJobsBySeries(seriesId);
-        Iterator it = jobs.listIterator();
-        while (it.hasNext()) {
-            VRLJob job = (VRLJob)it.next();
-            File jobDir = new File(path, job.getId().toString());
-            jobDir.mkdir();
+    public RevisionEntry getLastSeriesRevision(String user, long seriesId)
+            throws Exception {
+        return revisionCtl.getEntry(user, seriesId, "", "HEAD");
+    }
+
+    public RevisionLog getRevisionLog(String user, long seriesId,
+                                      String revision) {
+        RevisionLog[] res = revisionCtl.getSeriesLogs(user, seriesId,
+                revision, revision);
+        if (res != null && res.length > 0) {
+            return res[0];
+        } else {
+            logger.debug("Revision "+revision+" of series "+seriesId
+                    +" by user "+user+" not found.");
+            return null;
         }
-        return path;
+    }
+
+    public RevisionLog[] getRevisionsBySeries(String user, long seriesId) {
+        return revisionCtl.getSeriesLogs(user, seriesId, "0", "HEAD");
+    }
+
+    public File checkoutSeriesRevision(String user, long seriesId,
+                                       String revision) throws Exception {
+        return revisionCtl.checkoutRevision(user, seriesId, revision);
+    }
+
+    public long saveRevision(File path, String message) throws Exception {
+        return revisionCtl.commitChanges(path, message);
+    }
+
+    public void addFile(File file) throws Exception {
+        revisionCtl.addFile(file);
+    }
+
+    public void deleteFiles(File[] files) throws Exception {
+        revisionCtl.removeFiles(files);
+    }
+
+    public boolean hasModifications(File path) throws Exception {
+        return revisionCtl.hasModifications(path);
+    }
+
+    public FileInformation[] listFiles(File path) throws Exception {
+        return revisionCtl.listFilesWithStatus(path);
+    }
+
+    public void revertFiles(File[] files) throws Exception {
+        revisionCtl.revertFiles(files);
     }
 }
 

@@ -177,6 +177,13 @@ public class FileActionController extends MultiActionController {
                     while (it.hasNext()) {
                         final String fileName = it.next();
                         fm.cp(url+"/"+fileName, destDir.getPath(), overwrite);
+                        try {
+                            File destFile = new File(destDir, fileName);
+                            jobManager.addFile(destFile);
+                        } catch (Exception e) {
+                            // ignore errors when adding files -
+                            // they might be already in version control
+                        }
                     }
                     //si.cp(DtoStringList.fromStringList(list),
                     //        "file://"+jobDir.getPath(), overwrite, true);
@@ -253,9 +260,12 @@ public class FileActionController extends MultiActionController {
                 errorString = "Invalid filename(s)";
             } else {
                 logger.debug("Deleting "+list.size()+" files");
-                File[] array = list.toArray(new File[list.size()]);
-                for (File f : array) {
-                    f.delete();
+                try {
+                    jobManager.deleteFiles(list.toArray(
+                                new File[list.size()]));
+                } catch (Exception e) {
+                    errorString = "Could not delete files";
+                    logger.error(errorString, e);
                 }
             }
         }
@@ -504,6 +514,49 @@ public class FileActionController extends MultiActionController {
     }
 
     /**
+     * Returns a JSON object containing a boolean which indicates whether the
+     * current series has modifications.
+     *
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return A JSON object with a modified attribute.
+     *         If there is no active series the JSON object will contain
+     *         an error attribute indicating the error.
+     */
+    public ModelAndView isModified(HttpServletRequest request,
+                                   HttpServletResponse response) {
+
+        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
+        Long seriesId = (Long)request.getSession().getAttribute("seriesId");
+        ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
+
+        if (seriesId == null) {
+            errorString = "No active series in session";
+            logger.error(errorString);
+        } else {
+            try {
+                logger.debug("Checking for local modifications.");
+                mav.addObject("modified",
+                        jobManager.hasModifications(seriesDir));
+            } catch (Exception e) {
+                logger.error(e.getMessage(), e);
+                errorString = "There was an error getting the file states";
+            }
+        }
+
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
+        return mav;
+    }
+
+    /**
      * Returns a JSON object containing an array of filenames for the active
      * series.
      *
@@ -562,24 +615,93 @@ public class FileActionController extends MultiActionController {
                         DtoFolder folder = si.ls(url, 1);
                         for (DtoFile file : folder.getChildrenFiles()) {
                             fileList.add(new FileInformation(
-                                    file.getName(), file.getSize()));
+                                    file.getName(), file.getSize(), ""));
                         }
                     }
                 } else {
                     logger.debug("Generating file list for job " + jobStr
                             + " of series " + seriesId.toString());
                     File jobDir = new File(seriesDir, jobStr);
-                    File[] files = jobDir.listFiles();
-                    for (File f : files) {
-                        fileList.add(new FileInformation(
-                                f.getName(), f.length()));
-                    }
+                    FileInformation[] files = jobManager.listFiles(jobDir);
+                    fileList = Arrays.asList(files);
                 }
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
                 errorString = "There was an error getting the file listing";
             }
             mav.addObject("files", fileList.toArray());
+        }
+
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
+        return mav;
+    }
+
+    /**
+     * Reverts one or more files from the active series to the original state.
+     *
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return A JSON object
+     */
+    public ModelAndView revertFiles(HttpServletRequest request,
+                                    HttpServletResponse response) {
+
+        final String jobStr = request.getParameter("job");
+        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
+        final String filesParam = request.getParameter("files");
+        VRLJob job = null;
+        ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
+
+        if (jobStr != null) {
+            try {
+                long jobId = Long.parseLong(jobStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing job ID!");
+            }
+        }
+
+        if (seriesDir == null) {
+            errorString = "No active series in session";
+            logger.error(errorString);
+        } else if (job == null) {
+            errorString = "Invalid job";
+            logger.error("job is null!");
+        } else if (filesParam == null) {
+            errorString = "No files specified";
+            logger.error(errorString);
+        } else {
+            String[] fileNames = filesParam.split(",");
+            List<File> list = new ArrayList<File>();
+            File jobDir = new File(seriesDir, jobStr);
+            for (String fileName : fileNames) {
+                if (fileName.equals(Util.sanitizeSubPath(fileName))) {
+                    list.add(new File(jobDir, fileName));
+                } else {
+                    logger.warn("Invalid file "+fileName);
+                    continue;
+                }
+            }
+            if (list.size() == 0) {
+                errorString = "Invalid filename(s)";
+            } else {
+                logger.debug("Reverting "+list.size()+" files");
+                try {
+                    jobManager.revertFiles(list.toArray(
+                                new File[list.size()]));
+                } catch (Exception e) {
+                    errorString = "Could not revert files";
+                    logger.error(errorString, e);
+                }
+            }
         }
 
         if (errorString != null) {
@@ -637,17 +759,27 @@ public class FileActionController extends MultiActionController {
         } else {
             logger.debug("Saving file contents "+jobStr+"/"+fileName);
             try {
-                File destFile = new File(new File(seriesDir, jobStr), fileName);
+                File destFile = new File(new File(seriesDir, jobStr),
+                        fileName);
                 if (destFile.isDirectory()) {
                     errorString =
                         "The filename is reserved. Please use another filename";
                     logger.error("Tried to overwrite directory "
                             + destFile.getPath());
                 } else {
+                    boolean newFile = !destFile.exists();
                     BufferedWriter output = new BufferedWriter(
                         new FileWriter(destFile));
                     output.write(contents);
                     output.close();
+                    if (newFile) {
+                        try {
+                            jobManager.addFile(destFile);
+                        } catch (Exception e) {
+                            errorString = "Could not add file to repository";
+                            logger.error(errorString, e);
+                        }
+                    }
                 }
             } catch (IOException e) {
                 logger.error("Error writing to file.");
@@ -732,8 +864,14 @@ public class FileActionController extends MultiActionController {
                         errorString = "Could not process file";
                     }
                     if (newFile) {
-                        fileInfo = new FileInformation(
-                            f.getOriginalFilename(), f.getSize());
+                        try {
+                            jobManager.addFile(destination);
+                            fileInfo = new FileInformation(
+                                    f.getOriginalFilename(), f.getSize(), "A");
+                        } catch (Exception e) {
+                            errorString = "Could not add file to repository";
+                            logger.error(errorString, e);
+                        }
                     }
                 }
             }
@@ -749,7 +887,8 @@ public class FileActionController extends MultiActionController {
                 pw.print("{success:false,error:'"+errorString+"'}");
             } else {
                 pw.print("{success:true,name:'" + fileInfo.getName()
-                        + "',size:" + fileInfo.getSize() + "}");
+                        + "',size:" + fileInfo.getSize()
+                        + "',state:" + fileInfo.getState() + "}");
             }
             pw.flush();
         } catch (IOException e) {
