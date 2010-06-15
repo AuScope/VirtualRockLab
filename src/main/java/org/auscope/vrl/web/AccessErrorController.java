@@ -36,7 +36,8 @@ public class AccessErrorController implements Controller {
     public ModelAndView handleRequest(HttpServletRequest request,
                                       HttpServletResponse response) {
 
-        if (request.getMethod().equalsIgnoreCase("POST")) {
+        if (request.getMethod().equalsIgnoreCase("POST")
+                && "register".equals(request.getParameter("action"))) {
             logger.info("POST received from "+request.getRemoteUser());
             SimpleMailMessage msg = new SimpleMailMessage();
             msg.setTo("c.altinay@uq.edu.au");

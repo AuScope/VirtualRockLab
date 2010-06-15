@@ -41,7 +41,8 @@
     AuthenticationException e = (AuthenticationException)request.getSession()
         .getAttribute("SPRING_SECURITY_LAST_EXCEPTION");
 
-    if (request.getMethod().equalsIgnoreCase("POST")) {
+    if (request.getMethod().equalsIgnoreCase("POST")
+        && "register".equals(request.getParameter("action"))) {
 %>
         <p style="font-size:medium">
         Thank you very much for your interest. We will contact you shortly
@@ -70,6 +71,7 @@
 %></td></tr>
         </table>
         <form action="access_error.html" method="POST">
+            <input type="hidden" name="action" value="register" />
             <input type="submit" value="Register" />
         </form>
 <%      }
