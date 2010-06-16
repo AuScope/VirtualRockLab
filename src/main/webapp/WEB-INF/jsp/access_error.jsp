@@ -30,7 +30,7 @@
 <body>
     <div id="header-container">
         <div id="logo">
-            <img alt="" src="../img/img-auscope-banner.gif" />
+            <img alt="" src="<%=request.getContextPath()%>/img/img-auscope-banner.gif" />
         </div>
     </div>
 

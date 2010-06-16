@@ -110,32 +110,34 @@ public class JobActionController extends MultiActionController {
      */
     public ModelAndView deleteJob(HttpServletRequest request,
                                   HttpServletResponse response) {
-        ServiceInterface si = getGrisuService(request);
+
+        final ServiceInterface si = getGrisuService(request);
         final String user = request.getRemoteUser();
         File seriesDir = (File)request.getSession().getAttribute("seriesDir");
         final String jobStr = request.getParameter("job");
+        final ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
         VRLJob job = null;
         long jobId = -1;
-        String errorString = null;
-        ModelAndView mav = new ModelAndView("jsonView");
+
         if (jobStr != null) {
             try {
                 jobId = Long.parseLong(jobStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
+                logger.warn("Error parsing job ID " + jobStr);
             }
         }
 
         if (si == null) {
-            errorString = "You are not logged in or your session has expired";
+            errorString = ErrorMessages.SESSION_EXPIRED;
             logger.warn("ServiceInterface is null!");
         } else if (seriesDir == null) {
-            errorString = "No active series in session";
-            logger.error("series is null!");
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (job == null) {
-            errorString = "No/Invalid job specified";
-            logger.error(errorString);
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("job is null!");
         } else {
             // check if current user is the owner of the job
             VRLSeries s = jobManager.getSeriesById(job.getSeriesId());
@@ -147,17 +149,17 @@ public class JobActionController extends MultiActionController {
                         JobObject grisuJob = new JobObject(si, handle);
                         int status = grisuJob.getStatus(true);
                         if (status <= JobConstants.ACTIVE) {
-                            errorString = "Cannot delete running job";
+                            errorString = ErrorMessages.JOB_IS_RUNNING;
                             logger.warn(errorString);
                         }
                     } catch (Exception e) {
-                        logger.warn(e.getMessage());
+                        logger.error(e.getMessage(), e);
                     }
                 }
             } else {
-                logger.warn(user+"'s attempt to delete "+s.getUser()
-                    +"'s job denied!");
-                errorString = "You are not authorised to delete this job";
+                errorString = ErrorMessages.NOT_AUTHORIZED;
+                logger.warn(user + "'s attempt to delete " + s.getUser()
+                    + "'s job denied!");
             }
 
             if (errorString == null) {
@@ -170,8 +172,8 @@ public class JobActionController extends MultiActionController {
                     logger.debug("Deleting job "+jobStr+" from database.");
                     jobManager.deleteJob(job);
                 } catch (Exception e) {
-                    errorString = new String("Unable to delete job files");
-                    logger.error(e.getMessage());
+                    errorString = ErrorMessages.INTERNAL_ERROR;
+                    logger.error(e.getMessage(), e);
                 }
             } 
         }
@@ -198,14 +200,15 @@ public class JobActionController extends MultiActionController {
     public ModelAndView killJob(HttpServletRequest request,
                                 HttpServletResponse response) {
 
-        ServiceInterface si = getGrisuService(request);
+        final ServiceInterface si = getGrisuService(request);
         final String user = request.getRemoteUser();
+        Long seriesId = (Long)request.getSession().getAttribute("seriesId");
         final String jobStr = request.getParameter("job");
+        final ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
         VRLJob job = null;
         long jobId = -1;
         String handle = null;
-        ModelAndView mav = new ModelAndView("jsonView");
-        String errorString = null;
 
         if (jobStr != null) {
             try {
@@ -213,37 +216,40 @@ public class JobActionController extends MultiActionController {
                 job = jobManager.getJobById(jobId);
                 handle = job.getHandle();
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
+                logger.warn("Error parsing job ID " + jobStr);
             }
         }
 
         if (si == null) {
-            errorString = "You are not logged in or your session has expired";
+            errorString = ErrorMessages.SESSION_EXPIRED;
             logger.warn("ServiceInterface is null!");
+        } else if (seriesId == null) {
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (job == null) {
-            errorString = "No/Invalid job specified";
-            logger.error(errorString);
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("job is null!");
         } else if (handle == null || handle.length() == 0) {
-            errorString = "Job has not been submitted";
-            logger.error(errorString);
+            errorString = ErrorMessages.NULL_HANDLE;
+            logger.warn(errorString);
         } else {
             // check if current user is the owner of the job
             VRLSeries s = jobManager.getSeriesById(job.getSeriesId());
             if (user.equals(s.getUser())) {
                 try {
-                    logger.info("Terminating job with ID "+jobStr);
+                    logger.debug("Terminating job with ID "+jobStr);
                     JobObject grisuJob = new JobObject(si, handle);
                     grisuJob.kill(true);
                     job.setHandle(null);
                     jobManager.saveJob(job);
                 } catch (Exception e) {
-                    errorString = "Error terminating job";
+                    errorString = ErrorMessages.INTERNAL_ERROR;
                     logger.error(e.getMessage(), e);
                 }
             } else {
-                logger.warn(user+"'s attempt to kill "+s.getUser()
-                    +"'s job denied!");
-                errorString = "You are not authorised to terminate this job";
+                errorString = ErrorMessages.NOT_AUTHORIZED;
+                logger.warn(user + "'s attempt to kill " + s.getUser()
+                    + "'s job denied!");
             }
         }
 
@@ -269,17 +275,17 @@ public class JobActionController extends MultiActionController {
     public ModelAndView listJobs(HttpServletRequest request,
                                  HttpServletResponse response) {
 
-        ServiceInterface si = getGrisuService(request);
+        final ServiceInterface si = getGrisuService(request);
         Long seriesId = (Long)request.getSession().getAttribute("seriesId");
-        ModelAndView mav = new ModelAndView("jsonView");
+        final ModelAndView mav = new ModelAndView("jsonView");
         String errorString = null;
 
         if (si == null) {
-            errorString = "You are not logged in or your session has expired";
+            errorString = ErrorMessages.SESSION_EXPIRED;
             logger.warn("ServiceInterface is null!");
         } else if (seriesId == null) {
-            errorString = "No active series in session";
-            logger.error("series is null!");
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else {
             GrisuRegistry registry = GrisuRegistryManager.getDefault(si);
             List jobs = jobManager.getJobsBySeries(seriesId.longValue());
@@ -366,15 +372,18 @@ public class JobActionController extends MultiActionController {
     public ModelAndView listSites(HttpServletRequest request,
                                   HttpServletResponse response) {
 
-        ServiceInterface si = getGrisuService(request);
-        String version = request.getParameter("version");
-        List<SimpleBean> sites = new ArrayList<SimpleBean>();
-        ModelAndView mav = new ModelAndView("jsonView");
+        final ServiceInterface si = getGrisuService(request);
+        final String version = request.getParameter("version");
+        final ModelAndView mav = new ModelAndView("jsonView");
         String errorString = null;
+        List<SimpleBean> sites = new ArrayList<SimpleBean>();
 
         if (si == null) {
-            errorString = "You are not logged in or your session has expired";
+            errorString = ErrorMessages.SESSION_EXPIRED;
             logger.warn("ServiceInterface is null!");
+        } else if (version == null) {
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn("No version specified!");
         } else {
             GrisuRegistry registry = GrisuRegistryManager.getDefault(si);
             if (version != null) {
@@ -440,13 +449,13 @@ public class JobActionController extends MultiActionController {
     public ModelAndView listVersions(HttpServletRequest request,
                                      HttpServletResponse response) {
 
-        ServiceInterface si = getGrisuService(request);
-        List<SimpleBean> versions = new ArrayList<SimpleBean>();
-        ModelAndView mav = new ModelAndView("jsonView");
+        final ServiceInterface si = getGrisuService(request);
+        final ModelAndView mav = new ModelAndView("jsonView");
         String errorString = null;
+        List<SimpleBean> versions = new ArrayList<SimpleBean>();
 
         if (si == null) {
-            errorString = "You are not logged in or your session has expired";
+            errorString = ErrorMessages.SESSION_EXPIRED;
             logger.warn("ServiceInterface is null!");
         } else {
             logger.debug("Retrieving available ESyS-Particle versions");
@@ -488,18 +497,18 @@ public class JobActionController extends MultiActionController {
     public ModelAndView listSiteQueues(HttpServletRequest request,
                                        HttpServletResponse response) {
 
-        ServiceInterface si = getGrisuService(request);
-        String site = request.getParameter("site");
-        String version = request.getParameter("version");
-        List<SimpleBean> queues = new ArrayList<SimpleBean>();
-        ModelAndView mav = new ModelAndView("jsonView");
+        final ServiceInterface si = getGrisuService(request);
+        final String site = request.getParameter("site");
+        final String version = request.getParameter("version");
+        final ModelAndView mav = new ModelAndView("jsonView");
         String errorString = null;
+        List<SimpleBean> queues = new ArrayList<SimpleBean>();
 
         if (si == null) {
-            errorString = "You are not logged in or your session has expired";
+            errorString = ErrorMessages.SESSION_EXPIRED;
             logger.warn("ServiceInterface is null!");
         } else if (site == null || version == null) {
-            errorString = "Missing parameter";
+            errorString = ErrorMessages.MISSING_PARAMETER;
             logger.warn("No site or version specified!");
         } else {
             GrisuRegistry registry = GrisuRegistryManager.getDefault(si);
@@ -545,46 +554,50 @@ public class JobActionController extends MultiActionController {
      */
     public ModelAndView saveJob(HttpServletRequest request,
                                 HttpServletResponse response) {
+
         final String user = request.getRemoteUser();
         File seriesDir = (File)request.getSession().getAttribute("seriesDir");
         Long seriesId = (Long)request.getSession().getAttribute("seriesId");
-        String name = request.getParameter("name");
-        String scriptFile = request.getParameter("scriptFile");
-        String description = request.getParameter("description");
-        String jobStr = request.getParameter("id");
+        final String name = request.getParameter("name");
+        final String scriptFile = request.getParameter("scriptFile");
+        final String description = request.getParameter("description");
+        final String jobStr = request.getParameter("id");
+        final ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
         VRLSeries series = null;
         VRLJob job = null;
-        ModelAndView mav = new ModelAndView("jsonView");
-        String errorString = null;
 
         if (seriesId != null) {
             series = jobManager.getSeriesById(seriesId.longValue());
         }
 
-        if (seriesDir == null || series == null) {
-            errorString = "No active series in session";
-            logger.error("series is null!");
+        if (getGrisuService(request) == null) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (series == null) {
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (!series.getUser().equals(user)) {
-            errorString = "You can only save your own jobs";
-            logger.warn(user+" tried to edit "+series.getUser()+"'s job");
+            errorString = ErrorMessages.NOT_AUTHORIZED;
+            logger.warn(user+" tried to save "+series.getUser()+"'s job");
         } else if (name == null || scriptFile == null) {
-            errorString = "Missing parameter(s)";
+            errorString = ErrorMessages.MISSING_PARAMETER;
             logger.warn(errorString);
         } else if (!scriptFile.endsWith(".py")) {
-            errorString = "Script filename must end in '.py'";
+            errorString = ErrorMessages.INVALID_SCRIPTFILE;
             logger.warn(errorString);
         } else if (!scriptFile.equals(Util.sanitizeSubPath(scriptFile))) {
-            errorString = "Invalid script filename";
+            errorString = ErrorMessages.INVALID_FILENAME;
             logger.warn(errorString);
         } else if (jobStr != null && jobStr.length() > 0) {
             try {
                 long jobId = Long.parseLong(jobStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID "+jobStr);
+                logger.warn("Error parsing job ID " + jobStr);
             }
             if (job == null) {
-                errorString = "Invalid job";
+                errorString = ErrorMessages.MISSING_PARAMETER;
             }
         }
 
@@ -597,7 +610,7 @@ public class JobActionController extends MultiActionController {
                 VRLJob j = it.next();
                 if (name.equals(j.getName())) {
                     if (job == null || !job.getId().equals(j.getId())) {
-                        errorString = "A job by that name already exists";
+                        errorString = ErrorMessages.JOB_EXISTS;
                         logger.warn(errorString+": "+j.getId()+"/"+jobStr);
                         break;
                     }
@@ -628,12 +641,12 @@ public class JobActionController extends MultiActionController {
                     jobScript.createNewFile();
                     jobManager.addFile(jobDir);
                     jobManager.addFile(jobScript);
-                    String message = "Created job '"+name+"'.";
+                    String message = "Created job '" + name + "'.";
                     jobManager.saveRevision(jobDir, message);
                 } catch (IOException e) {
-                    logger.warn(e);
+                    logger.warn(e.getMessage());
                 } catch (Exception e) {
-                    logger.error(e);
+                    logger.error(e.getMessage(), e);
                 }
                 mav.addObject("job", newJob);
             }
@@ -658,10 +671,10 @@ public class JobActionController extends MultiActionController {
     public ModelAndView submitJob(HttpServletRequest request,
                                   HttpServletResponse response) {
 
+        final ServiceInterface si = getGrisuService(request);
         final String user = request.getRemoteUser();
         File seriesDir = (File)request.getSession().getAttribute("seriesDir");
         Long seriesId = (Long)request.getSession().getAttribute("seriesId");
-        ServiceInterface si = getGrisuService(request);
         final String jobStr = request.getParameter("job");
         final String memoryStr = request.getParameter("memory");
         final String numprocsStr = request.getParameter("numprocs");
@@ -669,17 +682,17 @@ public class JobActionController extends MultiActionController {
         final String site = request.getParameter("site");
         final String version = request.getParameter("version");
         final String walltimeStr = request.getParameter("walltime");
+        final ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
         VRLSeries series = null;
         VRLJob job = null;
-        ModelAndView mav = new ModelAndView("jsonView");
-        String errorString = null;
 
         if (jobStr != null) {
             try {
                 long jobId = Long.parseLong(jobStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
+                logger.warn("Error parsing job ID " + jobStr);
             }
         }
 
@@ -688,27 +701,27 @@ public class JobActionController extends MultiActionController {
         }
 
         if (si == null) {
-            errorString = "You are not logged in or your session has expired";
+            errorString = ErrorMessages.SESSION_EXPIRED;
             logger.warn("ServiceInterface is null!");
-        } else if (seriesDir == null || series == null) {
-            errorString = "No active series in session";
-            logger.warn("series is null!");
-        } else if (job == null) {
-            errorString = "Invalid job";
-            logger.warn("job is null!");
+        } else if (series == null) {
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (!series.getUser().equals(user)) {
-            errorString = "You can only submit your own jobs";
+            errorString = ErrorMessages.NOT_AUTHORIZED;
             logger.warn(user+" tried to submit "+series.getUser()+"'s job");
+        } else if (job == null) {
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("job is null!");
         } else if (memoryStr == null || numprocsStr == null || queue == null
                 || site == null || version == null || walltimeStr == null) {
-            errorString = "Missing parameter(s)";
+            errorString = ErrorMessages.MISSING_PARAMETER;
             logger.warn(errorString);
         } else {
             File jobDir = new File(seriesDir, jobStr);
             File scriptPath = new File(jobDir, job.getScriptFile());
             if (!scriptPath.exists()) {
-                errorString = "The script file does not exist";
-                logger.warn(job.getScriptFile()+" does not exist");
+                errorString = ErrorMessages.SCRIPT_NOT_FOUND;
+                logger.warn(job.getScriptFile()+" does not exist!");
             }
         }
 
@@ -725,7 +738,7 @@ public class JobActionController extends MultiActionController {
                 String subLoc = getSubmissionLocationForVersionSiteQueue(si,
                         version, site, queue);
                 if (subLoc == null) {
-                    errorString = "Invalid site, queue, or version specified";
+                    errorString = ErrorMessages.MISSING_PARAMETER;
                     throw new Exception("Site/queue/version combo not found: "
                         + site + ", " + queue + ", " + version);
                 }
@@ -760,24 +773,23 @@ public class JobActionController extends MultiActionController {
                 mav.addObject("status", status);
 
             } catch (NumberFormatException e) {
+                errorString = ErrorMessages.MISSING_PARAMETER;
                 logger.warn("Error parsing integer value(s): " + walltimeStr
                         + " / " + numprocsStr + " / " + memoryStr);
-                errorString = "Invalid wall time / CPUs / memory";
 
             } catch (JobPropertiesException e) {
-                logger.error(e.getMessage());
-                errorString = "The job could not be submitted";
+                errorString = ErrorMessages.INTERNAL_ERROR;
+                logger.error(e.getMessage(), e);
 
             } catch (Exception e) {
-                logger.error(e.getMessage(), e);
                 if (errorString == null) {
-                    errorString = "The job could not be submitted";
+                    errorString = ErrorMessages.INTERNAL_ERROR;
                 }
+                logger.error(e.getMessage(), e);
 
             } catch (java.lang.Error e) {
-                logger.error(e,e);
-                errorString =
-                    "Internal error. Please contact site administrator.";
+                errorString = ErrorMessages.INTERNAL_ERROR;
+                logger.error(e.getMessage(), e);
             }
         }
 
@@ -818,7 +830,7 @@ public class JobActionController extends MultiActionController {
     /**
      *
      */
-    private String lastLinesOf(String source, int numLines) {
+    private String lastLinesOf(final String source, int numLines) {
         int idx = source.lastIndexOf('\n');
         int i = 0;
         while (idx > -1 && i < numLines) {

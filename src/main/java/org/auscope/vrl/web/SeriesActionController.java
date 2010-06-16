@@ -74,6 +74,10 @@ public class SeriesActionController extends MultiActionController {
         }
     }
 
+    private boolean isLoggedIn(HttpServletRequest request) {
+        return (request.getSession().getAttribute("grisuService") != null);
+    }
+
     ///////////////////////////////////////////////////////////////////////
     ////////////////////////////// ACTIONS ////////////////////////////////
     ///////////////////////////////////////////////////////////////////////
@@ -88,37 +92,38 @@ public class SeriesActionController extends MultiActionController {
      */
     public ModelAndView cloneSeries(HttpServletRequest request,
                                      HttpServletResponse response) {
-        final String user = request.getRemoteUser();
-        String name = request.getParameter("name");
-        String description = request.getParameter("description");
-        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
+
         Long seriesId = (Long)request.getSession().getAttribute("seriesId");
         Long seriesRev = (Long)request.getSession().getAttribute("seriesRev");
+        final String user = request.getRemoteUser();
+        final String name = request.getParameter("name");
+        String description = request.getParameter("description");
+        final ModelAndView mav = new ModelAndView("jsonView");
         String errorString = null;
         VRLSeries series = null;
         long newRevision = -1;
         long newId = -1;
-        ModelAndView mav = new ModelAndView("jsonView");
 
         if (seriesId != null) {
             series = jobManager.getSeriesById(seriesId.longValue());
-        } else {
-            logger.warn("No series ID specified!");
         }
 
-        if (seriesDir == null || series == null || seriesRev == null) {
-            errorString = "No active series in session";
-            logger.error("seriesDir or series is null!");
+        if (!isLoggedIn(request)) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (series == null) {
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (name == null || name.length() < 3) {
-            errorString = new String("Invalid series name");
-            logger.error(errorString);
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn("No/Invalid series name specified!");
         } else {
             // prevent duplicate names
             List<VRLSeries> uSeries = jobManager.getSeriesByUser(user);
             Iterator<VRLSeries> it = uSeries.listIterator();
             while (it.hasNext()) {
                 if (name.equals(it.next().getName())) {
-                    errorString = "A series by that name already exists";
+                    errorString = ErrorMessages.SERIES_EXISTS;
                     logger.warn(errorString);
                     break;
                 }
@@ -138,8 +143,8 @@ public class SeriesActionController extends MultiActionController {
                         user, newId);
                 newRevision = rev.getRevision();
             } catch (Exception e) {
-                errorString = new String("Could not clone series");
-                logger.error(errorString, e);
+                errorString = ErrorMessages.INTERNAL_ERROR;
+                logger.error(e.getMessage(), e);
             }
         }
 
@@ -167,8 +172,9 @@ public class SeriesActionController extends MultiActionController {
     public ModelAndView closeSeries(HttpServletRequest request,
                                      HttpServletResponse response) {
 
-        ModelAndView mav = new ModelAndView("jsonView");
         File seriesDir = (File)request.getSession().getAttribute("seriesDir");
+        final ModelAndView mav = new ModelAndView("jsonView");
+
         if (seriesDir != null) {
             logger.debug("Deleting checkout at "+seriesDir.getPath());
             Util.deleteFilesRecursive(seriesDir);
@@ -177,7 +183,6 @@ public class SeriesActionController extends MultiActionController {
         request.getSession().removeAttribute("seriesDir");
         request.getSession().removeAttribute("seriesId");
         request.getSession().removeAttribute("seriesRev");
-
         mav.addObject("success", true);
         return mav;
     }
@@ -192,23 +197,27 @@ public class SeriesActionController extends MultiActionController {
      */
     public ModelAndView createSeries(HttpServletRequest request,
                                       HttpServletResponse response) {
+
         final String user = request.getRemoteUser();
-        String name = request.getParameter("name");
+        final String name = request.getParameter("name");
         String description = request.getParameter("description");
+        final ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
         long seriesId = -1;
         long seriesRevision = -1;
-        String errorString = null;
-        ModelAndView mav = new ModelAndView("jsonView");
 
-        if (name == null || name.length() < 3) {
-            errorString = "Invalid series name";
-            logger.error(errorString);
+        if (!isLoggedIn(request)) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (name == null || name.length() < 3) {
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn("No/Invalid series name specified!");
         } else {
             List<VRLSeries> series = jobManager.getSeriesByUser(user);
             Iterator<VRLSeries> it = series.listIterator();
             while (it.hasNext()) {
                 if (name.equals(it.next().getName())) {
-                    errorString = "A series by that name already exists";
+                    errorString = ErrorMessages.SERIES_EXISTS;
                     logger.warn(errorString);
                     break;
                 }
@@ -229,8 +238,8 @@ public class SeriesActionController extends MultiActionController {
                         user, seriesId);
                 seriesRevision = rev.getRevision();
             } catch (Exception e) {
-                errorString = new String("Could not create series");
-                logger.error(errorString, e);
+                errorString = ErrorMessages.INTERNAL_ERROR;
+                logger.error(e.getMessage(), e);
             }
         }
 
@@ -260,14 +269,17 @@ public class SeriesActionController extends MultiActionController {
     public ModelAndView listSeries(HttpServletRequest request,
                                    HttpServletResponse response) {
 
-        String errorString = null;
-        final String node = request.getParameter("node");
         final boolean demo = Boolean.valueOf(request.getParameter("demo"));
         final String user = (demo == true ? "demo" : request.getRemoteUser());
+        final String node = request.getParameter("node");
+        String errorString = null;
 
-        if (node == null) {
+        if (!isLoggedIn(request)) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (node == null) {
+            errorString = ErrorMessages.MISSING_PARAMETER;
             logger.warn("No node specified!");
-            errorString = new String("Invalid request");
         } else if (node.equals("series-root")) {
             List<VRLSeries> series = jobManager.getSeriesByUser(user);
             JSONArray jsSeries = (JSONArray)JSONSerializer.toJSON(series);
@@ -295,7 +307,7 @@ public class SeriesActionController extends MultiActionController {
             try {
                 response.getWriter().print(json);
             } catch (IOException e) {
-                logger.error("Error writing response!");
+                logger.error(e.getMessage(), e);
             }
         } else if (node.startsWith("series-")) {
             String idStr = node.substring(7);
@@ -321,18 +333,18 @@ public class SeriesActionController extends MultiActionController {
                 response.setContentType("application/json");
                 response.getWriter().print(jsLogs.toString());
             } catch (NumberFormatException e) {
-                logger.error("Error parsing series ID '"+idStr+"'");
-                errorString = "Invalid request";
+                errorString = ErrorMessages.MISSING_PARAMETER;
+                logger.warn("Error parsing series ID " + idStr);
             } catch (IOException e) {
-                logger.error("Error writing response!");
-                errorString = "Error writing response";
-            } catch (Exception e) {
+                errorString = ErrorMessages.INTERNAL_ERROR;
                 logger.error(e.getMessage(), e);
-                errorString = "Error processing data";
+            } catch (Exception e) {
+                errorString = ErrorMessages.INTERNAL_ERROR;
+                logger.error(e.getMessage(), e);
             }
         } else {
-            logger.warn("Invalid node "+node);
-            errorString = "Invalid request";
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn("Invalid node " + node);
         }
 
         if (errorString == null) {
@@ -359,41 +371,40 @@ public class SeriesActionController extends MultiActionController {
                                    HttpServletResponse response) {
 
         final String user = request.getRemoteUser();
-        String seriesIdStr = request.getParameter("seriesId");
-        String revisionStr = request.getParameter("revision");
+        final String seriesIdStr = request.getParameter("seriesId");
+        final String revisionStr = request.getParameter("revision");
+        final ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
         VRLSeries series = null;
         long revision = -1;
         Long seriesId = null;
-        ModelAndView mav = new ModelAndView("jsonView");
-        String errorString = null;
 
         if (seriesIdStr != null) {
             try {
                 seriesId = new Long(seriesIdStr);
                 series = jobManager.getSeriesById(seriesId.longValue());
             } catch (NumberFormatException e) {
-                logger.error("Error parsing series ID!");
+                logger.warn("Error parsing series ID " + seriesIdStr);
             }
-        } else {
-            logger.warn("No series ID specified!");
         }
 
         if (revisionStr != null) {
             try {
                 revision = Long.parseLong(revisionStr);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing revision number!");
+                logger.warn("Error parsing revision number " + revisionStr);
             }
-        } else {
-            logger.warn("No revision number specified!");
         }
 
-        if (series == null || revision < 0) {
-            errorString = "The requested series does not exist";
-            logger.error(errorString);
+        if (!isLoggedIn(request)) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (series == null || revision < 0) {
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn(errorString);
         } else if (!series.getUser().equals(user) &&
                     !series.getUser().equals("demo")) {
-            errorString = "You can only open your own series and examples";
+            errorString = ErrorMessages.NOT_AUTHORIZED;
             logger.warn(user+" tried to open "+series.getUser()+"'s series");
         } else {
             try {
@@ -428,8 +439,8 @@ public class SeriesActionController extends MultiActionController {
                 mav.addObject("revision", revision);
                 mav.addObject("revisionLog", log.getMessage());
             } catch (Exception e) {
-                errorString = "Error accessing series files";
-                logger.error(errorString, e);
+                errorString = ErrorMessages.INTERNAL_ERROR;
+                logger.error(e.getMessage(), e);
             }
         }
 
@@ -455,27 +466,30 @@ public class SeriesActionController extends MultiActionController {
     public ModelAndView saveSeries(HttpServletRequest request,
                                    HttpServletResponse response) {
 
-        final String user = request.getRemoteUser();
-        String message = request.getParameter("message");
         File seriesDir = (File)request.getSession().getAttribute("seriesDir");
         Long seriesId = (Long)request.getSession().getAttribute("seriesId");
+        final String user = request.getRemoteUser();
+        final String message = request.getParameter("message");
+        final ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
         VRLSeries series = null;
         long revision = -1;
-        ModelAndView mav = new ModelAndView("jsonView");
-        String errorString = null;
 
         if (seriesId != null) {
             series = jobManager.getSeriesById(seriesId.longValue());
         }
 
-        if (seriesDir == null || series == null) {
-            errorString = "No active series in session";
-            logger.error("seriesDir is null!");
+        if (!isLoggedIn(request)) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (series == null) {
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (!series.getUser().equals(user)) {
-            errorString = "You can only save series you own";
+            errorString = ErrorMessages.NOT_AUTHORIZED;
             logger.warn(user+" tried to save "+series.getUser()+"'s series.");
         } else if (message == null) {
-            errorString = "No commit message specified";
+            errorString = ErrorMessages.MISSING_PARAMETER;
             logger.warn(errorString);
         } else {
             logger.debug("Committing changes in "+seriesDir.getPath());
@@ -490,8 +504,8 @@ public class SeriesActionController extends MultiActionController {
                     mav.addObject("revisionLog", message);
                 }
             } catch (Exception e) {
-                errorString = "Error storing series files";
-                logger.error(errorString, e);
+                errorString = ErrorMessages.INTERNAL_ERROR;
+                logger.error(e.getMessage(), e);
             }
         }
 

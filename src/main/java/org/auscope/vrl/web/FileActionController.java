@@ -111,16 +111,16 @@ public class FileActionController extends MultiActionController {
     public ModelAndView copyFiles(HttpServletRequest request,
                                   HttpServletResponse response) {
 
+        final ServiceInterface si = getGrisuService(request);
+        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
         final String srcJobStr = request.getParameter("srcJob");
         final String destJobStr = request.getParameter("destJob");
-        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
         final String filesParam = request.getParameter("files");
         final String overwriteParam = request.getParameter("overwrite");
-        ServiceInterface si = getGrisuService(request);
+        final ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
         VRLJob srcJob = null;
         VRLJob destJob = null;
-        ModelAndView mav = new ModelAndView("jsonView");
-        String errorString = null;
 
         if (srcJobStr != null && destJobStr != null) {
             try {
@@ -129,26 +129,27 @@ public class FileActionController extends MultiActionController {
                 jobId = Long.parseLong(destJobStr);
                 destJob = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
+                logger.warn("Error parsing job ID " + srcJobStr
+                        + "/" + destJobStr);
             }
         }
 
         if (si == null) {
-            errorString = "You are not logged in or your session has expired";
+            errorString = ErrorMessages.SESSION_EXPIRED;
             logger.warn("ServiceInterface is null!");
         } else if (seriesDir == null) {
-            errorString = "No active series in session";
-            logger.error(errorString);
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (srcJob == null || destJob == null) {
-            errorString = "Invalid job";
-            logger.error("srcJob or destJob is null!");
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("srcJob or destJob is null!");
         } else if (filesParam == null) {
-            errorString = "No files specified";
-            logger.error(errorString);
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn("No files specified!");
         } else if (srcJob.getHandle() == null
                 || srcJob.getHandle().length() == 0) {
-            errorString = "Job has no output files";
-            logger.error("source job handle is null!");
+            errorString = ErrorMessages.NULL_HANDLE;
+            logger.warn("source job handle is null!");
         } else {
             String[] fileNames = filesParam.split(",");
             List<String> list = new ArrayList<String>();
@@ -161,7 +162,7 @@ public class FileActionController extends MultiActionController {
                 }
             }
             if (list.size() == 0) {
-                errorString = "Invalid filename(s)";
+                errorString = ErrorMessages.INVALID_FILENAME;
             } else {
                 try {
                     JobObject grisuJob = new JobObject(si, srcJob.getHandle());
@@ -188,8 +189,8 @@ public class FileActionController extends MultiActionController {
                     //si.cp(DtoStringList.fromStringList(list),
                     //        "file://"+jobDir.getPath(), overwrite, true);
                 } catch (Exception e) {
-                    errorString = new String("Could not copy files");
-                    logger.error(errorString, e);
+                    errorString = ErrorMessages.INTERNAL_ERROR;
+                    logger.error(e.getMessage(), e);
                 }
             }
         }
@@ -215,35 +216,34 @@ public class FileActionController extends MultiActionController {
     public ModelAndView deleteFiles(HttpServletRequest request,
                                     HttpServletResponse response) {
 
-        ServiceInterface si = getGrisuService(request);
-        final String jobStr = request.getParameter("job");
         File seriesDir = (File)request.getSession().getAttribute("seriesDir");
+        final String jobStr = request.getParameter("job");
         final String filesParam = request.getParameter("files");
-        VRLJob job = null;
-        ModelAndView mav = new ModelAndView("jsonView");
+        final ModelAndView mav = new ModelAndView("jsonView");
         String errorString = null;
+        VRLJob job = null;
 
         if (jobStr != null) {
             try {
                 long jobId = Long.parseLong(jobStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
+                logger.warn("Error parsing job ID " + jobStr);
             }
         }
 
-        if (si == null) {
-            errorString = "You are not logged in or your session has expired";
+        if (getGrisuService(request) == null) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
             logger.warn("ServiceInterface is null!");
         } else if (seriesDir == null) {
-            errorString = "No active series in session";
-            logger.error(errorString);
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (job == null) {
-            errorString = "Invalid job";
-            logger.error("job is null!");
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("job is null!");
         } else if (filesParam == null) {
-            errorString = "No files specified";
-            logger.error(errorString);
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn("No files specified!");
         } else {
             String[] fileNames = filesParam.split(",");
             List<File> list = new ArrayList<File>();
@@ -257,15 +257,15 @@ public class FileActionController extends MultiActionController {
                 }
             }
             if (list.size() == 0) {
-                errorString = "Invalid filename(s)";
+                errorString = ErrorMessages.INVALID_FILENAME;
             } else {
                 logger.debug("Deleting "+list.size()+" files");
                 try {
                     jobManager.deleteFiles(list.toArray(
                                 new File[list.size()]));
                 } catch (Exception e) {
-                    errorString = "Could not delete files";
-                    logger.error(errorString, e);
+                    errorString = ErrorMessages.INTERNAL_ERROR;
+                    logger.error(e.getMessage(), e);
                 }
             }
         }
@@ -295,36 +295,36 @@ public class FileActionController extends MultiActionController {
     public ModelAndView downloadFiles(HttpServletRequest request,
                                       HttpServletResponse response) {
 
+        final ServiceInterface si = getGrisuService(request);
+        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
         final String jobStr = request.getParameter("job");
         final String remoteStr = request.getParameter("remote");
         final String filesParam = request.getParameter("files");
-        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
-        ServiceInterface si = getGrisuService(request);
-        boolean remote = (remoteStr != null && remoteStr.length() > 0);
-        VRLJob job = null;
+        final boolean remote = (remoteStr != null && remoteStr.length() > 0);
         String errorString = null;
+        VRLJob job = null;
 
         if (jobStr != null) {
             try {
                 long jobId = Long.parseLong(jobStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
+                logger.warn("Error parsing job ID " + jobStr);
             }
         }
 
         if (si == null) {
-            errorString = "You are not logged in or your session has expired";
+            errorString = ErrorMessages.SESSION_EXPIRED;
             logger.warn("ServiceInterface is null!");
         } else if (seriesDir == null) {
-            errorString = "No active series in session";
-            logger.error("seriesDir is null!");
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (job == null) {
-            errorString = "Invalid job";
-            logger.error("job is null!");
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("job is null!");
         } else if (filesParam == null) {
-            errorString = "No filename(s) provided";
-            logger.error(errorString);
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn("No files specified!");
         } else {
             String[] fileNames = filesParam.split(",");
             File jobDir = new File(seriesDir, jobStr);
@@ -334,8 +334,8 @@ public class FileActionController extends MultiActionController {
                 File f = null;
 
                 if (!fileName.equals(Util.sanitizeSubPath(fileName))) {
+                    errorString = ErrorMessages.INVALID_FILENAME;
                     logger.warn("Invalid file " + fileName + " requested!");
-                    errorString = "Invalid filename";
                 } else {
                     if (remote) {
                         try {
@@ -343,14 +343,14 @@ public class FileActionController extends MultiActionController {
                                     si, job.getHandle());
                             f = grisuJob.downloadAndCacheOutputFile(fileName);
                         } catch (Exception e) {
-                            logger.error(e.getMessage());
-                            errorString = "Unable to fetch remote file";
+                            errorString = ErrorMessages.INTERNAL_ERROR;
+                            logger.error(e.getMessage(), e);
                         }
                     } else {
                         f = new File(jobDir, fileName);
                         if (!f.canRead()) {
+                            errorString = ErrorMessages.INTERNAL_ERROR;
                             logger.error("File "+f.getPath()+" not readable!");
-                            errorString = "File could not be read";
                         }
                     }
                 }
@@ -361,8 +361,8 @@ public class FileActionController extends MultiActionController {
                         sendSingleFile(f, response);
                         return null;
                     } catch (IOException e) {
-                        errorString = "IO Error sending the file";
-                        logger.error(e.getMessage());
+                        errorString = ErrorMessages.INTERNAL_ERROR;
+                        logger.error(e.getMessage(), e);
                     }
                 }
             } else { // multiple files are put in an archive
@@ -414,19 +414,21 @@ public class FileActionController extends MultiActionController {
                         return null;
 
                     } else {
-                        zout.close();
-                        errorString = "Could not access the files";
+                        zout.finish();
+                        errorString = ErrorMessages.INTERNAL_ERROR;
                         logger.error(errorString);
                     }
 
                 } catch (Exception e) {
-                    errorString = "Could not archive files";
-                    logger.error(e.getMessage());
+                    errorString = ErrorMessages.INTERNAL_ERROR;
+                    logger.error(e.getMessage(), e);
                 }
             }
         }
 
-        // We only end up here in case of an error so return the message
+        // We only end up here in case of an error so return the message.
+        // TODO: This may not actually work if the ZipOutputStream has been
+        // opened already
         return new ModelAndView(viewName, "error", errorString);
     }
 
@@ -444,12 +446,12 @@ public class FileActionController extends MultiActionController {
     public ModelAndView getFileContents(HttpServletRequest request,
                                         HttpServletResponse response) {
 
+        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
         final String jobStr = request.getParameter("job");
         final String fileName = request.getParameter("filename");
-        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
-        VRLJob job = null;
-        ModelAndView mav = new ModelAndView("jsonView");
+        final ModelAndView mav = new ModelAndView("jsonView");
         String errorString = null;
+        VRLJob job = null;
         String sourceText = null;
 
         if (jobStr != null) {
@@ -457,31 +459,34 @@ public class FileActionController extends MultiActionController {
                 long jobId = Long.parseLong(jobStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
+                logger.warn("Error parsing job ID " + jobStr);
             }
         }
 
-        if (seriesDir == null) {
-            errorString = "No active series in session";
-            logger.error(errorString);
-        } else if (fileName == null) {
-            errorString = "No filename supplied";
-            logger.error(errorString);
+        if (getGrisuService(request) == null) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (seriesDir == null) {
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (job == null) {
-            errorString = "Invalid job";
-            logger.error("job is null!");
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("job is null!");
+        } else if (fileName == null) {
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn("No filename specified!");
         } else if (!fileName.equals(Util.sanitizeSubPath(fileName))) {
-            errorString = "Invalid filename";
+            errorString = ErrorMessages.INVALID_FILENAME;
             logger.warn("Invalid file " + fileName + " requested!");
         } else {
             try {
                 File f = new File(new File(seriesDir, jobStr), fileName);
                 if (!f.canRead() || !f.isFile()) {
+                    errorString = ErrorMessages.INTERNAL_ERROR;
                     logger.error("File "+f.getPath()+" not readable!");
-                    errorString = "File could not be read";
                 } else if (f.length() > MAX_FILE_SIZE_FOR_DISPLAY) {
-                    logger.error("File "+f.getPath()+" too big for display!");
-                    errorString = "File size exceeds limit for inline display";
+                    errorString = ErrorMessages.FILE_TOO_BIG;
+                    logger.warn("File "+f.getPath()+" too big for display!");
                 } else {
                     logger.debug("Reading "+f.getPath());
                     BufferedReader input = new BufferedReader(
@@ -496,8 +501,8 @@ public class FileActionController extends MultiActionController {
                     sourceText = contents.toString();
                 }
             } catch (IOException e) {
-                logger.error("Error reading file.");
-                errorString = "File could not be read";
+                errorString = ErrorMessages.INTERNAL_ERROR;
+                logger.error(e.getMessage(), e);
             }
         }
 
@@ -528,21 +533,23 @@ public class FileActionController extends MultiActionController {
                                    HttpServletResponse response) {
 
         File seriesDir = (File)request.getSession().getAttribute("seriesDir");
-        Long seriesId = (Long)request.getSession().getAttribute("seriesId");
-        ModelAndView mav = new ModelAndView("jsonView");
+        final ModelAndView mav = new ModelAndView("jsonView");
         String errorString = null;
 
-        if (seriesId == null) {
-            errorString = "No active series in session";
-            logger.error(errorString);
+        if (getGrisuService(request) == null) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (seriesDir == null) {
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else {
             try {
                 logger.debug("Checking for local modifications.");
                 mav.addObject("modified",
                         jobManager.hasModifications(seriesDir));
             } catch (Exception e) {
+                errorString = ErrorMessages.INTERNAL_ERROR;
                 logger.error(e.getMessage(), e);
-                errorString = "There was an error getting the file states";
             }
         }
 
@@ -571,34 +578,34 @@ public class FileActionController extends MultiActionController {
     public ModelAndView listFiles(HttpServletRequest request,
                                   HttpServletResponse response) {
 
-        final String jobStr = request.getParameter("job");
-        final String remoteStr = request.getParameter("remote");
+        final ServiceInterface si = getGrisuService(request);
         File seriesDir = (File)request.getSession().getAttribute("seriesDir");
         Long seriesId = (Long)request.getSession().getAttribute("seriesId");
-        ServiceInterface si = getGrisuService(request);
-        boolean remote = (remoteStr != null && remoteStr.length() > 0);
-        VRLJob job = null;
-        ModelAndView mav = new ModelAndView("jsonView");
+        final String jobStr = request.getParameter("job");
+        final String remoteStr = request.getParameter("remote");
+        final boolean remote = (remoteStr != null && remoteStr.length() > 0);
+        final ModelAndView mav = new ModelAndView("jsonView");
         String errorString = null;
+        VRLJob job = null;
 
         if (jobStr != null) {
             try {
                 long jobId = Long.parseLong(jobStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
+                logger.warn("Error parsing job ID " + jobStr);
             }
         }
 
         if (si == null) {
-            errorString = "You are not logged in or your session has expired";
+            errorString = ErrorMessages.SESSION_EXPIRED;
             logger.warn("ServiceInterface is null!");
         } else if (seriesId == null) {
-            errorString = "No active series in session";
-            logger.error(errorString);
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (job == null) {
-            errorString = "Invalid job";
-            logger.error("job is null!");
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("job is null!");
         } else {
             List<FileInformation> fileList = new ArrayList<FileInformation>();
 
@@ -626,8 +633,8 @@ public class FileActionController extends MultiActionController {
                     fileList = Arrays.asList(files);
                 }
             } catch (Exception e) {
+                errorString = ErrorMessages.INTERNAL_ERROR;
                 logger.error(e.getMessage(), e);
-                errorString = "There was an error getting the file listing";
             }
             mav.addObject("files", fileList.toArray());
         }
@@ -653,31 +660,34 @@ public class FileActionController extends MultiActionController {
     public ModelAndView revertFiles(HttpServletRequest request,
                                     HttpServletResponse response) {
 
-        final String jobStr = request.getParameter("job");
         File seriesDir = (File)request.getSession().getAttribute("seriesDir");
+        final String jobStr = request.getParameter("job");
         final String filesParam = request.getParameter("files");
-        VRLJob job = null;
-        ModelAndView mav = new ModelAndView("jsonView");
+        final ModelAndView mav = new ModelAndView("jsonView");
         String errorString = null;
+        VRLJob job = null;
 
         if (jobStr != null) {
             try {
                 long jobId = Long.parseLong(jobStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
+                logger.warn("Error parsing job ID " + jobStr);
             }
         }
 
-        if (seriesDir == null) {
-            errorString = "No active series in session";
-            logger.error(errorString);
+        if (getGrisuService(request) == null) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (seriesDir == null) {
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (job == null) {
-            errorString = "Invalid job";
-            logger.error("job is null!");
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("job is null!");
         } else if (filesParam == null) {
-            errorString = "No files specified";
-            logger.error(errorString);
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn("No files specified!");
         } else {
             String[] fileNames = filesParam.split(",");
             List<File> list = new ArrayList<File>();
@@ -691,15 +701,15 @@ public class FileActionController extends MultiActionController {
                 }
             }
             if (list.size() == 0) {
-                errorString = "Invalid filename(s)";
+                errorString = ErrorMessages.INVALID_FILENAME;
             } else {
                 logger.debug("Reverting "+list.size()+" files");
                 try {
                     jobManager.revertFiles(list.toArray(
                                 new File[list.size()]));
                 } catch (Exception e) {
-                    errorString = "Could not revert files";
-                    logger.error(errorString, e);
+                    errorString = ErrorMessages.INTERNAL_ERROR;
+                    logger.error(e.getMessage(), e);
                 }
             }
         }
@@ -726,45 +736,47 @@ public class FileActionController extends MultiActionController {
     public ModelAndView saveFileContents(HttpServletRequest request,
                                          HttpServletResponse response) {
 
+        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
         final String jobStr = request.getParameter("job");
         final String fileName = request.getParameter("filename");
         final String contents = request.getParameter("contents");
-        File seriesDir = (File)request.getSession().getAttribute("seriesDir");
-        VRLJob job = null;
-        ModelAndView mav = new ModelAndView("jsonView");
+        final ModelAndView mav = new ModelAndView("jsonView");
         String errorString = null;
+        VRLJob job = null;
 
         if (jobStr != null) {
             try {
                 long jobId = Long.parseLong(jobStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
+                logger.warn("Error parsing job ID " + jobStr);
             }
         }
 
-        if (seriesDir == null) {
-            errorString = "No active series in session";
-            logger.error("seriesDir is null!");
+        if (getGrisuService(request) == null) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (seriesDir == null) {
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (job == null) {
-            errorString = "Invalid job";
-            logger.error("job is null!");
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("job is null!");
         } else if (fileName == null || contents == null) {
-            errorString = "Missing parameter";
-            logger.error("No filename/contents provided.");
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn("No filename/contents provided!");
         } else if (!fileName.equals(Util.sanitizeSubPath(fileName)) ||
                 fileName.startsWith(".")) {
-            errorString = "Invalid filename";
-            logger.error("Invalid filename " + fileName + "!");
+            errorString = ErrorMessages.MISSING_PARAMETER;
+            logger.warn("Invalid filename " + fileName + "!");
         } else {
             logger.debug("Saving file contents "+jobStr+"/"+fileName);
             try {
                 File destFile = new File(new File(seriesDir, jobStr),
                         fileName);
                 if (destFile.isDirectory()) {
-                    errorString =
-                        "The filename is reserved. Please use another filename";
-                    logger.error("Tried to overwrite directory "
+                    errorString = ErrorMessages.INVALID_FILENAME;
+                    logger.warn("Tried to overwrite directory "
                             + destFile.getPath());
                 } else {
                     boolean newFile = !destFile.exists();
@@ -776,14 +788,14 @@ public class FileActionController extends MultiActionController {
                         try {
                             jobManager.addFile(destFile);
                         } catch (Exception e) {
-                            errorString = "Could not add file to repository";
-                            logger.error(errorString, e);
+                            errorString = ErrorMessages.INTERNAL_ERROR;
+                            logger.error(e.getMessage(), e);
                         }
                     }
                 }
             } catch (IOException e) {
-                logger.error("Error writing to file.");
-                errorString = "File could not be saved";
+                errorString = ErrorMessages.INTERNAL_ERROR;
+                logger.error(e.getMessage(), e);
             }
         }
 
@@ -810,47 +822,49 @@ public class FileActionController extends MultiActionController {
     public ModelAndView uploadFile(HttpServletRequest request,
                                    HttpServletResponse response) {
 
-        final String jobStr = request.getParameter("job");
         File seriesDir = (File)request.getSession().getAttribute("seriesDir");
-        VRLJob job = null;
+        final String jobStr = request.getParameter("job");
         String errorString = null;
         FileInformation fileInfo = null;
+        VRLJob job = null;
 
         if (jobStr != null) {
             try {
                 long jobId = Long.parseLong(jobStr);
                 job = jobManager.getJobById(jobId);
             } catch (NumberFormatException e) {
-                logger.error("Error parsing job ID!");
+                logger.warn("Error parsing job ID " + jobStr);
             }
         }
 
-        if (seriesDir == null) {
-            errorString = "No active series in session";
-            logger.error("seriesDir is null!");
+        if (getGrisuService(request) == null) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (seriesDir == null) {
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
         } else if (job == null) {
-            errorString = "Invalid job";
-            logger.error("job is null!");
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("job is null!");
         } else {
             MultipartHttpServletRequest mfReq =
                 (MultipartHttpServletRequest) request;
 
             MultipartFile f = mfReq.getFile("file");
             if (f == null) {
-                errorString = "Missing parameter";
-                logger.error("No file parameter provided.");
+                errorString = ErrorMessages.MISSING_PARAMETER;
+                logger.warn("No file provided!");
             } else if (!f.getOriginalFilename().equals(
                         Util.sanitizeSubPath(f.getOriginalFilename()))) {
-                errorString = "Invalid filename";
+                errorString = ErrorMessages.INVALID_FILENAME;
                 logger.warn("Invalid filename " + f.getOriginalFilename());
             } else {
                 logger.info("Saving uploaded file "+f.getOriginalFilename());
                 File destination = new File(new File(seriesDir, jobStr),
                         f.getOriginalFilename());
                 if (destination.isDirectory()) {
-                    errorString =
-                        "The filename is reserved. Please use another filename";
-                    logger.error("Tried to overwrite directory " +
+                    errorString = ErrorMessages.INVALID_FILENAME;
+                    logger.warn("Tried to overwrite directory " +
                             destination.getPath());
                 } else {
                     boolean newFile = !destination.exists();
@@ -860,8 +874,8 @@ public class FileActionController extends MultiActionController {
                     try {
                         f.transferTo(destination);
                     } catch (IOException e) {
-                        logger.error("Could not move file: "+e.getMessage());
-                        errorString = "Could not process file";
+                        errorString = ErrorMessages.INTERNAL_ERROR;
+                        logger.error(e.getMessage(), e);
                     }
                     if (newFile) {
                         try {
@@ -869,8 +883,8 @@ public class FileActionController extends MultiActionController {
                             fileInfo = new FileInformation(
                                     f.getOriginalFilename(), f.getSize(), "A");
                         } catch (Exception e) {
-                            errorString = "Could not add file to repository";
-                            logger.error(errorString, e);
+                            errorString = ErrorMessages.INTERNAL_ERROR;
+                            logger.error(e.getMessage(), e);
                         }
                     }
                 }

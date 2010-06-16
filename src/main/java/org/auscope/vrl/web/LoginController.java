@@ -275,7 +275,7 @@ public class LoginController implements Controller {
             }
 
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error(e.getMessage(), e);
         }
         return rd;
     }
@@ -402,7 +402,7 @@ public class LoginController implements Controller {
         String status = doc.getElementsByTagName("Status")
             .item(0).getFirstChild().getNodeValue();
 
-        logger.info("Response status: "+status);
+        logger.debug("Response status: "+status);
         if (!status.equals("Error")) {
             String certPEM = doc.getElementsByTagName("Certificate")
                 .item(0).getFirstChild().getNodeValue();
