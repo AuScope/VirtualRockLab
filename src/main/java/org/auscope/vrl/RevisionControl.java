@@ -103,10 +103,10 @@ public class RevisionControl {
             + sdf.format(new Date());
         File path = new File(targetDir);
 
-        SVNUrl url = new SVNUrl(
-                svnroot + File.separator
-                + user + File.separator
-                + seriesId);
+        SVNUrl url = new SVNUrl(this.escapeURL(
+                    svnroot + File.separator
+                    + user + File.separator
+                    + seriesId));
         SVNRevision rev = SVNRevision.getRevision(revision);
 
         // first checkout a fresh copy of HEAD
@@ -130,10 +130,10 @@ public class RevisionControl {
             String revisionStart, String revisionEnd) {
         RevisionLog[] result = null;
         try {
-            SVNUrl url = new SVNUrl(
+            SVNUrl url = new SVNUrl(this.escapeURL(
                     svnroot + File.separator
                     + user + File.separator
-                    + seriesId);
+                    + seriesId));
             SVNRevision revStart, revEnd;
             try {
                 revStart = SVNRevision.getRevision(revisionStart);
@@ -177,11 +177,11 @@ public class RevisionControl {
     public RevisionEntry getEntry(String user, long seriesId, String subPath,
                                   String revision) throws Exception {
         RevisionEntry result = null;
-        SVNUrl url = new SVNUrl(
+        SVNUrl url = new SVNUrl(this.escapeURL(
                 svnroot + File.separator
                 + user + File.separator
                 + seriesId + File.separator
-                + Util.sanitizeSubPath(subPath));
+                + Util.sanitizeSubPath(subPath)));
         logger.debug("url="+url.toString());
         ISVNDirEntry entry = svnClient.getDirEntry(url,
                 SVNRevision.getRevision(revision));
@@ -208,10 +208,10 @@ public class RevisionControl {
             throws Exception {
 
         // 1. export a clean copy of source series
-        SVNUrl srcUrl = new SVNUrl(
+        SVNUrl srcUrl = new SVNUrl(this.escapeURL(
                 svnroot + File.separator
                 + srcUser + File.separator
-                + srcId);
+                + srcId));
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
         String targetDir = TEMP_DIR + sdf.format(new Date());
         File destPath = new File(targetDir);
@@ -232,10 +232,10 @@ public class RevisionControl {
         }
 
         // 3. import the modified series directory
-        SVNUrl destUrl = new SVNUrl(
+        SVNUrl destUrl = new SVNUrl(this.escapeURL(
                 svnroot + File.separator
                 + destUser + File.separator
-                + destId);
+                + destId));
         svnClient.doImport(destPath, destUrl, message, true);
         Util.deleteFilesRecursive(destPath);
     }
@@ -256,10 +256,10 @@ public class RevisionControl {
             // create a Documentation subdirectory
             //File subPath = new File(path, "Documentation");
             //subPath.mkdir();
-            SVNUrl url = new SVNUrl(
+            SVNUrl url = new SVNUrl(this.escapeURL(
                     svnroot + File.separator
                     + user + File.separator
-                    + seriesId);
+                    + seriesId));
             logger.debug("Importing "+sourceDir);
             svnClient.doImport(path, url, message, true);
             Util.deleteFilesRecursive(path);
@@ -370,6 +370,10 @@ public class RevisionControl {
                 file.delete();
             }
         }
+    }
+
+    private String escapeURL(final String url) {
+        return url.replaceAll("@", "%40");
     }
 }
 
