@@ -17,19 +17,19 @@ public class VRLJob {
     /** The binary to execute with a script parameter */
     public static final String BINARY_NAME = "mpipython";
     /** A description for this job */
-    private String    description;
+    private String description;
     /** The handle to a corresponding Grid job (if applicable) */
-    private String    handle;
+    private String handle;
     /** A unique identifier for this job */
-    private Long      id;
+    private Long   id;
     /** Name of this job */
-    private String    name;
-    /** Directory containing output files */
-    private String    outputDir;
+    private String name;
+    /** URL of directory containing output files */
+    private String outputUrl;
     /** The script filename */
-    private String    scriptFile;
+    private String scriptFile;
     /** The identifier of the series this job belongs to */
-    private Long      seriesId;
+    private Long   seriesId;
 
     /**
      * Default empty constructor.
@@ -41,14 +41,14 @@ public class VRLJob {
      * Constructor with values.
      */
     public VRLJob(String name, String description, String scriptFile,
-                  String outputDir, Long seriesId) {
-        setName(name);
-        setDescription(description);
-        setOutputDir(outputDir);
-        setScriptFile(scriptFile);
-        setSeriesId(seriesId);
-        handle = null;
-        id = null;
+                  Long seriesId) {
+        this.name = name;
+        this.description = description;
+        this.scriptFile = scriptFile;
+        this.seriesId = seriesId;
+        this.handle = null;
+        this.id = null;
+        this.outputUrl = null;
     }
 
     /**
@@ -124,21 +124,21 @@ public class VRLJob {
     }
 
     /**
-     * Returns the output directory of this job.
+     * Returns the output directory URL of this job.
      *
-     * @return The output directory of this job.
+     * @return The output directory URL of this job.
      */
-    public String getOutputDir() {
-        return outputDir;
+    public String getOutputUrl() {
+        return outputUrl;
     }
 
     /**
-     * Sets the output directory of this job.
+     * Sets the output directory URL of this job.
      *
-     * @param outputDir The output directory of this job.
+     * @param outputDir The output directory URL of this job.
      */
-    public void setOutputDir(String outputDir) {
-        this.outputDir = outputDir;
+    public void setOutputUrl(String outputUrl) {
+        this.outputUrl = outputUrl;
     }
 
     /**
@@ -189,7 +189,7 @@ public class VRLJob {
                ", name=\"" + name + "\"" +
                ", description=\"" + description + "\"" +
                ", handle=\"" + handle + "\"" +
-               ", outputDir=\"" + outputDir + "\"" +
+               ", outputUrl=\"" + outputUrl + "\"" +
                ", scriptFile=\"" + scriptFile + "\"";
     }
 }

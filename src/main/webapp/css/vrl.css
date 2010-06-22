@@ -131,6 +131,7 @@ img {
 }
 
 .add-icon { background-image: url("../img/add.png") !important }
+.archive-icon { background-image: url("../img/archive.png") !important }
 .arrowleft-icon { background-image: url("../img/arrow_left.png") !important }
 .auscope-icon { background-image: url("../img/auscope.png") !important }
 .brick-icon { background-image: url("../img/brick.png") !important }

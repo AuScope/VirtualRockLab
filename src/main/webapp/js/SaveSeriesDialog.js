@@ -13,7 +13,7 @@ show: function(callback) {
     var saveSeriesHandler = function() {
         var form = Ext.getCmp('ssd-form').getForm();
         if (!form.isValid()) {
-            Ext.Msg.alert('Message required', 'Please enter a descriptive message.');
+            VRL.showMessage('Please enter a descriptive message.', 'w');
             return false;
         }
 
@@ -23,8 +23,8 @@ show: function(callback) {
                 var resp = VRL.decodeResponse(response);
                 if (resp) {
                     if (resp.revision == -1) {
-                        Ext.Msg.alert('Save series',
-                            'The series is up to date. No save required.');
+                        VRL.showMessage(
+                            'The series is up to date. No save required.', 'i');
                     } else {
                         if (Ext.isFunction(callback)) {
                             callback(resp);

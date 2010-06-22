@@ -60,6 +60,9 @@ public class FileActionController extends MultiActionController {
     private static final String viewName = "home";
     /** Maximum file size allowed for inline display = 10 kB */
     private static final long MAX_FILE_SIZE_FOR_DISPLAY = 10240L;
+    /** Location where job files should be archived to (ARCS Data Fabric) */
+    private static final String ARCHIVE_URL =
+        "gsiftp://arcs-df.vpac.org:2810/~/grisu_archive";
     private VRLJobManager jobManager;
 
     /**
@@ -98,6 +101,71 @@ public class FileActionController extends MultiActionController {
     ///////////////////////////////////////////////////////////////////////
     ////////////////////////////// ACTIONS ////////////////////////////////
     ///////////////////////////////////////////////////////////////////////
+
+    /**
+     * Archives the output files of a job to the default archive location
+     *
+     * @param request The servlet request
+     * @param response The servlet response
+     *
+     * @return A JSON object
+     */
+    public ModelAndView archiveFiles(HttpServletRequest request,
+                                     HttpServletResponse response) {
+
+        final ServiceInterface si = getGrisuService(request);
+        Long seriesId = (Long)request.getSession().getAttribute("seriesId");
+        final String jobStr = request.getParameter("job");
+        final ModelAndView mav = new ModelAndView("jsonView");
+        String errorString = null;
+        VRLJob job = null;
+
+        if (jobStr != null) {
+            try {
+                long jobId = Long.parseLong(jobStr);
+                job = jobManager.getJobById(jobId);
+            } catch (NumberFormatException e) {
+                logger.warn("Error parsing job ID " + jobStr);
+            }
+        }
+
+        if (si == null) {
+            errorString = ErrorMessages.SESSION_EXPIRED;
+            logger.warn("ServiceInterface is null!");
+        } else if (seriesId == null) {
+            errorString = ErrorMessages.NO_SERIES;
+            logger.warn(errorString);
+        } else if (job == null) {
+            errorString = ErrorMessages.INVALID_JOB;
+            logger.warn("job is null!");
+        } else if (job.getHandle() == null || job.getHandle().length() == 0) {
+            errorString = ErrorMessages.NULL_HANDLE;
+            logger.warn("job handle is null!");
+        } else {
+            try {
+                logger.debug("Archiving files of job " + jobStr);
+                String archiveUrl = si.archiveJob(job.getHandle(), ARCHIVE_URL);
+                logger.debug("Archive location: " + archiveUrl);
+                // grisu deletes the job from its database after archiving so
+                // discard handle
+                job.setHandle(null);
+                job.setOutputUrl(archiveUrl);
+                jobManager.saveJob(job);
+            } catch (Exception e) {
+                errorString = ErrorMessages.INTERNAL_ERROR;
+                logger.error(e.getMessage());
+            }
+        }
+
+        if (errorString != null) {
+            mav.addObject("error", errorString);
+            mav.addObject("success", false);
+        } else {
+            mav.addObject("success", true);
+        }
+
+        return mav;
+    }
 
     /**
      * Copies one or more output files from one job to another (or the same)
@@ -146,10 +214,10 @@ public class FileActionController extends MultiActionController {
         } else if (filesParam == null) {
             errorString = ErrorMessages.MISSING_PARAMETER;
             logger.warn("No files specified!");
-        } else if (srcJob.getHandle() == null
-                || srcJob.getHandle().length() == 0) {
+        } else if (srcJob.getOutputUrl() == null
+                || srcJob.getOutputUrl().length() == 0) {
             errorString = ErrorMessages.NULL_HANDLE;
-            logger.warn("source job handle is null!");
+            logger.warn("source job URL is null!");
         } else {
             String[] fileNames = filesParam.split(",");
             List<String> list = new ArrayList<String>();
@@ -165,8 +233,7 @@ public class FileActionController extends MultiActionController {
                 errorString = ErrorMessages.INVALID_FILENAME;
             } else {
                 try {
-                    JobObject grisuJob = new JobObject(si, srcJob.getHandle());
-                    final String url = grisuJob.getJobDirectoryUrl();
+                    final String url = srcJob.getOutputUrl();
                     File destDir = new File(seriesDir, destJobStr);
                     final boolean overwrite = "on".equals(overwriteParam);
                     logger.debug("Transferring " + list.size()
@@ -339,9 +406,9 @@ public class FileActionController extends MultiActionController {
                 } else {
                     if (remote) {
                         try {
-                            JobObject grisuJob = new JobObject(
-                                    si, job.getHandle());
-                            f = grisuJob.downloadAndCacheOutputFile(fileName);
+                            String url = job.getOutputUrl() + "/" + fileName;
+                            f = GrisuRegistryManager.getDefault(si)
+                                .getFileManager().downloadFile(url);
                         } catch (Exception e) {
                             errorString = ErrorMessages.INTERNAL_ERROR;
                             logger.error(e.getMessage(), e);
@@ -373,10 +440,6 @@ public class FileActionController extends MultiActionController {
                         "attachment; filename=\"jobfiles.zip\"");
 
                 try {
-                    JobObject grisuJob = null;
-                    if (remote) {
-                        grisuJob = new JobObject(si, job.getHandle());
-                    }
                     boolean readOneOrMoreFiles = false;
                     ZipOutputStream zout = new ZipOutputStream(
                             response.getOutputStream());
@@ -387,7 +450,9 @@ public class FileActionController extends MultiActionController {
                         }
                         File f = null;
                         if (remote) {
-                            f = grisuJob.downloadAndCacheOutputFile(fileName);
+                            String url = job.getOutputUrl() + "/" + fileName;
+                            f = GrisuRegistryManager.getDefault(si)
+                                .getFileManager().downloadFile(url);
                         } else {
                             f = new File(jobDir, fileName);
                         }
@@ -612,14 +677,12 @@ public class FileActionController extends MultiActionController {
             try {
                 // check if the request is for a remote or local listing
                 if (remote) {
-                    if (job.getHandle() != null
-                            && job.getHandle().length() > 0) {
+                    if (job.getOutputUrl() != null
+                            && job.getOutputUrl().length() > 0) {
                         logger.debug("Retrieving remote file list for job "
                                 + jobStr + " of series "
                                 + seriesId.toString());
-                        JobObject grisuJob = new JobObject(si, job.getHandle());
-                        String url = grisuJob.getJobDirectoryUrl();
-                        DtoFolder folder = si.ls(url, 1);
+                        DtoFolder folder = si.ls(job.getOutputUrl(), 1);
                         for (DtoFile file : folder.getChildrenFiles()) {
                             fileList.add(new FileInformation(
                                     file.getName(), file.getSize(), ""));

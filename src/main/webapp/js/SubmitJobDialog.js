@@ -209,13 +209,12 @@ show: function(job, callback) {
         var onSubmitJobFailure = function(response, options) {
             VRL.hideProgressDlg();
             Ext.getCmp('submit-win').show();
-            VRL.showError('Could not submit job! Status: '+
-                response.status+' ('+response.statusText+')');
+            VRL.showMessage('Could not submit job! Status: '
+                + response.status + ' (' + response.statusText + ')');
         }
 
         if (!jobSubmitForm.getForm().isValid()) {
-            Ext.Msg.alert('Invalid value(s)',
-                          'Please correct the marked form fields.');
+            VRL.showMessage('Please correct the marked form fields.', 'w');
             return false;
         }
 

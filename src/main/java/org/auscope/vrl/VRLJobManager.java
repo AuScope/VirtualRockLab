@@ -91,8 +91,7 @@ public class VRLJobManager {
         while (it.hasNext()) {
             VRLJob job = (VRLJob)it.next();
             VRLJob newJob = new VRLJob(job.getName(), job.getDescription(),
-                    job.getScriptFile(), job.getOutputDir(),
-                    newId);
+                    job.getScriptFile(), newId);
             saveJob(newJob);
             jobIdMap.put(job.getId().toString(), newJob.getId().toString());
         }

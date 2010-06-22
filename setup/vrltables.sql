@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   handle varchar(255),
   name varchar(255) NOT NULL,
   description TEXT,
-  scriptFile varchar(32),
-  outputDir varchar(128)
+  script_file varchar(32),
+  output_url varchar(255)
   );
 

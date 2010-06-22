@@ -16,6 +16,16 @@ VRL.FileManager = {
     // FILE MANAGER ACTIONS
     //
 
+    archiveAction: new Ext.Action({
+        text: 'Archive',
+        iconCls: 'archive-icon',
+        tooltip: 'Transfers all output files to the ARCS data fabric',
+        handler: function() {
+            VRL.FileManager.archiveJob();
+        },
+        disabled: true
+    }),
+
     newFileAction: new Ext.Action({
         text: 'New...',
         iconCls: 'new-icon',
@@ -163,7 +173,7 @@ VRL.FileManager = {
 
         var onCopySuccess = function(form, action) {
             if (!Ext.isEmpty(action.result.error)) {
-                VRL.showError('Error copying file(s): '
+                VRL.showMessage('Error copying file(s): '
                         + action.result.error);
             } else {
                 this.localFileGrid.getStore().reload();
@@ -172,8 +182,7 @@ VRL.FileManager = {
         }
 
         var onCopyFailure = function(form, action) {
-            VRL.showError('Error copying file(s): '
-                    + action.result.error);
+            VRL.showMessage('Error copying file(s): ' + action.result.error);
         }
 
         var doCopy = function() {
@@ -479,15 +488,14 @@ VRL.FileManager = {
                             w.close();
                         } else if (this.localFileGrid.getStore().find(
                                 'name', f.getValue()) >= 0) {
-                            VRL.showError(
-                                'A file by that name already exists.', null, 1);
+                            VRL.showMessage(
+                                'A file by that name already exists.', 'w');
                         } else if (f.isValid()) {
                             VRL.activateTab('editor-tab');
                             this.createFileTab(this.job, f.getValue(), '');
                             w.close();
                         } else {
-                            VRL.showError(
-                                'The filename is not valid.', null, 1);
+                            VRL.showMessage('The filename is not valid.', 'w');
                         }
                     }.createDelegate(VRL.FileManager)
                 }]
@@ -508,8 +516,7 @@ VRL.FileManager = {
     uploadDialog: function() {
         var onUploadSuccess = function(form, action) {
             if (!Ext.isEmpty(action.result.error)) {
-                VRL.showError('Error uploading file: '
-                        + action.result.error);
+                VRL.showMessage('Error uploading file: '+action.result.error);
             } else {
                 this.localFileGrid.getStore().reload();
                 Ext.getCmp('uf-win').close();
@@ -517,8 +524,7 @@ VRL.FileManager = {
         }
 
         var onUploadFailure = function(form, action) {
-            VRL.showError('Error uploading file: '
-                    + action.result.error);
+            VRL.showMessage('Error uploading file: ' + action.result.error);
         }
 
         var doUpload = function() {
@@ -654,6 +660,13 @@ VRL.FileManager = {
                             this.newFileAction.enable();
                             this.refreshAction.enable();
                             this.uploadAction.enable();
+                            if (!Ext.isEmpty(record.get('status'))
+                                    && VRL.JobManager.SUBMIT_STATES
+                                    .indexOf(record.get('status')) >= 0) {
+                                this.archiveAction.enable();
+                            } else {
+                                this.archiveAction.disable();
+                            }
                         }
                     }
                 }
@@ -661,13 +674,34 @@ VRL.FileManager = {
         });
     },
 
+    archiveJob: function() {
+        var onOK = function() {
+            this.archiveAction.disable();
+            this.reloadFileList();
+        }
+        var onResponse = function(response, options) {
+            var resp = VRL.decodeResponse(response);
+            if (resp) {
+                VRL.showMessage(
+                    'The archive process has been started. Depending on the '
+                    + 'number of files and their size it may take a while '
+                    + 'until the process is finished.', 'i', onOK,
+                    VRL.FileManager);
+            }
+        }
+        VRL.doRequest(this.controllerURL, 'archiveFiles',
+            { job: this.job.get('id') }, onResponse);
+    },
+
     commitChanges: function() {
-        var callback = function(seriesDetails) {
-            Ext.Msg.alert('New revision saved',
-                'Revision '+seriesDetails.revision+' saved successfully.');
-            Ext.apply(VRL.currentSeries, seriesDetails);
+        var onOK = function() {
             VRL.updateSeriesSummary();
             VRL.FileManager.reloadFileList();
+        }
+        var callback = function(seriesDetails) {
+            VRL.showMessage('Revision ' + seriesDetails.revision
+                    + ' saved successfully.', 'i', onOK, VRL.FileManager);
+            Ext.apply(VRL.currentSeries, seriesDetails);
         }
         VRL.SaveSeriesDialog.show(callback);
     },
@@ -978,6 +1012,7 @@ VRL.FileManager = {
                     'selectionchange': function(sm) {
                         if (sm.getCount() == 0) {
                             copyToInputAction.disable();
+                            copyToJobAction.disable();
                             downloadAction.disable();
                         } else {
                             copyToInputAction.enable();
@@ -991,7 +1026,9 @@ VRL.FileManager = {
                 this.refreshAction,
                 downloadAction,
                 copyToInputAction,
-                copyToJobAction
+                copyToJobAction,
+                '->',
+                this.archiveAction
             ],
             listeners: {
                 'contextmenu' : function(e) {

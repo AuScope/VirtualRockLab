@@ -7,12 +7,11 @@
             <generator class="native"/>
         </id>
         <property name="seriesId" column="series_id"/>
-        <!--<many-to-one name="series" column="series_id"/>-->
         <property name="handle"/>
         <property name="name"/>
         <property name="description"/>
-        <property name="scriptFile"/>
-        <property name="outputDir"/>
+        <property name="scriptFile" column="script_file"/>
+        <property name="outputUrl" column="output_url"/>
     </class>
 </hibernate-mapping>
 

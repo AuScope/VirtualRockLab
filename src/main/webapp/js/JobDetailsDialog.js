@@ -54,8 +54,7 @@ show: function(callback, values) {
     var saveJobHandler = function() {
         var form = jobDetailsForm.getForm();
         if (!form.isValid()) {
-            Ext.Msg.alert('Invalid values',
-                          'Please correct the marked form fields.');
+            VRL.showMessage('Please correct the marked form fields.', 'w');
             return false;
         }
 
@@ -76,8 +75,8 @@ show: function(callback, values) {
         var onSaveFailure = function(response, options) {
             VRL.hideProgressDlg();
             Ext.getCmp('jdd-win').show();
-            VRL.showError('Could not execute last request. Status: '+
-                response.status+' ('+response.statusText+')');
+            VRL.showMessage('Could not execute last request. Status: '
+                + response.status + ' (' + response.statusText + ')');
         }
 
         Ext.getCmp('jdd-win').hide();

@@ -60,7 +60,6 @@ public class JobActionController extends MultiActionController {
     private final Log logger = LogFactory.getLog(getClass());
     private static final String FQAN = "/ARCS/AuScope";
 
-    private String jobFileArchiveDir = "/home/vrl/repo";
     private VRLJobManager jobManager;
 
     /**
@@ -241,6 +240,7 @@ public class JobActionController extends MultiActionController {
                     JobObject grisuJob = new JobObject(si, handle);
                     grisuJob.kill(true);
                     job.setHandle(null);
+                    job.setOutputUrl(null);
                     jobManager.saveJob(job);
                 } catch (Exception e) {
                     errorString = ErrorMessages.INTERNAL_ERROR;
@@ -628,11 +628,8 @@ public class JobActionController extends MultiActionController {
                 mav.addObject("job", job);
             } else {
                 // create new job
-                String outputDir = jobFileArchiveDir
-                    + File.separator + user
-                    + File.separator + name;
                 VRLJob newJob = new VRLJob(name, description, scriptFile,
-                        outputDir, seriesId);
+                        seriesId);
                 jobManager.saveJob(newJob);
                 File jobDir = new File(seriesDir, newJob.getId().toString());
                 jobDir.mkdir();
@@ -761,11 +758,25 @@ public class JobActionController extends MultiActionController {
                 }
 
                 grisuJob.createJob(FQAN);
+
+                // clean up old job if there is one
+                if (job.getHandle() != null && job.getHandle().length() > 0) {
+                    try {
+                        (new JobObject(si, job.getHandle())).kill(true);
+                        job.setHandle(null);
+                        job.setOutputUrl(null);
+                        jobManager.saveJob(job);
+                    } catch (Exception e) {
+                        logger.warn("Error deleting old job: "+e.getMessage());
+                    }
+                }
+
                 logger.info("Submitting job with name " + grisuJob.getJobname()
                         + " to " + grisuJob.getSubmissionLocation());
                 grisuJob.submitJob();
 
                 job.setHandle(grisuJob.getJobname());
+                job.setOutputUrl(grisuJob.getJobDirectoryUrl());
                 jobManager.saveJob(job);
 
                 String status = grisuJob.getStatusString(true);

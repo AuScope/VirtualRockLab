@@ -44,7 +44,7 @@ show: function(attributes) {
     var createSeriesHandler = function() {
         var form = seriesDetailsForm.getForm();
         if (!form.isValid()) {
-            Ext.Msg.alert('Invalid values', 'Please fill in all fields of the form.');
+            VRL.showMessage('Please fill in all fields of the form.', 'w');
             return false;
         }
 
@@ -63,7 +63,7 @@ show: function(attributes) {
     var cloneSeriesHandler = function() {
         var form = seriesDetailsForm.getForm();
         if (!form.isValid()) {
-            Ext.Msg.alert('Invalid values', 'Please fill in all fields of the form.');
+            VRL.showMessage('Please fill in all fields of the form.', 'w');
             return false;
         }
 

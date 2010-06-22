@@ -22,11 +22,11 @@ onLoadException: function(proxy, type, action, options, response, arg) {
         if (Ext.isObject(response.raw) && !Ext.isEmpty(response.raw.error)) {
             msg+=' ('+response.raw.error+')';
         }
-        VRL.showError(msg);
+        VRL.showMessage(msg);
     } else /* type === 'response' */ {
-        VRL.showError('Communication error (' + response.statusText
-            + '). Most likely your session has expired. '
-            + 'Please try reloading the page.');
+        VRL.showMessage('Communication error (' + response.statusText
+            + '). Maybe your session has expired. '
+            + 'Please try reloading the page or contact our staff.');
     }
 },
 
@@ -44,24 +44,33 @@ decodeResponse: function(response, callback) {
     VRL.hideProgressDlg();
     var resp = Ext.decode(response.responseText);
     if (resp.error != null) {
-        VRL.showError(resp.error, callback);
+        VRL.showMessage(resp.error+'.', 'e', callback);
         return;
     }
     return resp;
 },
 
-// shows an error or warning dialog with given message
-showError: function(message, callback, warnOnly) {
-    var t = (warnOnly ? 'Warning' : 'Error');
-    var i = (warnOnly ? Ext.Msg.WARNING : Ext.Msg.ERROR);
-    VRL.errorDlg = Ext.Msg.show({
+// shows a message dialog with given message
+showMessage: function(message, type, callback, scope) {
+    var t, i;
+    if (type === 'i') {
+        t = 'Information';
+        i = Ext.Msg.INFO;
+    } else if (type === 'w') {
+        t = 'Warning';
+        i = Ext.Msg.WARNING;
+    } else {
+        t = 'Error';
+        i = Ext.Msg.ERROR;
+    }
+    VRL.msgDlg = Ext.Msg.show({
         title: t,
         msg: message,
         buttons: Ext.Msg.OK,
         icon: i,
         fn: function() {
-            VRL.errorDlg = undefined;
-            if (Ext.isFunction(callback)) { callback.call(this); }
+            VRL.msgDlg = undefined;
+            if (Ext.isFunction(callback)) { callback.call(scope?scope:this); }
         }
     });
 },
@@ -81,7 +90,7 @@ hideProgressDlg: function() {
 
 // notifies the user through a progress dialog that data is being retrieved
 showProgressDlg: function() {
-    if (VRL.progressDlg.disabled && !VRL.errorDlg) {
+    if (VRL.progressDlg.disabled && !VRL.msgDlg) {
         VRL.progressDlg.enable();
         VRL.progressDlg.show();
     }
@@ -93,8 +102,8 @@ showProgressDlg: function() {
 doRequest: function(url, action, params, sCallback, fCallback) {
     var onRequestFailure = function(response, options) {
         VRL.hideProgressDlg();
-        VRL.showError('Could not execute last request. Status: '+
-            response.status+' ('+response.statusText+')');
+        VRL.showMessage('Could not execute last request. Status: '
+            + response.status + ' (' + response.statusText + ')');
     }
 
     var fcbk = fCallback || onRequestFailure;
@@ -318,7 +327,7 @@ initialize: function() {
             this.onWindowUnloading, this);
 
     if (!Ext.isEmpty(this.error)) {
-        this.showError(this.error, this.showWelcome);
+        this.showMessage(this.error, 'e', this.showWelcome, this);
         this.error = undefined;
     } else {
         this.showWelcome.call(this);

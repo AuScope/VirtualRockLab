@@ -132,7 +132,7 @@ VRL.JobManager = {
     deleteJob: function(job) {
         if (!Ext.isEmpty(job.submitDate)
                 && this.SUBMIT_STATES.indexOf(job.status) < 0) {
-            Ext.Msg.alert('Delete Job', 'Cannot delete running job.');
+            VRL.showMessage('Cannot delete running job.', 'w');
         } else {
             var onDeleteJobResponse = function(response, options) {
                 VRL.decodeResponse(response);
@@ -161,7 +161,7 @@ VRL.JobManager = {
     killJob: function(job) {
         if (Ext.isEmpty(job.submitDate)
                 || this.SUBMIT_STATES.indexOf(job.status) >= 0) {
-            Ext.Msg.alert('Terminate Job', 'This job is not running.');
+            VRL.showMessage('This job is not running.', 'i');
         } else {
             var onKillJobResponse = function(response, options) {
                 VRL.decodeResponse(response);
