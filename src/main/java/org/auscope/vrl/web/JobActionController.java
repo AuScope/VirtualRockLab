@@ -298,6 +298,10 @@ public class JobActionController extends MultiActionController {
                     try {
                         JobObject grisuJob = new JobObject(si, handle);
                         String status = grisuJob.getStatusString(true);
+                        // remove " (ExitCode: XYZ)" from status string
+                        if (status.startsWith(JobConstants.DONE_STRING)) {
+                            status = JobConstants.DONE_STRING;
+                        }
                         String subLoc = grisuJob.getSubmissionLocation();
                         String queue = SubmissionLocationHelpers
                             .extractQueue(subLoc);
