@@ -965,7 +965,7 @@ public class FileActionController extends MultiActionController {
             } else {
                 pw.print("{success:true,name:'" + fileInfo.getName()
                         + "',size:" + fileInfo.getSize()
-                        + "',state:" + fileInfo.getState() + "}");
+                        + ",state:'" + fileInfo.getState() + "'}");
             }
             pw.flush();
         } catch (IOException e) {
