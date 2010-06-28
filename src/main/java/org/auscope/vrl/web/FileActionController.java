@@ -888,7 +888,6 @@ public class FileActionController extends MultiActionController {
         File seriesDir = (File)request.getSession().getAttribute("seriesDir");
         final String jobStr = request.getParameter("job");
         String errorString = null;
-        FileInformation fileInfo = null;
         VRLJob job = null;
 
         if (jobStr != null) {
@@ -943,8 +942,6 @@ public class FileActionController extends MultiActionController {
                     if (newFile) {
                         try {
                             jobManager.addFile(destination);
-                            fileInfo = new FileInformation(
-                                    f.getOriginalFilename(), f.getSize(), "A");
                         } catch (Exception e) {
                             errorString = ErrorMessages.INTERNAL_ERROR;
                             logger.error(e.getMessage(), e);
@@ -963,9 +960,7 @@ public class FileActionController extends MultiActionController {
             if (errorString != null) {
                 pw.print("{success:false,error:'"+errorString+"'}");
             } else {
-                pw.print("{success:true,name:'" + fileInfo.getName()
-                        + "',size:" + fileInfo.getSize()
-                        + ",state:'" + fileInfo.getState() + "'}");
+                pw.print("{success:true}");
             }
             pw.flush();
         } catch (IOException e) {
