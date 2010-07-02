@@ -113,6 +113,7 @@ doRequest: function(url, action, params, sCallback, fCallback) {
         url: url,
         success: sCallback,
         failure: fcbk,
+        timeout: 60000, // allow 60 seconds for requests
         params: p
     });
 },
