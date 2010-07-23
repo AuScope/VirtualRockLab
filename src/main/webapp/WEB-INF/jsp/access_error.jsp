@@ -11,6 +11,7 @@
     <link rel="stylesheet" type="text/css" href="css/vrl.min.css">
     <style type="text/css">
       .error { font-size:medium; font-weight:bold; color:red; }
+      .confirm { font-size:medium; font-weight:bold; color:blue; }
       .att-table {
         font-size:16px;
         margin-bottom:10px;
@@ -35,8 +36,6 @@
     </div>
 
     <div id="body" style="padding:10px;">
-        <p class="error">Access Denied</p>
-        <p style="font-size:small">
 <%
     AuthenticationException e = (AuthenticationException)request.getSession()
         .getAttribute("SPRING_SECURITY_LAST_EXCEPTION");
@@ -44,20 +43,27 @@
     if (request.getMethod().equalsIgnoreCase("POST")
         && "register".equals(request.getParameter("action"))) {
 %>
+        <p class="confirm">Notification Sent</p>
         <p style="font-size:medium">
         Thank you very much for your interest. We will contact you shortly
         via email!
         </p>
 <%  } else if (e instanceof DisabledException) { %>
+        <p class="error">Access Denied</p>
+        <p style="font-size:small">
         Your portal account has been disabled.<br>
         If you believe this is an error please contact the site administrators.
+        </p>
 <%  } else if (e instanceof UsernameNotFoundException) { %>
+        <p class="error">Access Denied</p>
+        <p style="font-size:small">
         The Virtual Rock Laboratory is only accessible by registered users.<br>
 <%      if (request.getHeader("Shib-Person-commonName") == null) { %>
         Unfortunately, your institution (IdP) does not release the details
         required to securely authenticate yourself.<br/>
         Please send your details to: <a href="mailto:webmaster@esscc.uq.edu.au">webmaster@esscc.uq.edu.au</a>
         and we will be in touch with you shortly.
+        </p>
 <%      } else { %>
         If you would like to register now please use the button below.<br>
         The following details will be forwarded to the administrators who will
@@ -74,12 +80,15 @@
             <input type="hidden" name="action" value="register" />
             <input type="submit" value="Register" />
         </form>
+        </p>
 <%      }
     } else { %>
+        <p class="error">Access Denied</p>
+        <p style="font-size:small">
         You are not allowed to access this page.<br>
         If you believe this is an error please contact the site administrators.
-<%  } %>
         </p>
+<%  } %>
     </div>
 </body>
 
