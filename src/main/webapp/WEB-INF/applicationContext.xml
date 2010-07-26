@@ -6,7 +6,7 @@
        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
 
     <bean id="propertyConfigurer" 
-        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        class="org.auscope.vrl.PropertyConfigurer">
         <property name="locations">
             <list>
                 <value>classpath:jdbc.properties</value>

@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.auscope.vrl.VRLJob;
 import org.auscope.vrl.VRLJobManager;
 import org.auscope.vrl.VRLSeries;
+import org.auscope.vrl.PropertyConfigurer;
 import org.auscope.vrl.Util;
 
 import org.springframework.web.servlet.ModelAndView;
@@ -58,9 +59,18 @@ public class JobActionController extends MultiActionController {
 
     /** Logger for this class */
     private final Log logger = LogFactory.getLog(getClass());
-    private static final String FQAN = "/ARCS/AuScope";
 
     private VRLJobManager jobManager;
+    private PropertyConfigurer propertyConfigurer;
+
+    /**
+     * Sets the {@link PropertyConfigurer} to be used to retrieve settings.
+     *
+     * @param propertyConfigurer the <code>PropertyConfigurer</code> to use
+     */
+    public void setPropertyConfigurer(PropertyConfigurer propertyConfigurer) {
+        this.propertyConfigurer = propertyConfigurer;
+    }
 
     /**
      * Sets the {@link VRLJobManager} to be used to retrieve and store series
@@ -93,6 +103,10 @@ public class JobActionController extends MultiActionController {
     private ServiceInterface getGrisuService(HttpServletRequest request) {
         return (ServiceInterface)
             request.getSession().getAttribute("grisuService");
+    }
+
+    private String getFQAN() {
+        return propertyConfigurer.resolvePlaceholder("login.fqan");
     }
 
     ///////////////////////////////////////////////////////////////////////
@@ -398,7 +412,7 @@ public class JobActionController extends MultiActionController {
                 propMap.put(JobSubmissionProperty.APPLICATIONVERSION, version);
                 Set<GridResource> resources = registry
                     .getApplicationInformation(VRLJob.APPLICATION_NAME)
-                    .getBestSubmissionLocations(propMap, FQAN);
+                    .getBestSubmissionLocations(propMap, getFQAN());
                 Iterator<GridResource> it = resources.iterator();
                 while (it.hasNext()) {
                     sites.add(new SimpleBean(it.next().getSiteName()));
@@ -407,7 +421,7 @@ public class JobActionController extends MultiActionController {
                 Set<String> subLocs = registry
                     .getApplicationInformation(VRLJob.APPLICATION_NAME)
                     .getAvailableSubmissionLocationsForVersionAndFqan(
-                            version, FQAN);
+                            version, getFQAN());
                 Set<String> siteSet = registry.getResourceInformation()
                     .distillSitesFromSubmissionLocations(subLocs);
                 Iterator<String> it = siteSet.iterator();
@@ -522,7 +536,7 @@ public class JobActionController extends MultiActionController {
             Set<String> subLocs = registry
                 .getApplicationInformation(VRLJob.APPLICATION_NAME)
                 .getAvailableSubmissionLocationsForVersionAndFqan(
-                        version, FQAN);
+                        version, getFQAN());
             Iterator<String> it = subLocs.iterator();
             while (it.hasNext()) {
                 String sl = it.next();
@@ -761,7 +775,7 @@ public class JobActionController extends MultiActionController {
                     }
                 }
 
-                grisuJob.createJob(FQAN);
+                grisuJob.createJob(getFQAN());
 
                 // clean up old job if there is one
                 if (job.getHandle() != null && job.getHandle().length() > 0) {
@@ -828,7 +842,7 @@ public class JobActionController extends MultiActionController {
         Set<String> subLocs = registry
             .getApplicationInformation(VRLJob.APPLICATION_NAME)
             .getAvailableSubmissionLocationsForVersionAndFqan(
-                    version, FQAN);
+                    version, getFQAN());
         Iterator<String> it = subLocs.iterator();
         while (it.hasNext()) {
             String sl = it.next();

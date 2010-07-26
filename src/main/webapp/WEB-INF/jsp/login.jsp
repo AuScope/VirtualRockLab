@@ -22,14 +22,14 @@
 <%@ include file="page_header.jsp" %>
     <div id="body" style="padding:10px;">
         <p style="font-size:medium;padding-bottom:5px;">
-<% if (request.getHeader("Shib-AuEduPerson-SharedToken") == null) {%>
-<%     if (request.getHeader("Shib-Person-commonName") != null) {%>
-        Hello <%=request.getHeader("Shib-Person-commonName")%>,<br/>
-<%     }%>
+<c:if test="${sharedToken==null}">
+    <c:if test="${commonName!=null}">
+        Hello <c:out value="${commonName}"/>,<br/>
+    </c:if>
         Your institution (IdP) does not support the &quot;shared token&quot;
         attribute. This means that you will need your own certificate to access
         Grid resources.<br/>
-<% }%>
+</c:if>
         If you have a valid Grid certificate please upload it to the ARCS
         MyProxy server (e.g. using the <a href="http://www.arcs.org.au/index.php/services/services-list/290-grix">grix tool</a>)
         then use the fields below to to enter the MyProxy username and

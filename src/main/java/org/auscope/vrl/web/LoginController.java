@@ -36,6 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.ssl.PKCS8Key;
 
+import org.auscope.vrl.PropertyConfigurer;
 import org.auscope.vrl.VRLJob;
 
 // see http://www.hpc.jcu.edu.au/projects/archer-data-activities/browser/security/current/slcs-common/src/
@@ -84,13 +85,10 @@ public class LoginController implements Controller {
     protected final Log logger = LogFactory.getLog(getClass());
 
     private static final String SLCS_URL = "https://slcs1.arcs.org.au/SLCS/";
-    private static final String HOST_KEY_FILE = "/etc/shibboleth/hostkey.pem";
     /** Lifetime of the generated proxy in seconds (10 days) */
     private static final int PROXY_LIFETIME = 10*24*60*60;
     /** Minimum remaining proxy lifetime for a successful login (1 day) */
     private static final int MIN_LIFETIME = 24*60*60;
-    /** FQAN (VO) to use for jobs */
-    private static final String FQAN = "/ARCS/AuScope";
     /** maximum number of login failures */
     private static final int MAX_ATTEMPTS = 3;
 
@@ -98,6 +96,12 @@ public class LoginController implements Controller {
         public String authToken;
         public String certDN;
         public List certExtensions;
+    }
+
+    private PropertyConfigurer propertyConfigurer;
+
+    public void setPropertyConfigurer(PropertyConfigurer propertyConfigurer) {
+        this.propertyConfigurer = propertyConfigurer;
     }
 
     /**
@@ -112,9 +116,13 @@ public class LoginController implements Controller {
     public ModelAndView handleRequest(HttpServletRequest request,
                                       HttpServletResponse response) {
 
+        final String shibCN = propertyConfigurer.resolvePlaceholder(
+                "shib.commonName");
+        final String shibToken = propertyConfigurer.resolvePlaceholder(
+                "shib.sharedToken");
         Integer loginAttempts = (Integer)request.getSession()
             .getAttribute("loginAttempt");
-        String errorMessage = null;
+        ModelAndView mav = new ModelAndView("login");
         
         if (loginAttempts == null) {
             loginAttempts = new Integer(1);
@@ -158,8 +166,9 @@ public class LoginController implements Controller {
                     return redirectToTarget(request);
                 }
             } catch (Exception e) {
-                errorMessage = new String(e.getMessage());
+                String errorMessage = new String(e.getMessage());
                 logger.error(errorMessage, e);
+                mav.addObject("error", errorMessage);
                 loginAttempts = new Integer(loginAttempts.intValue()+1);
                 request.getSession().setAttribute(
                         "loginAttempt", loginAttempts);
@@ -170,7 +179,9 @@ public class LoginController implements Controller {
         }
 
         logger.debug("Returning login view.");
-        return new ModelAndView("login", "error", errorMessage);
+        mav.addObject("commonName", request.getHeader(shibCN));
+        mav.addObject("sharedToken", request.getHeader(shibToken));
+        return mav;
     }
 
     /**
@@ -178,10 +189,12 @@ public class LoginController implements Controller {
      * to Shibboleth logout.
      */
     private ModelAndView doLogout(HttpServletRequest request) {
+        final String shibLogoutUrl = propertyConfigurer.resolvePlaceholder(
+                "shib.logoutUrl");
         request.getSession(false).invalidate();
         SecurityContextHolder.clearContext();
         return new ModelAndView(new RedirectView(
-                    "/Shibboleth.sso/Logout", false, false, false));
+                    shibLogoutUrl, false, false, false));
     }
 
     /**
@@ -335,8 +348,10 @@ public class LoginController implements Controller {
         if (certReqDataHex == null || sessionKeyHex == null) {
             throw new GeneralSecurityException("Invalid Request.");
         } else {
+            final String hostKeyFile = propertyConfigurer.resolvePlaceholder(
+                    "login.hostKeyFile");
             // load host key
-            FileInputStream in = new FileInputStream(HOST_KEY_FILE);
+            FileInputStream in = new FileInputStream(hostKeyFile);
             PKCS8Key pem = new PKCS8Key(in, null);
             Key privateKey = pem.getPrivateKey();
             Cipher cipher = Cipher.getInstance("RSA");
@@ -366,8 +381,12 @@ public class LoginController implements Controller {
         RequestData rd = parseRequestData(slcsResponse);
 
         String certCN = rd.certDN.split("CN=")[1];
-        String shibCN = request.getHeader("Shib-Person-commonName") + " "
-                + request.getHeader("Shib-AuEduPerson-SharedToken");
+        final String headerCN = propertyConfigurer.resolvePlaceholder(
+                "shib.commonName");
+        final String headerToken = propertyConfigurer.resolvePlaceholder(
+                "shib.sharedToken");
+        String shibCN = request.getHeader(headerCN) + " "
+                + request.getHeader(headerToken);
         if (!certCN.equals(shibCN)) {
             logger.error(certCN+" != "+shibCN);
             throw new GeneralSecurityException(
@@ -427,6 +446,7 @@ public class LoginController implements Controller {
         if (lifetime < MIN_LIFETIME) {
             throw new Exception("Proxy lifetime too short!");
         }
+        final String FQAN = propertyConfigurer.resolvePlaceholder("login.fqan");
         GrisuRegistry registry = GrisuRegistryManager.getDefault(si);
         if (!Arrays.asList(registry.getUserEnvironmentManager()
                     .getAllAvailableFqans()).contains(FQAN)) {

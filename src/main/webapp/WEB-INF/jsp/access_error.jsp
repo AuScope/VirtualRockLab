@@ -1,7 +1,4 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<%@page import="org.springframework.security.AuthenticationException"%>
-<%@page import="org.springframework.security.DisabledException"%>
-<%@page import="org.springframework.security.userdetails.UsernameNotFoundException"%>
 <%@ include file="/WEB-INF/jsp/include.jsp" %>
 
 <html>
@@ -36,59 +33,67 @@
     </div>
 
     <div id="body" style="padding:10px;">
-<%
-    AuthenticationException e = (AuthenticationException)request.getSession()
-        .getAttribute("SPRING_SECURITY_LAST_EXCEPTION");
-
-    if (request.getMethod().equalsIgnoreCase("POST")
-        && "register".equals(request.getParameter("action"))) {
-%>
-        <p class="confirm">Notification Sent</p>
-        <p style="font-size:medium">
-        Thank you very much for your interest. We will contact you shortly
-        via email!
-        </p>
-<%  } else if (e instanceof DisabledException) { %>
+<c:choose>
+    <c:when test="${show=='accountDisabled'}">
         <p class="error">Access Denied</p>
         <p style="font-size:small">
         Your portal account has been disabled.<br>
         If you believe this is an error please contact the site administrators.
         </p>
-<%  } else if (e instanceof UsernameNotFoundException) { %>
+    </c:when>
+    <c:when test="${show=='notRegistered'}">
         <p class="error">Access Denied</p>
         <p style="font-size:small">
         The Virtual Rock Laboratory is only accessible by registered users.<br>
-<%      if (request.getHeader("Shib-Person-commonName") == null) { %>
+        <c:choose>
+            <c:when test="${commonName==null}">
         Unfortunately, your institution (IdP) does not release the details
         required to securely authenticate yourself.<br/>
-        Please send your details to: <a href="mailto:webmaster@esscc.uq.edu.au">webmaster@esscc.uq.edu.au</a>
+        Please send your details to: <a href="mailto:<c:out value="${notify}"/>"><c:out value="${notify}"/></a>
         and we will be in touch with you shortly.
         </p>
-<%      } else { %>
+            </c:when>
+            <c:otherwise>
         If you would like to register now please use the button below.<br>
         The following details will be forwarded to the administrators who will
         be in touch with you via email shortly:<br>
         <table class="att-table">
-            <tr><th>Name:</th><td><%=request.getHeader("Shib-Person-commonName")%></td></tr>
-            <tr><th>Email:</th><td><%=request.getRemoteUser()%></td></tr>
-            <tr><th>Organisation:</th><td><%=request.getHeader("Shib-EP-OrgDN")%></td></tr>
-            <tr><th>Affiliation:</th><td><%=request.getHeader("Shib-EP-Affiliation")%></td></tr>
-            <tr><th>Shared Token:</th><td><%=request.getHeader("Shib-AuEduPerson-SharedToken")
-%></td></tr>
+            <tr><th>Name:</th><td><c:out value="${commonName}"/></td></tr>
+            <tr><th>Email:</th><td><c:out value="${email}"/></td></tr>
+            <tr><th>Organisation:</th><td><c:out value="${organisation}"/></td></tr>
+            <tr><th>Affiliation:</th><td><c:out value="${affiliation}"/></td></tr>
+            <tr><th>Shared Token:</th><td><c:out value="${sharedToken}"/></td></tr>
         </table>
         <form action="access_error.html" method="POST">
             <input type="hidden" name="action" value="register" />
             <input type="submit" value="Register" />
         </form>
         </p>
-<%      }
-    } else { %>
+            </c:otherwise>
+        </c:choose>
+    </c:when>
+    <c:when test="${show=='messageSent'}">
+        <p class="confirm">Notification Sent</p>
+        <p style="font-size:medium">
+        Thank you very much for your interest. We will contact you shortly
+        via email!
+        </p>
+    </c:when>
+    <c:when test="${show=='messageSendError'}">
+        <p class="error">Internal Error</p>
+        <p style="font-size:medium">
+        Unable to send message. Please contact our administrators directly by
+        emailing <c:out value="${notify}"/>.
+        </p>
+    </c:when>
+    <c:otherwise>
         <p class="error">Access Denied</p>
         <p style="font-size:small">
         You are not allowed to access this page.<br>
         If you believe this is an error please contact the site administrators.
         </p>
-<%  } %>
+    </c:otherwise>
+</c:choose>
     </div>
 </body>
 

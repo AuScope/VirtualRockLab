@@ -25,9 +25,12 @@
     <bean name="/about.html" class="org.auscope.vrl.web.AboutController"/>
     <bean name="/access_error.html" class="org.auscope.vrl.web.AccessErrorController">
         <property name="mailSender" ref="mailSender"/>
+        <property name="propertyConfigurer" ref="propertyConfigurer"/>
     </bean>
     <bean name="/home.html" class="org.auscope.vrl.web.HomeController"/>
-    <bean name="/login.html" class="org.auscope.vrl.web.LoginController"/>
+    <bean name="/login.html" class="org.auscope.vrl.web.LoginController">
+        <property name="propertyConfigurer" ref="propertyConfigurer"/>
+    </bean>
 
     <!-- The action controller beans follow -->
 
@@ -44,6 +47,7 @@
     <bean name="/job.do" class="org.auscope.vrl.web.JobActionController">
         <property name="jobManager" ref="vrlJobManager"/>
         <property name="methodNameResolver" ref="methodNameResolver"/>
+        <property name="propertyConfigurer" ref="propertyConfigurer"/>
     </bean>
 </beans>
 
